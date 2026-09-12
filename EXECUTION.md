@@ -57,6 +57,8 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 ## Milestone 5 — Frontend Foundation
 **PRD refs:** §4.1, §4.3
 **Goal:** Next.js app has shadcn/ui initialized, Tailwind configured, the `cn()` helper in place, an API client, and TanStack Query hooks for songs.
+- [x] **Milestone 5a: Frontend Scaffold & Tooling** (Tailwind + shadcn + one component verification)
+- [x] **Milestone 5b: Frontend Data Layer** (api-client.ts/query-keys.ts/use-songs.ts)
 **Do:** `shadcn init` + add the component set from §4.3; `lib/utils.ts`, `lib/api-client.ts`, `hooks/use-songs.ts`.
 **Verify with:** `shadcn-component-add` (for the initial component set), `nx-workspace-verify`
 **Done when:** a bare catalog page can fetch and render the song list from the live API.
