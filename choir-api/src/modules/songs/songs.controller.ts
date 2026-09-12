@@ -13,9 +13,18 @@ export class SongsController {
   async getSongs(req: Request, res: Response) {
     try {
       const songs = await songsService.getSongs();
-      res.status(200).json(songs);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.json(songs);
+    } catch (_err) {
+      res.status(500).json({ message: 'Failed to fetch songs' });
+    }
+  }
+
+  async getSongById(req: Request, res: Response) {
+    try {
+      const song = await songsService.getSongById(req.params.id as string);
+      res.json(song);
+    } catch (_err) {
+      res.status(404).json({ message: 'Song not found' });
     }
   }
 

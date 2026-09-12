@@ -12,8 +12,8 @@ export interface JwtPayload {
 }
 
 // Module augmentation — preferred over namespace for ESLint flat config
-declare module 'express-serve-static-core' {
-  interface Request {
+declare module 'express' {
+  export interface Request {
     user?: JwtPayload;
   }
 }

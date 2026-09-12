@@ -17,5 +17,6 @@ router.post('/:id/links', requireRole('DIRECTOR'), songsController.createLink.bi
 
 // Any authenticated user
 router.get('/', songsController.getSongs.bind(songsController));
+router.get('/:id', songsController.getSongById.bind(songsController));
 
 export default router;

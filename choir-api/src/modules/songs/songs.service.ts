@@ -19,6 +19,20 @@ export class SongsService {
     });
   }
 
+  async getSongById(id: string) {
+    const song = await prisma.song.findUnique({
+      where: { id },
+      include: {
+        parts: true,
+        links: true,
+      },
+    });
+    if (!song) {
+      throw new Error('Song not found');
+    }
+    return song;
+  }
+
   async createSong(dto: CreateSongDto) {
     return prisma.song.create({
       data: {
