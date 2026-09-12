@@ -43,6 +43,12 @@ export function PartNotesEditor({ songId, parts }: PartNotesEditorProps) {
   );
 }
 
+const PART_COLORS: Record<string, string> = {
+  SOPRANO: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+  ALTO: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200 dark:bg-fuchsia-900/30 dark:text-fuchsia-300 dark:border-fuchsia-800',
+  TENOR: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
+};
+
 function PartRow({
   songId,
   part,
@@ -71,8 +77,8 @@ function PartRow({
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2">
-        <Badge variant="outline" className="w-20 justify-center">{part}</Badge>
-        {!canEdit && <span className="text-xs text-slate-400">Read only</span>}
+        <Badge variant="outline" className={`w-20 justify-center ${PART_COLORS[part] || ''}`}>{part}</Badge>
+        {!canEdit && <span className="text-xs text-muted-foreground">Read only</span>}
       </div>
       {canEdit ? (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-1">
@@ -89,8 +95,8 @@ function PartRow({
           )}
         </form>
       ) : (
-        <p className="text-sm text-slate-600 bg-slate-50 rounded p-2 min-h-[2.5rem]">
-          {notes || <span className="text-slate-400 italic">No notes yet</span>}
+        <p className="text-sm text-foreground bg-slate-100 dark:bg-slate-800 rounded p-2 min-h-[2.5rem]">
+          {notes || <span className="text-muted-foreground italic">No notes yet</span>}
         </p>
       )}
     </div>

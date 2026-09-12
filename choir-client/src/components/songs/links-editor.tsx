@@ -54,9 +54,9 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Reference Links</h3>
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Reference Links</h3>
       {links.length === 0 && (
-        <p className="text-sm text-slate-400 italic">No links added yet.</p>
+        <p className="text-sm text-muted-foreground italic">No links added yet.</p>
       )}
       <div className="space-y-2">
         {links.map((link) => (
@@ -67,7 +67,7 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline truncate max-w-[220px]"
+              className="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[220px]"
             >
               {link.url}
             </a>

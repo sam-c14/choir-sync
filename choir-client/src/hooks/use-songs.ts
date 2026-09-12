@@ -110,3 +110,16 @@ export function useDeleteSongLink() {
     },
   });
 }
+
+export function useDeleteSong() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiClient.delete(`/songs/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.songs.all });
+    },
+  });
+}

@@ -9,6 +9,12 @@ export default defineConfig(() => ({
   root: import.meta.dirname,
   cacheDir: '../node_modules/.vite/choir-client',
   server:{
+    proxy: {
+      "/api": {
+        target: "http://localhost:3333",
+        changeOrigin: true
+      }
+    },
     port: 4200,
     host: 'localhost',
   },
