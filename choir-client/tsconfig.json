@@ -4,6 +4,10 @@
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
     "types": [
       "vite/client"
     ]
