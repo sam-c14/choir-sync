@@ -11,11 +11,10 @@ export interface JwtPayload {
   leadsVoicePart: z.infer<typeof VoicePartTypeEnum> | null;
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: JwtPayload;
-    }
+// Module augmentation — preferred over namespace for ESLint flat config
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: JwtPayload;
   }
 }
 
@@ -32,7 +31,7 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
     const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
     req.user = payload;
     next();
-  } catch (error) {
+  } catch (_err) {
     return res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 };
