@@ -1,7 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import apiClient from '../lib/api-client';
+import { apiClient } from '../lib/api-client';
 import { queryKeys } from '../lib/query-keys';
-import type { CreateSongDto, UpdateSongDto, CreateSongPartDto, CreateSongLinkDto } from '@choir-sync/validation';
+import type {
+  CreateSongDto,
+  UpdateSongDto,
+  CreateSongPartDto,
+  CreateSongLinkDto,
+  UpdateSongPartDto,
+} from '@choir-workspace/shared-validation';
 
 export function useSongs() {
   return useQuery({
@@ -44,7 +50,7 @@ export function useUpdateSong() {
       const response = await apiClient.patch(`/songs/${id}`, data);
       return response.data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.songs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.songs.detail(variables.id) });
     },
@@ -54,12 +60,25 @@ export function useUpdateSong() {
 export function useAddSongPart() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: CreateSongPartDto[] }) => {
-      const response = await apiClient.put(`/songs/${id}/parts`, data);
+    mutationFn: async ({ songId, data }: { songId: string; data: CreateSongPartDto[] }) => {
+      const response = await apiClient.put(`/songs/${songId}/parts`, data);
       return response.data;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.songs.detail(variables.id) });
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.songs.detail(variables.songId) });
+    },
+  });
+}
+
+export function useUpdatePart() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ songId, part, data }: { songId: string; part: string; data: UpdateSongPartDto }) => {
+      const response = await apiClient.patch(`/songs/${songId}/parts/${part}`, data);
+      return response.data;
+    },
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.songs.detail(variables.songId) });
     },
   });
 }
@@ -67,12 +86,27 @@ export function useAddSongPart() {
 export function useAddSongLink() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: CreateSongLinkDto }) => {
-      const response = await apiClient.post(`/songs/${id}/links`, data);
+    mutationFn: async ({ songId, data }: { songId: string; data: CreateSongLinkDto }) => {
+      const response = await apiClient.post(`/songs/${songId}/links`, data);
       return response.data;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.songs.detail(variables.id) });
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.songs.detail(variables.songId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.songs.all });
+    },
+  });
+}
+
+export function useDeleteSongLink() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ songId, linkId }: { songId: string; linkId: string }) => {
+      const response = await apiClient.delete(`/songs/${songId}/links/${linkId}`);
+      return response.data;
+    },
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.songs.detail(variables.songId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.songs.all });
     },
   });
 }

@@ -32,8 +32,16 @@ This document summarizes the work completed across Milestones 0 through 5 of the
 - **React Query:** Built custom data-fetching hooks (`useSongs`, `useUpdateSong`, etc.) and centralized cache keys to keep the UI snappy and synchronized.
 - **End-to-End Proof:** Replaced the frontend scaffolding with a bare catalog page that successfully pulls real song data from the local API and renders it in Shadcn Cards, proving end-to-end connectivity.
 
+## 6. Frontend Features (Milestone 6)
+- **Routing & Auth State:** Implemented React Router with a global `AuthProvider` and a `RequireAuth` guard.
+- **Login Flow:** Built a functional login page using `react-hook-form` and the shared Zod schema.
+- **Song Catalog:** Created a rich catalog page (`/`) featuring client-side search, voice-part filtering, and sorting (by title, complexity, or date).
+- **Role-Aware UI:** 
+  - Integrated `AddSongDialog` restricted to Directors.
+  - Built a `SongDetailDialog` featuring a `PartNotesEditor` that allows Directors and appropriate Section Leaders to add/edit notes while keeping others in read-only mode.
+  - Built a `LinksEditor` for Directors to manage reference links.
+
 ---
 
 ### Pending Work
-- **Milestone 6 (Frontend Features):** Proper login flow, search/filter controls, and role-aware dialog forms.
-- **Milestone 7 (Deployment Readiness):** Finalizing Docker builds, environment variable audits, and preparing for Render/Vercel deployment.
+- **Milestone 7 (Deployment Readiness):** Finalizing Docker builds, environment variable audits, and preparing for Render deployment.
