@@ -126,7 +126,7 @@ choir-sync/                           # repo root — no apps/ folder
 │   │   │   └── ui/                   # shadcn-generated primitives (button, input, select, form, dialog, card, badge, ...)
 │   │   ├── lib/
 │   │   │   ├── utils.ts              # cn() helper — clsx + tailwind-merge
-│   │   │   ├── api-client.ts         # thin fetch wrapper against VITE_API_URL, attaches JWT
+│   │   │   ├── api-client.ts         # Axios instance against VITE_API_URL, attaches JWT
 │   │   │   └── query-keys.ts
 │   │   ├── hooks/
 │   │   │   └── use-songs.ts          # TanStack Query hooks: list/detail/create/update/delete
@@ -137,7 +137,6 @@ choir-sync/                           # repo root — no apps/ folder
 │   ├── index.html
 │   ├── components.json               # shadcn/ui config — framework: vite
 │   ├── project.json
-│   ├── tailwind.config.js
 │   ├── vite.config.ts
 │   └── tsconfig.json
 ├── libs/
@@ -162,7 +161,7 @@ choir-sync/                           # repo root — no apps/ folder
 ### 4.2 Technology Stack
 
 - **Monorepo Management:** Nx, flat root layout, pnpm workspaces
-- **Frontend:** **Vite** + **React 19**, **react-router** (tentative) for client-side routing, Tailwind CSS, **shadcn/ui** (Radix-based component primitives, copied into `components/ui`, not a pnpm dependency), **clsx** + `tailwind-merge` (combined into a `cn()` helper), **react-hook-form** + `@hookform/resolvers/zod` for forms, TanStack Query, Lucide Icons
+- **Frontend:** **Vite** + **React 19**, **react-router** (tentative) for client-side routing, Tailwind CSS v4, **shadcn/ui** (Radix-based component primitives, copied into `components/ui`, not a pnpm dependency), **clsx** + `tailwind-merge` (combined into a `cn()` helper), **react-hook-form** + `@hookform/resolvers/zod` for forms, TanStack Query, Lucide Icons
 - **Backend:** Node.js, **Express** (plain — no NestJS), Prisma ORM
 - **Auth:** JWT (stateless — no session table needed), bcrypt for password hashing, held client-side per §4.4
 - **Shared Libraries:** Zod for schema validation and TypeScript contracts shared client/server
