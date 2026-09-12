@@ -51,3 +51,4 @@ export type UpdateSongDto = z.infer<typeof UpdateSongSchema>;
 export type CreateSongPartDto = z.infer<typeof CreateSongPartSchema>;
 export type CreateSongLinkDto = z.infer<typeof CreateSongLinkSchema>;
 export type LoginDto = z.infer<typeof LoginSchema>;
+export type UpdateSongPartDto = z.infer<typeof UpdateSongPartSchema>;
