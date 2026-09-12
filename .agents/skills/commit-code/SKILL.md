@@ -70,5 +70,5 @@ Milestone: EXECUTION.md #0 — Workspace Scaffold
 ## Common pitfalls
 - Committing mid-milestone "as a checkpoint" before verification has actually run — a commit is a claim that this state works, not a save button.
 - One giant commit spanning `feat` + `chore` + `docs` with a vague message like "milestone 4 done" — makes `git bisect` and review useless later.
-- Committing `apps/choir-api/.env.local` because it wasn't caught by `.gitignore` yet — always worth a first-commit check that `.env*` (except `.env.example`) is actually ignored.
+- Committing `choir-api/.env.local` because it wasn't caught by `.gitignore` yet — always worth a first-commit check that `.env*` (except `.env.example`) is actually ignored.
 - Skipping the `Milestone:` footer, which is what lets you or the agent later answer "which commit was EXECUTION.md #4?" without guessing.

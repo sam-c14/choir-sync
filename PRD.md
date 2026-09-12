@@ -1,23 +1,22 @@
 # Product Requirements Document (PRD): Choir Part Tracker
 
-**Version:** 2.0.0
-**Target Architecture:** Nx Integrated Monorepo (Express backend only)
+**Version:** 3.0.0
+**Target Architecture:** Nx Monorepo — flat root layout (Express backend only)
 **Hosting Model:** 100% Free Tier (Vercel + Render + Supabase)
 
 ---
 
-## Changelog from v1.0.0
+## Changelog from v2.0.0
 
-- Backend is **Express only** — dropped the NestJS/Express hybrid file layout that mixed two conventions.
-- Voice parts scoped to **Soprano, Alto, Tenor** for now (dropped Bass, Baritone, Solo — trivial to re-add later since it's just an enum).
-- Dropped `sheetUrl` / `audioUrl` and any file storage requirement. Replaced with a **Links** table for external references (Spotify, YouTube, Audiomack, etc.) — no storage bucket needed.
-- Added a `complexity` field on `Song`, settable at creation and editable later, used for sorting.
-- Sorting is now explicit: **Title (A–Z)**, **Recently Added**, **Complexity**. ("Song title" and "alphabetical" from the original ask collapse into the same sort — see note below.)
-- Added a real **auth/authorization model** (User, roles, route guards) — v1.0.0 defined three permission tiers but had no way to enforce them. This was a gap, not a new requirement, so it's included here as a fix rather than scope creep.
-- Removed the unsupported "real-time updates" claim (no WebSocket/Realtime layer was actually specified) — rehearsal editing is still inline, just over plain REST.
-- Removed full-text-search-over-lyrics requirement — no lyrics field exists, and it wasn't asked for in this pass.
+- **Project layout is flat at repo root**, not under `apps/`. Nx generated `choir-api`, `choir-client`, and `libs/shared/{types,validation}` directly at the workspace root alongside `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `PRD.md`, and `EXECUTION.md`. Every path in this document is updated to match — there is no `apps/` prefix anywhere anymore.
+- **Package manager is pnpm**, not npm. `pnpm-workspace.yaml` + `pnpm-lock.yaml` at root; all install/build commands updated accordingly.
+- **Frontend is Vite + React 19**, not Next.js. This is the biggest change and it ripples through the whole frontend section: no App Router, no Server Components, no `.next` build output, no `NEXT_PUBLIC_*` env var convention. The client is a plain SPA served as static files.
+- **Client-side routing: react-router** (tentative — this was "leaning towards" rather than fully decided as of this version; confirm before Milestone 6, since swapping it later means rewriting every route definition and `useNavigate`/`useParams` call).
+- Since there's no Next.js server layer, there's also no server-side auth boundary — added a short **§4.4** on how the JWT is held and enforced entirely client-side now.
+- **Vercel deployment settings updated**: no more `Framework Preset: Next.js` / `.next` output — now a Vite static build with `dist` output and a `VITE_API_URL` env var instead of `NEXT_PUBLIC_API_URL`.
+- **Dockerfile updated for pnpm** and the flat root layout — no more `apps/choir-api` paths, no more `npm ci`.
 
-> **Note on sorting:** "song title" and "alphabetical" are the same operation (`ORDER BY title ASC`), so they're implemented as a single sort option rather than two. If you actually meant something different by "song title" (e.g. insertion order / no sort), let me know and I'll split it back out.
+> **Open item carried forward:** react-router vs TanStack Router isn't fully locked in. Everything below assumes react-router; if that changes before Milestone 6, the routing subsection and the `choir-client/src` tree need another pass, but nothing else in this document is affected by that specific choice.
 
 ---
 
@@ -25,19 +24,19 @@
 
 The **Choir Part Tracker** is a lightweight platform for choir directors, section leaders, and choristers to maintain a searchable, sortable repertoire catalog. Each song tracks basic metadata, a complexity rating, external reference links (recordings on Spotify/YouTube/Audiomack), and per-voice-part notes for Soprano, Alto, and Tenor — editable now, and persisted for reference in future rehearsals.
 
-The codebase remains an **Nx integrated monorepo** so the Zod validation schemas and TypeScript types are shared between the Next.js client and the Express API, while running entirely on free-tier infrastructure.
+The codebase is an **Nx monorepo** (flat root layout) so the Zod validation schemas and TypeScript types are shared between the **Vite + React 19** client and the Express API, while running entirely on free-tier infrastructure.
 
 ---
 
 ## 2. User Personas & Permissions
 
-| Role                 | Permissions & Core Workflows                                                                                                                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Director / Admin** | Full CRUD on songs, voice parts, and links. Sets/edits complexity. Only role that can create or delete songs.                                                                                                |
-| **Section Leader**   | Can edit voice-part notes **only for the voice part they lead** (e.g. an Alto section leader can update Alto notes on any song, but not Soprano or Tenor). Cannot create/delete songs or edit song metadata. |
-| **Chorister**        | Read-only: browse, search, filter, and sort the catalog; view all voice-part notes and links.                                                                                                                |
+| Role | Permissions & Core Workflows |
+|---|---|
+| **Director / Admin** | Full CRUD on songs, voice parts, and links. Sets/edits complexity. Only role that can create or delete songs. |
+| **Section Leader** | Can edit voice-part notes **only for the voice part they lead** (e.g. an Alto section leader can update Alto notes on any song, but not Soprano or Tenor). Cannot create/delete songs or edit song metadata. |
+| **Chorister** | Read-only: browse, search, filter, and sort the catalog; view all voice-part notes and links. |
 
-Enforcement of this table is the job of the auth layer in §5 — this was previously just a table with no backing implementation.
+Enforcement of this table happens in the API's auth layer (§5, §7) and is mirrored in the client's UI state (§4.4) — the client-side checks are for UX only (hiding buttons that would 403), never the actual security boundary.
 
 ---
 
@@ -46,7 +45,6 @@ Enforcement of this table is the job of the auth layer in §5 — this was previ
 ### 3.1 Repertoire Management (Song Catalog)
 
 **Song fields:**
-
 - `title` (Required, String) — the only hard requirement to create a song
 - `composer` / `arranger` (Optional, String)
 - `complexity` (Required, Enum: `EASY`, `MODERATE`, `CHALLENGING`, default `MODERATE`) — settable at creation, editable anytime
@@ -55,7 +53,6 @@ Enforcement of this table is the job of the auth layer in §5 — this was previ
 - `links` — zero or more external reference links (see 3.2)
 
 **Voice Part Notes:**
-
 - Each song has up to one record per voice part: `SOPRANO`, `ALTO`, `TENOR`.
 - Each part record holds free-text `notes` (harmonic cues, timing, whatever the section needs) and is independently inputtable and updatable.
 - Notes persist indefinitely as the reference copy for future rehearsals — there's no "reset" or expiry; a Director or the relevant Section Leader can update them at any time.
@@ -73,72 +70,76 @@ Enforcement of this table is the job of the auth layer in §5 — this was previ
   - Recently Added (newest first, based on creation time)
   - Complexity (Easy → Challenging, or reverse)
 - **Filter by:** voice part presence, complexity, status, tags (multi-select).
-- **Search:** plain text match on `title` and `composer`. (A proper full-text index isn't needed yet at this scale — a simple `ILIKE`/`contains` query is fine for now; flagging that this should be revisited with a Postgres `tsvector` + GIN index once the catalog grows past a few hundred songs.)
+- **Search:** plain text match on `title` and `composer`. (A proper full-text index isn't needed yet at this scale — a simple `ILIKE`/`contains` query is fine for now; revisit with a Postgres `tsvector` + GIN index once the catalog grows past a few hundred songs.)
 
 ### 3.4 Rehearsal Workspace
 
 - Inline editing for voice-part notes so a Section Leader can update their part between rehearsal songs without leaving the catalog view.
-- Mobile-responsive for phone/tablet use on a music stand. (This is a plain REST PATCH under the hood — no real-time sync between multiple open devices in this version.)
+- Mobile-responsive for phone/tablet use on a music stand. Plain REST PATCH under the hood — no real-time sync between multiple open devices in this version.
 
 ---
 
 ## 4. Technical Architecture
 
-### 4.1 Monorepo Topology (Nx)
+### 4.1 Monorepo Topology (Nx — flat root layout)
 
 ```
-choir-workspace/
-├── apps/
-│   ├── choir-client/                 # Next.js (App Router, Tailwind CSS, shadcn/ui, TanStack Query)
-│   │   ├── app/
-│   │   │   ├── (dashboard)/
-│   │   │   │   ├── songs/
-│   │   │   │   │   ├── [id]/page.tsx
-│   │   │   │   │   ├── page.tsx
-│   │   │   │   │   └── _components/
-│   │   │   │   │       ├── song-list.tsx
-│   │   │   │   │       ├── song-card.tsx
-│   │   │   │   │       ├── song-filters.tsx        # sort dropdown, S/A/T chips, complexity/status filters
-│   │   │   │   │       ├── song-form.tsx            # react-hook-form + zodResolver(CreateSongSchema)
-│   │   │   │   │       ├── voice-part-notes-editor.tsx
-│   │   │   │   │       └── song-links-editor.tsx
-│   │   │   │   ├── login/page.tsx
-│   │   │   │   └── layout.tsx
-│   │   │   ├── layout.tsx
-│   │   │   ├── globals.css
-│   │   │   └── page.tsx
+choir-sync/                           # repo root — no apps/ folder
+├── choir-api/                        # Express REST Backend
+│   ├── src/
+│   │   ├── modules/
+│   │   │   ├── auth/
+│   │   │   │   ├── auth.routes.ts
+│   │   │   │   ├── auth.controller.ts
+│   │   │   │   └── auth.service.ts
+│   │   │   └── songs/
+│   │   │       ├── songs.routes.ts
+│   │   │       ├── songs.controller.ts
+│   │   │       └── songs.service.ts
+│   │   ├── middleware/
+│   │   │   ├── requireAuth.ts
+│   │   │   └── requireRole.ts
+│   │   ├── prisma/
+│   │   │   └── schema.prisma
+│   │   └── main.ts
+│   ├── Dockerfile
+│   ├── project.json
+│   └── tsconfig.json
+├── choir-client/                     # Vite + React 19 SPA
+│   ├── src/
+│   │   ├── main.tsx                  # ReactDOM root + <RouterProvider>/<BrowserRouter>
+│   │   ├── App.tsx                   # top-level layout, route outlet
+│   │   ├── routes.tsx                # react-router route definitions
+│   │   ├── pages/
+│   │   │   ├── login-page.tsx
+│   │   │   └── songs/
+│   │   │       ├── songs-page.tsx           # catalog list view
+│   │   │       ├── song-detail-page.tsx
+│   │   │       └── _components/
+│   │   │           ├── song-list.tsx
+│   │   │           ├── song-card.tsx
+│   │   │           ├── song-filters.tsx      # sort dropdown, S/A/T chips, complexity/status filters
+│   │   │           ├── song-form.tsx          # react-hook-form + zodResolver(CreateSongSchema)
+│   │   │           ├── voice-part-notes-editor.tsx
+│   │   │           └── song-links-editor.tsx
 │   │   ├── components/
 │   │   │   └── ui/                   # shadcn-generated primitives (button, input, select, form, dialog, card, badge, ...)
 │   │   ├── lib/
 │   │   │   ├── utils.ts              # cn() helper — clsx + tailwind-merge
-│   │   │   ├── api-client.ts         # thin fetch wrapper against NEXT_PUBLIC_API_URL
+│   │   │   ├── api-client.ts         # thin fetch wrapper against VITE_API_URL, attaches JWT
 │   │   │   └── query-keys.ts
 │   │   ├── hooks/
 │   │   │   └── use-songs.ts          # TanStack Query hooks: list/detail/create/update/delete
-│   │   ├── components.json           # shadcn/ui config (aliases, style, base color)
-│   │   ├── project.json
-│   │   ├── tailwind.config.js
-│   │   └── tsconfig.json
-│   └── choir-api/                    # Express REST Backend (single convention, no NestJS)
-│       ├── src/
-│       │   ├── modules/
-│       │   │   ├── auth/
-│       │   │   │   ├── auth.routes.ts
-│       │   │   │   ├── auth.controller.ts
-│       │   │   │   └── auth.service.ts
-│       │   │   └── songs/
-│       │   │       ├── songs.routes.ts
-│       │   │       ├── songs.controller.ts
-│       │   │       └── songs.service.ts
-│       │   ├── middleware/
-│       │   │   ├── requireAuth.ts
-│       │   │   └── requireRole.ts
-│       │   ├── prisma/
-│       │   │   └── schema.prisma
-│       │   └── main.ts
-│       ├── Dockerfile
-│       ├── project.json
-│       └── tsconfig.json
+│   │   ├── auth/
+│   │   │   └── auth-context.tsx      # holds JWT + current user/role, see §4.4
+│   │   └── index.css                 # Tailwind entry
+│   ├── public/
+│   ├── index.html
+│   ├── components.json               # shadcn/ui config — framework: vite
+│   ├── project.json
+│   ├── tailwind.config.js
+│   ├── vite.config.ts
+│   └── tsconfig.json
 ├── libs/
 │   └── shared/
 │       ├── types/
@@ -149,31 +150,34 @@ choir-workspace/
 │           └── project.json
 ├── nx.json
 ├── package.json
-└── tsconfig.base.json
+├── pnpm-workspace.yaml
+├── pnpm-lock.yaml
+├── tsconfig.base.json
+├── PRD.md
+└── EXECUTION.md
 ```
+
+> **Verify before Milestone 4/5:** confirm whether `choir-api` and `choir-client` each have their own `package.json` (typical for a pnpm-workspace-based Nx layout) or whether dependencies live solely in the root `package.json`. This changes exactly what the Dockerfile in §8.2 needs to `COPY` for a correct pnpm install, and isn't fully confirmed yet.
 
 ### 4.2 Technology Stack
 
-- **Monorepo Management:** Nx (Integrated TypeScript Workspace)
-- **Frontend:** Next.js 14+ (App Router), React, Tailwind CSS, **shadcn/ui** (Radix-based component primitives, copied into `components/ui`, not an npm dependency), **clsx** + `tailwind-merge` (combined into a `cn()` helper), **react-hook-form** + `@hookform/resolvers/zod` for forms, TanStack Query, Lucide Icons
+- **Monorepo Management:** Nx, flat root layout, pnpm workspaces
+- **Frontend:** **Vite** + **React 19**, **react-router** (tentative) for client-side routing, Tailwind CSS, **shadcn/ui** (Radix-based component primitives, copied into `components/ui`, not a pnpm dependency), **clsx** + `tailwind-merge` (combined into a `cn()` helper), **react-hook-form** + `@hookform/resolvers/zod` for forms, TanStack Query, Lucide Icons
 - **Backend:** Node.js, **Express** (plain — no NestJS), Prisma ORM
-- **Auth:** JWT (stateless — no session table needed), bcrypt for password hashing
+- **Auth:** JWT (stateless — no session table needed), bcrypt for password hashing, held client-side per §4.4
 - **Shared Libraries:** Zod for schema validation and TypeScript contracts shared client/server
 - **Database:** Managed PostgreSQL via **Supabase**
 
 ### 4.3 Frontend Component & Form Conventions
 
-**shadcn/ui setup** (run once, from `apps/choir-client`):
-
+**shadcn/ui setup for Vite** (run once, from `choir-client/`):
 ```
 npx shadcn@latest init
 npx shadcn@latest add button input textarea select form dialog card badge dropdown-menu sonner
 ```
+During `init`, choose the Vite framework option — this affects the `components.json` `framework` field and how it wires path aliases. Unlike the Next.js setup, `@/*` path aliases need to be configured in **both** `tsconfig.json` (`compilerOptions.paths`) and `vite.config.ts` (`resolve.alias`), since Vite doesn't read `tsconfig.json` paths at build time on its own.
 
-This generates `components.json` and drops the primitives straight into `components/ui/` as editable source — there's no `shadcn` runtime package to install, which keeps the bundle lean and every component fully customizable.
-
-**`cn()` helper** (`lib/utils.ts`) — the standard shadcn pattern, combining `clsx` for conditional class logic with `tailwind-merge` to resolve conflicting Tailwind classes:
-
+**`cn()` helper** (`src/lib/utils.ts`) — unchanged from before, standard shadcn pattern:
 ```typescript
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -183,28 +187,28 @@ export function cn(...inputs: ClassValue[]) {
 }
 ```
 
-**Forms** are built with `react-hook-form`, wired to the **same Zod schemas the backend validates against** (`CreateSongSchema`, `CreateSongPartSchema`, `LoginSchema` from `libs/shared/validation`) via `@hookform/resolvers/zod`, and rendered with shadcn's `<Form>` primitives:
-
+**Forms** are built with `react-hook-form`, wired to the **same Zod schemas the backend validates against** (`CreateSongSchema`, `CreateSongPartSchema`, `LoginSchema` from `libs/shared/validation`) via `@hookform/resolvers/zod`, rendered with shadcn's `<Form>` primitives — this part is unaffected by the Next.js → Vite switch:
 ```typescript
 const form = useForm<CreateSongDto>({
   resolver: zodResolver(CreateSongSchema),
-  defaultValues: {
-    title: "",
-    complexity: "MODERATE",
-    tags: [],
-    parts: [],
-    links: [],
-  },
+  defaultValues: { title: "", complexity: "MODERATE", tags: [], parts: [], links: [] },
 });
 ```
 
-This means client-side validation errors match the server's validation exactly — no drift between what the form allows and what the API accepts. Applies to the song create/edit form, the per-part notes editor, and the login form.
+### 4.4 Client-Side Auth & Routing
+
+There's no server layer on the frontend anymore, so the whole auth flow lives in the browser:
+
+- On login, the API's JWT is stored in `localStorage` and held in an `AuthContext` (`src/auth/auth-context.tsx`) alongside the decoded user's `role` and `leadsVoicePart`.
+- `api-client.ts` attaches the token as an `Authorization: Bearer <token>` header on every request; a `401` response clears the stored token and redirects to `/login`.
+- react-router routes are wrapped in a `<RequireAuth>` element that redirects unauthenticated users to `/login`.
+- UI elements are conditionally rendered/disabled based on the role in `AuthContext` (e.g. a Chorister never sees an "Add Song" button; a Section Leader only sees an editable state on their own voice part's notes) — **this is a UX convenience only**. The actual permission boundary is enforced server-side per §7's access column, and the UI must never be the only thing standing between a Chorister and a write endpoint.
 
 ---
 
 ## 5. Database Schema (Prisma on Supabase)
 
-`apps/choir-api/src/prisma/schema.prisma`:
+`choir-api/src/prisma/schema.prisma`:
 
 ```prisma
 datasource db {
@@ -306,24 +310,15 @@ model SongLink {
 
 ## 6. Shared Validation & Data Contracts
 
-`libs/shared/validation/src/index.ts`:
+`libs/shared/validation/src/index.ts` — unchanged from v2.0.0, this layer is independent of the frontend framework choice:
 
 ```typescript
 import { z } from "zod";
 
 export const VoicePartTypeEnum = z.enum(["SOPRANO", "ALTO", "TENOR"]);
-export const SongStatusEnum = z.enum([
-  "REHEARSAL",
-  "ACTIVE_SUNDAY",
-  "ARCHIVED",
-]);
+export const SongStatusEnum = z.enum(["REHEARSAL", "ACTIVE_SUNDAY", "ARCHIVED"]);
 export const SongComplexityEnum = z.enum(["EASY", "MODERATE", "CHALLENGING"]);
-export const LinkPlatformEnum = z.enum([
-  "SPOTIFY",
-  "YOUTUBE",
-  "AUDIOMACK",
-  "OTHER",
-]);
+export const LinkPlatformEnum = z.enum(["SPOTIFY", "YOUTUBE", "AUDIOMACK", "OTHER"]);
 export const UserRoleEnum = z.enum(["DIRECTOR", "SECTION_LEADER", "CHORISTER"]);
 
 export const CreateSongLinkSchema = z.object({
@@ -347,10 +342,7 @@ export const CreateSongSchema = z.object({
 });
 
 export const UpdateSongPartSchema = CreateSongPartSchema.partial();
-export const UpdateSongSchema = CreateSongSchema.partial().omit({
-  parts: true,
-  links: true,
-});
+export const UpdateSongSchema = CreateSongSchema.partial().omit({ parts: true, links: true });
 
 export const LoginSchema = z.object({
   email: z.string().email(),
@@ -368,18 +360,20 @@ export type LoginDto = z.infer<typeof LoginSchema>;
 
 ## 7. REST API Endpoints
 
-| Method   | Route                             | Description                          | Access                                                             | Body / Query                                                                                  |
-| -------- | --------------------------------- | ------------------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| `POST`   | `/api/v1/auth/login`              | Log in, returns a JWT                | Public                                                             | `LoginDto`                                                                                    |
-| `GET`    | `/api/v1/songs`                   | List songs — search, filter, sort    | Any authenticated user                                             | `?search=&voicePart=&complexity=&status=&sortBy=title\|createdAt\|complexity&order=asc\|desc` |
-| `POST`   | `/api/v1/songs`                   | Create a song with parts & links     | Director only                                                      | `CreateSongDto`                                                                               |
-| `GET`    | `/api/v1/songs/:id`               | Fetch full song detail               | Any authenticated user                                             | None                                                                                          |
-| `PATCH`  | `/api/v1/songs/:id`               | Update song metadata / complexity    | Director only                                                      | `UpdateSongDto`                                                                               |
-| `DELETE` | `/api/v1/songs/:id`               | Delete song (cascades parts & links) | Director only                                                      | None                                                                                          |
-| `PUT`    | `/api/v1/songs/:id/parts`         | Bulk upsert voice-part notes         | Director only                                                      | `CreateSongPartDto[]`                                                                         |
-| `PATCH`  | `/api/v1/songs/:id/parts/:part`   | Update a single part's notes         | Director, or Section Leader whose `leadsVoicePart` matches `:part` | `UpdateSongPartDto`                                                                           |
-| `POST`   | `/api/v1/songs/:id/links`         | Add a reference link                 | Director only                                                      | `CreateSongLinkDto`                                                                           |
-| `DELETE` | `/api/v1/songs/:id/links/:linkId` | Remove a reference link              | Director only                                                      | None                                                                                          |
+Unchanged from v2.0.0 — the frontend framework swap has no effect on the API surface.
+
+| Method | Route | Description | Access | Body / Query |
+|---|---|---|---|---|
+| `POST` | `/api/v1/auth/login` | Log in, returns a JWT | Public | `LoginDto` |
+| `GET` | `/api/v1/songs` | List songs — search, filter, sort | Any authenticated user | `?search=&voicePart=&complexity=&status=&sortBy=title\|createdAt\|complexity&order=asc\|desc` |
+| `POST` | `/api/v1/songs` | Create a song with parts & links | Director only | `CreateSongDto` |
+| `GET` | `/api/v1/songs/:id` | Fetch full song detail | Any authenticated user | None |
+| `PATCH` | `/api/v1/songs/:id` | Update song metadata / complexity | Director only | `UpdateSongDto` |
+| `DELETE` | `/api/v1/songs/:id` | Delete song (cascades parts & links) | Director only | None |
+| `PUT` | `/api/v1/songs/:id/parts` | Bulk upsert voice-part notes | Director only | `CreateSongPartDto[]` |
+| `PATCH` | `/api/v1/songs/:id/parts/:part` | Update a single part's notes | Director, or Section Leader whose `leadsVoicePart` matches `:part` | `UpdateSongPartDto` |
+| `POST` | `/api/v1/songs/:id/links` | Add a reference link | Director only | `CreateSongLinkDto` |
+| `DELETE` | `/api/v1/songs/:id/links/:linkId` | Remove a reference link | Director only | None |
 
 Default sort (no query params) is `sortBy=createdAt&order=desc` — most recently added first.
 
@@ -390,7 +384,7 @@ Default sort (no query params) is `sortBy=createdAt&order=desc` — most recentl
 ```
    ┌─────────────────────────────────────────────────────────────┐
    │                    Vercel (Free Tier)                        │
-   │            Frontend Client (Next.js App Router)              │
+   │              Frontend Client (Vite + React 19 SPA)           │
    │               https://choir-client.vercel.app                │
    └──────────────────────────────┬───────────────────────────────┘
                                    │ HTTPS Requests
@@ -408,7 +402,7 @@ Default sort (no query params) is `sortBy=createdAt&order=desc` — most recentl
    └─────────────────────────────────────────────────────────────┘
 ```
 
-> **Reminder from the last review:** Render's free tier spins down after 15 minutes idle (~40s cold start) and Supabase free projects pause after extended inactivity. Fine for now given the reduced scope, but worth revisiting if this becomes the choir's daily-driver tool.
+> **Reminder from earlier reviews:** Render's free tier spins down after 15 minutes idle (~40s cold start) and Supabase free projects pause after extended inactivity. Fine for now, worth revisiting if this becomes the choir's daily-driver tool.
 
 ### 8.1 Database: Supabase Setup
 
@@ -417,34 +411,37 @@ Default sort (no query params) is `sortBy=createdAt&order=desc` — most recentl
    - Copy the **Transaction Connection String** (port `6543`, pooled) → `DATABASE_URL`.
    - Copy the **Direct Connection String** (port `5432`) → `DIRECT_URL` (used for Prisma migrations).
 3. Append `?pgbouncer=true&connection_limit=1` to `DATABASE_URL`.
+4. Local dev: store both in a root-level `.env` (gitignored) — Nx auto-loads a workspace-root `.env` for all tasks, so both the Prisma CLI and `nx serve choir-api` pick it up without extra config.
 
 ### 8.2 Backend: Render Docker Setup
 
-`apps/choir-api/Dockerfile`:
+`choir-api/Dockerfile`:
 
 ```dockerfile
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-COPY package*.json ./
+RUN npm install -g pnpm
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY nx.json tsconfig.base.json ./
-RUN npm ci
-
-COPY apps/choir-api ./apps/choir-api
+COPY choir-api ./choir-api
 COPY libs ./libs
 
-RUN npx prisma generate --schema=apps/choir-api/src/prisma/schema.prisma
+RUN pnpm install --frozen-lockfile
+
+RUN npx prisma generate --schema=choir-api/src/prisma/schema.prisma
 RUN npx nx build choir-api --configuration=production
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install -g pnpm
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --prod
 
-COPY --from=builder /app/dist/apps/choir-api ./dist
-COPY --from=builder /app/apps/choir-api/src/prisma ./prisma
+COPY --from=builder /app/dist/choir-api ./dist
+COPY --from=builder /app/choir-api/src/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
@@ -452,11 +449,12 @@ EXPOSE 3333
 CMD npx prisma migrate deploy --schema=./prisma/schema.prisma && node dist/main.js
 ```
 
-**Render Web Service Settings:**
+> This assumes dependencies resolve from the root `package.json`/`pnpm-lock.yaml` alone. If `choir-api` turns out to have its own `package.json` (see the note in §4.1), the `COPY` list and the `pnpm install --frozen-lockfile --prod` step in the runner stage need to also include that file — confirm this before running `docker-build-test` for real.
 
+**Render Web Service Settings:**
 - **Runtime:** Docker
-- **Build Context:** `.` (monorepo root, needed for Nx shared libs)
-- **Dockerfile Path:** `apps/choir-api/Dockerfile`
+- **Build Context:** `.` (repo root, needed for Nx shared libs)
+- **Dockerfile Path:** `choir-api/Dockerfile`
 - **Instance Type:** Free
 - **Environment Variables:**
   - `DATABASE_URL`, `DIRECT_URL` — from Supabase
@@ -467,20 +465,22 @@ CMD npx prisma migrate deploy --schema=./prisma/schema.prisma && node dist/main.
 ### 8.3 Frontend: Vercel Setup
 
 1. Import the GitHub repo into Vercel.
-2. **Framework Preset:** Next.js · **Root Directory:** `apps/choir-client` · **Build Command:** `npx nx build choir-client --configuration=production` · **Output Directory:** `.next`
-3. **Environment Variables:** `NEXT_PUBLIC_API_URL` → `https://choir-api.onrender.com/api/v1`
+2. **Framework Preset:** Vite (or "Other" if Vercel doesn't auto-detect it inside an Nx monorepo) · **Root Directory:** `choir-client` · **Build Command:** `npx nx build choir-client --configuration=production` · **Output Directory:** `dist` (Vite's default — **not** `.next`).
+3. **Environment Variables:** `VITE_API_URL` → `https://choir-api.onrender.com/api/v1`. Note the `VITE_` prefix is required — Vite only exposes env vars to client code if they're prefixed this way, unlike Next.js's `NEXT_PUBLIC_` convention.
 
 ---
 
 ## 9. Development & Agent Execution Checklist
 
-1. [ ] Initialize Nx workspace: `npx create-nx-workspace@latest choir-workspace --preset=apps`
-2. [ ] Generate `apps/choir-api` (Express) and `apps/choir-client` (Next.js).
-3. [ ] Generate `libs/shared/types` and `libs/shared/validation`.
-4. [ ] Install backend dependencies: `@prisma/client`, `prisma`, `zod`, `@tanstack/react-query`, `bcrypt`, `jsonwebtoken`.
-5. [ ] Install frontend dependencies: `lucide-react`, `clsx`, `tailwind-merge`, `react-hook-form`, `@hookform/resolvers`; run `npx shadcn@latest init` then add the components listed in §4.3.
-6. [ ] Configure `schema.prisma` with the models in §5 and run the first migration.
-7. [ ] Implement `requireAuth` / `requireRole` middleware and the Section-Leader-scoped-to-their-part check on `PATCH /songs/:id/parts/:part`.
-8. [ ] Implement song, part, and link CRUD services/controllers using the shared Zod DTOs.
-9. [ ] Build the Next.js catalog view with shadcn primitives: search bar, S/A/T filter chips, sort dropdown (Title / Recently Added / Complexity), react-hook-form-driven add/edit song dialog (incl. complexity field), inline part-notes editor, and a small links section per song (platform icon + URL).
-10. [ ] Seed one Director user manually (or via a one-off script) to bootstrap login before building a signup flow.
+1. [x] Initialize Nx workspace (flat root layout, pnpm).
+2. [x] Generate `choir-api` (Express) and `choir-client` (Vite + React 19).
+3. [x] Generate `libs/shared/types` and `libs/shared/validation`.
+4. [ ] Set up Prisma + first migration against a dev Supabase project (in progress — Milestone 2).
+5. [ ] Install remaining backend dependencies: `zod`, `@tanstack/react-query` (client), `bcrypt`, `jsonwebtoken`.
+6. [ ] Install frontend dependencies: `react-router` (or confirmed alternative), `lucide-react`, `clsx`, `tailwind-merge`, `react-hook-form`, `@hookform/resolvers`; run `npx shadcn@latest init` (Vite framework option) then add the components listed in §4.3.
+7. [ ] Configure `vite.config.ts` and `tsconfig.json` path aliases (`@/*`) for shadcn.
+8. [ ] Implement `requireAuth` / `requireRole` middleware and the Section-Leader-scoped-to-their-part check on `PATCH /songs/:id/parts/:part`.
+9. [ ] Implement song, part, and link CRUD services/controllers using the shared Zod DTOs.
+10. [ ] Implement `AuthContext`, `RequireAuth` route wrapper, and the `api-client.ts` JWT interceptor per §4.4.
+11. [ ] Build the catalog view with shadcn primitives: search bar, S/A/T filter chips, sort dropdown (Title / Recently Added / Complexity), react-hook-form-driven add/edit song dialog (incl. complexity field), inline part-notes editor, and a small links section per song (platform icon + URL).
+12. [ ] Seed one Director user manually (or via a one-off script) to bootstrap login before building a signup flow.

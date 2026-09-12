@@ -11,7 +11,7 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 **Goal:** Nx workspace exists with both apps and both shared libs generated and wired together.
 **Do:**
 - `npx create-nx-workspace@latest choir-workspace --preset=apps`
-- Generate `apps/choir-api` (Express) and `apps/choir-client` (Next.js).
+- Generate `choir-api` (Express) and `choir-client` (Next.js).
 - Generate `libs/shared/types` and `libs/shared/validation`.
 **Verify with:** `nx-workspace-verify`
 **Done when:** `nx show projects` lists all four projects; a trivial import from `libs/shared/validation` works in both apps.

@@ -7,7 +7,7 @@ description: Add or extend a shadcn/ui component without duplicating existing pr
 Any time the frontend needs a new UI primitive (button, dialog, select, etc.) or a variant of one that already exists.
 
 ## Procedure
-1. Check `apps/choir-client/components/ui/` first. If the component already exists (e.g. `button.tsx`), extend its variants in place rather than re-adding it.
+1. Check `choir-client/components/ui/` first. If the component already exists (e.g. `button.tsx`), extend its variants in place rather than re-adding it.
 2. If it genuinely doesn't exist, add it from the project root of the client app: `npx shadcn@latest add <component>`.
 3. Confirm `components.json` still has the same `style` and `baseColor` as before the add — `shadcn add` shouldn't touch it, but verify rather than assume, especially if this is the first add after a version bump.
 4. Wire any conditional styling through the existing `cn()` helper in `lib/utils.ts` (`clsx` + `tailwind-merge`) — don't hand-roll a second version of that logic in the new component.

@@ -1,0 +1,93 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum VoicePartType {
+  SOPRANO
+  ALTO
+  TENOR
+}
+
+enum SongStatus {
+  REHEARSAL
+  ACTIVE_SUNDAY
+  ARCHIVED
+}
+
+enum SongComplexity {
+  EASY
+  MODERATE
+  CHALLENGING
+}
+
+enum LinkPlatform {
+  SPOTIFY
+  YOUTUBE
+  AUDIOMACK
+  OTHER
+}
+
+enum UserRole {
+  DIRECTOR
+  SECTION_LEADER
+  CHORISTER
+}
+
+model User {
+  id             String         @id @default(uuid())
+  email          String         @unique
+  passwordHash   String
+  role           UserRole       @default(CHORISTER)
+  // Only meaningful when role = SECTION_LEADER; which part they're allowed to edit
+  leadsVoicePart VoicePartType?
+  createdAt      DateTime       @default(now())
+
+  @@index([role])
+}
+
+model Song {
+  id         String         @id @default(uuid())
+  title      String
+  composer   String?
+  complexity SongComplexity @default(MODERATE)
+  tags       String[]       @default([])
+  status     SongStatus     @default(ACTIVE_SUNDAY)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  parts      SongPart[]
+  links      SongLink[]
+
+  @@index([title])
+  @@index([status])
+  @@index([complexity])
+  @@index([tags], type: Gin)
+}
+
+model SongPart {
+  id        String        @id @default(uuid())
+  songId    String
+  song      Song          @relation(fields: [songId], references: [id], onDelete: Cascade)
+  voicePart VoicePartType
+  notes     String?
+  updatedAt DateTime      @updatedAt
+
+  @@unique([songId, voicePart])
+  @@index([voicePart])
+}
+
+model SongLink {
+  id        String       @id @default(uuid())
+  songId    String
+  song      Song         @relation(fields: [songId], references: [id], onDelete: Cascade)
+  platform  LinkPlatform
+  url       String
+  createdAt DateTime     @default(now())
+
+  @@index([songId])
+}

@@ -13,7 +13,7 @@ Only when a dev database's migration history is broken beyond a normal `migrate 
 
 ## Procedure
 1. Confirm the guardrails above are satisfied.
-2. Run the reset: `npx prisma migrate reset --schema=apps/choir-api/src/prisma/schema.prisma`. This drops the dev database, recreates it, reapplies every migration in order, and runs the seed script if one is configured.
+2. Run the reset: `npx prisma migrate reset --schema=choir-api/src/prisma/schema.prisma`. This drops the dev database, recreates it, reapplies every migration in order, and runs the seed script if one is configured.
 3. Re-seed the one Director user (per PRD §9, step 10) so login isn't broken afterward.
 4. Report exactly what was dropped, what was recreated, and confirm the seed ran.
 

@@ -7,9 +7,9 @@ description: Catch misconfigured or missing environment variables before a miles
 Before marking any deployment-related milestone complete, and any time an env var is added or changed.
 
 ## Procedure
-1. Confirm `apps/choir-api/.env.example` lists exactly the variables the code reads — no more, no less:
+1. Confirm `choir-api/.env.example` lists exactly the variables the code reads — no more, no less:
    `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `PORT`, `CORS_ORIGIN`.
-   Grep `process.env.` across `apps/choir-api/src` and diff the result against `.env.example`.
+   Grep `process.env.` across `choir-api/src` and diff the result against `.env.example`.
 2. Confirm `DATABASE_URL` uses the pooled port (`6543`) and includes `?pgbouncer=true&connection_limit=1`; confirm `DIRECT_URL` uses the direct port (`5432`) and is referenced only by Prisma migrations, not by the running app.
 3. Confirm `.env` (the real, secret-bearing file) is listed in `.gitignore` and does not appear in any diff artifact produced during the milestone.
 4. Confirm `CORS_ORIGIN` is set to the actual Vercel deployment URL, not the PRD's placeholder (`https://your-choir-client.vercel.app`).

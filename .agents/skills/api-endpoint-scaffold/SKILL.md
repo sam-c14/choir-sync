@@ -4,7 +4,7 @@ description: The standard pattern for adding a new Express endpoint (routes -> c
 ---
 
 ## When to use this
-Any time a new route is added to `apps/choir-api`, or an existing one is modified.
+Any time a new route is added to `choir-api`, or an existing one is modified.
 
 ## Procedure
 1. **Check for an existing shared schema first.** Look in `libs/shared/validation/src/index.ts` for a Zod schema matching this request/response shape. If one doesn't exist, add it there — never define a one-off `z.object` inside the API module.
