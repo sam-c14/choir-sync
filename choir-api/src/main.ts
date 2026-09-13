@@ -1,11 +1,17 @@
 import express from 'express';
 import * as path from 'path';
+import cors from 'cors';
 import authRoutes from './modules/auth/auth.routes';
 import songsRoutes from './modules/songs/songs.routes';
 import uniformsRoutes from './modules/uniforms/uniforms.routes';
 import usersRoutes from './modules/users/users.routes';
 
 const app = express();
+
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+}));
+
 app.use(express.json());
 
 app.use('/assets', express.static(path.join(__dirname, 'assets')));

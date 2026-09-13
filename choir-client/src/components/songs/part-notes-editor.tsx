@@ -83,15 +83,15 @@ function PartRow({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Badge variant="outline" className={`w-20 justify-center ${PART_COLORS[part] || ''}`}>{part}</Badge>
+        <Badge variant="outline" className={`w-20 h-6 justify-center ${PART_COLORS[part] || ''}`}>{part}</Badge>
         {!canEdit && <span className="text-xs text-muted-foreground">Read only</span>}
       </div>
       {canEdit ? (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Textarea
-            rows={5}
+            rows={2}
             placeholder={`Notes for ${part} section…`}
-            className="resize-none text-sm"
+            className="resize-none text-sm min-h-28"
             {...register('notes')}
           />
           {isDirty && (
