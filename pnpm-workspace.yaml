@@ -12,4 +12,4 @@ allowBuilds:
   prisma: true
   '@prisma/client': true
   bcrypt: true
-  puppeteer: set this to true or false
+  puppeteer: true

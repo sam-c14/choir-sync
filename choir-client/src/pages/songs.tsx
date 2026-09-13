@@ -173,7 +173,7 @@ function SongSection({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
         <h2 className="text-xl font-semibold tracking-tight">{title} <Badge variant="secondary" className="ml-2">{songsData?.total ?? 0}</Badge></h2>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex sm:items-center gap-2 w-full sm:w-auto sm:flex-row flex-col gap-y-4">
           <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
@@ -185,6 +185,7 @@ function SongSection({
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger
+              className="min-w-44 sm:max-w-auto max-w-44"
               render={
                 <Button variant="outline" size="sm" className="h-9 gap-1 shrink-0" />
               }

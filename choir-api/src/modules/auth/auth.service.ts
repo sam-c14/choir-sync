@@ -5,8 +5,10 @@ import { LoginDto, GoogleAuthDto } from '@choir-workspace/shared-validation';
 
 import { OAuth2Client } from 'google-auth-library';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev-only';
+const JWT_SECRET = process.env.JWT_SECRET;
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is required');
 
 export class AuthService {
   async login(dto: LoginDto) {

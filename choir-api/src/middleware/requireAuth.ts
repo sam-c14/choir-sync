@@ -3,7 +3,9 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRoleEnum, VoicePartTypeEnum } from '@choir-workspace/shared-validation';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev-only';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is required')
 
 export interface JwtPayload {
   id: string;
