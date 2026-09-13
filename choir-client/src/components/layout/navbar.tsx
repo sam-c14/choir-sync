@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../auth/auth-context';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { ModeToggle } from '../mode-toggle';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 
 export function Navbar() {
   const { user, logout } = useAuth();
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   if (!user) return null;
 
@@ -26,9 +28,32 @@ export function Navbar() {
             {user.role.toLowerCase().replace('_', ' ')}
           </span>
           <ModeToggle />
-          <Button variant="outline" size="sm" onClick={logout}>Log out</Button>
+          <Button variant="outline" size="sm" onClick={() => setLogoutOpen(true)}>Log out</Button>
         </div>
       </div>
+
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Log Out</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              Are you sure you want to log out of Choir Sync?
+            </p>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setLogoutOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setLogoutOpen(false);
+                logout();
+              }}
+            >
+              Log out
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }
