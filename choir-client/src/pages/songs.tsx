@@ -56,6 +56,10 @@ export default function SongsPage() {
   const { data: songs, isLoading, error } = useSongs();
   const isDirector = user?.role === 'DIRECTOR';
 
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [selectedSong, setSelectedSong] = useState<string | null>(null);
+
   const activeSongs = (songs ?? []).filter((s: Song) => s.status === 'ACTIVE_SUNDAY');
   const otherSongs = (songs ?? []).filter((s: Song) => s.status !== 'ACTIVE_SUNDAY');
 
