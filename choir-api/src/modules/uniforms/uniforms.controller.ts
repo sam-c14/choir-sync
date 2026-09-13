@@ -8,7 +8,9 @@ export class UniformsController {
       const filter = (req.query.filter as string) || 'current';
       const page = req.query.page ? parseInt(req.query.page as string) : 1;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
-      const uniforms = await uniformsService.getUniforms(filter, page, limit);
+      const fromDate = req.query.from as string | undefined;
+      const toDate = req.query.to as string | undefined;
+      const uniforms = await uniformsService.getUniforms(filter, page, limit, fromDate, toDate);
       res.json(uniforms);
     } catch (error: any) {
       res.status(500).json({ message: 'Failed to fetch uniforms' });

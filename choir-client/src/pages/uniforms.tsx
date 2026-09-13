@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { UniformDialog } from '../components/uniforms/uniform-dialog';
 import { DeleteUniformDialog } from '../components/uniforms/delete-uniform-dialog';
 import { Skeleton } from '../components/ui/skeleton';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { format } from 'date-fns';
 import { Pencil, Trash } from 'lucide-react';
 
@@ -13,7 +15,16 @@ export default function UniformsPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<'current' | 'past'>('current');
   const [page, setPage] = useState(1);
-  const { data: uniformsData, isLoading } = useUniforms(filter, page, 20);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  
+  const { data: uniformsData, isLoading } = useUniforms({
+    filter,
+    page,
+    limit: 20,
+    from: fromDate || undefined,
+    to: toDate || undefined,
+  });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUniform, setEditingUniform] = useState<any>(null);
@@ -53,19 +64,56 @@ export default function UniformsPage() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 border-b pb-2">
-        <Button
-          variant={filter === 'current' ? 'default' : 'ghost'}
-          onClick={() => { setFilter('current'); setPage(1); }}
-        >
-          Upcoming & Current
-        </Button>
-        <Button
-          variant={filter === 'past' ? 'default' : 'ghost'}
-          onClick={() => { setFilter('past'); setPage(1); }}
-        >
-          Past Entries
-        </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={filter === 'current' ? 'default' : 'ghost'}
+            onClick={() => { setFilter('current'); setPage(1); }}
+          >
+            Upcoming & Current
+          </Button>
+          <Button
+            variant={filter === 'past' ? 'default' : 'ghost'}
+            onClick={() => { setFilter('past'); setPage(1); }}
+          >
+            Past Entries
+          </Button>
+        </div>
+
+        {filter === 'past' && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="from-date" className="text-sm font-medium whitespace-nowrap">From:</Label>
+              <Input
+                id="from-date"
+                type="date"
+                className="w-36 h-9"
+                value={fromDate}
+                onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="to-date" className="text-sm font-medium whitespace-nowrap">To:</Label>
+              <Input
+                id="to-date"
+                type="date"
+                className="w-36 h-9"
+                value={toDate}
+                onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+              />
+            </div>
+            {(fromDate || toDate) && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => { setFromDate(''); setToDate(''); setPage(1); }}
+                className="text-muted-foreground hover:text-foreground shrink-0"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {isLoading ? (

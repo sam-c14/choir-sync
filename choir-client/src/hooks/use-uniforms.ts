@@ -17,11 +17,25 @@ export interface PaginatedUniforms {
   totalPages: number;
 }
 
-export function useUniforms(filter: 'current' | 'past' | 'all' = 'current', page: number = 1, limit: number = 20) {
+export function useUniforms(options: {
+  filter?: 'current' | 'past' | 'all';
+  page?: number;
+  limit?: number;
+  from?: string;
+  to?: string;
+} = {}) {
+  const { filter = 'current', page = 1, limit = 20, from, to } = options;
   return useQuery({
-    queryKey: ['uniforms', filter, page, limit],
+    queryKey: ['uniforms', filter, page, limit, from, to],
     queryFn: async () => {
-      const res = await apiClient.get<PaginatedUniforms>(`/uniforms?filter=${filter}&page=${page}&limit=${limit}`);
+      const params = new URLSearchParams();
+      params.append('filter', filter);
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+      if (from) params.append('from', from);
+      if (to) params.append('to', to);
+      
+      const res = await apiClient.get<PaginatedUniforms>(`/uniforms?${params.toString()}`);
       return res.data;
     },
   });

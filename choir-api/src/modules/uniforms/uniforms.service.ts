@@ -3,10 +3,10 @@ import { CreateUniformDto, UpdateUniformDto } from '@choir-workspace/shared-vali
 import { startOfDay } from 'date-fns';
 
 export class UniformsService {
-  async getUniforms(filter: string, page: number = 1, limit: number = 20) {
+  async getUniforms(filter: string, page: number = 1, limit: number = 20, fromDate?: string, toDate?: string) {
     const today = startOfDay(new Date());
 
-    let whereClause = {};
+    let whereClause: any = {};
     if (filter === 'current') {
       whereClause = {
         serviceDate: {
@@ -14,10 +14,12 @@ export class UniformsService {
         },
       };
     } else if (filter === 'past') {
+      const dateFilter: any = { lt: today };
+      if (fromDate) dateFilter.gte = new Date(fromDate);
+      if (toDate) dateFilter.lte = new Date(toDate);
+      
       whereClause = {
-        serviceDate: {
-          lt: today,
-        },
+        serviceDate: dateFilter,
       };
     }
 
