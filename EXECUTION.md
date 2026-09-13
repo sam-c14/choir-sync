@@ -115,7 +115,26 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 
 ---
 
-## Milestone 9 — Deployment Readiness
+## Milestone 9 — User Management (Roles & Deletion)
+**PRD refs:** §7 (users rows), §12
+**Goal:** Directors can see all users, promote a Chorister to Section Leader (or Director), and delete a non-Director user — closing the gap §10.2 left open (Google SSO auto-provisions Choristers with no other way to manage them).
+**Do:**
+- Add `UpdateUserRoleSchema` to `libs/shared/validation` per §6/§12.2, including the `.refine()` requiring `leadsVoicePart` when `role === SECTION_LEADER`. No Prisma migration needed — the fields already exist.
+- Implement `choir-api/src/modules/users/` per `api-endpoint-scaffold`: `GET /api/v1/users`, `PATCH /api/v1/users/:id/role`, and `DELETE /api/v1/users/:id` — all `requireRole(DIRECTOR)`. Confirm the `GET` response mapping explicitly excludes `passwordHash` and `googleId` — select only the safe fields, don't rely on Prisma's default and trim it later.
+- Implement the "last Director" safety check per §12.2 on the role-update endpoint (409 if the update would leave zero Directors) before the write happens, not as a client-side-only guard.
+- Implement `role !== SECTION_LEADER` clearing `leadsVoicePart` to `null` server-side, regardless of what the request body contains.
+- Implement the delete endpoint's Director-protection rule: reject with 403 if the target's role is `DIRECTOR` — this is a fixed policy (any Director, not just "the last one"), and correctly blocks self-deletion as a side effect. Do not build support for deleting a Director in this milestone; that's explicitly deferred.
+- Frontend: `/admin/users` route (Director-only, both nav visibility and route-level redirect), a `use-users.ts` TanStack Query hook (list, role-update, delete), and a table/list UI with a role `Select` per user (revealing a `leadsVoicePart` `Select` when `SECTION_LEADER` is chosen) plus a Delete action per row. The Delete action must be hidden entirely for Director rows, not just disabled. Add shadcn's `AlertDialog` via `shadcn-component-add` for a delete confirmation — this is a destructive, irreversible action.
+**Verify with:**
+- `api-endpoint-scaffold` while building the endpoints.
+- `auth-guard-verify` — extend the matrix with all three endpoints; confirm non-Directors get 403 on all writes.
+- Two targeted checks beyond the standard matrix, both worth testing deliberately rather than trusting the happy path: (1) attempt to demote the sole seeded Director and confirm 409; (2) attempt to delete a seeded Director (as another Director) and confirm 403, including a Director attempting to delete themselves.
+- `frontend-browser-verify` for the admin UI — role changes, the delete confirmation dialog, and confirming the Delete action is genuinely absent (not just disabled) on Director rows.
+**Done when:** the auth matrix passes, both safety checks (last-Director demotion, Director deletion) are proven to actually block their respective actions, and a Director can promote a Chorister and delete a non-Director user end-to-end through the UI.
+
+---
+
+## Milestone 10 — Deployment Readiness
 **PRD refs:** §8
 **Goal:** The app is actually deployable to Render + Vercel on the free tier, per §8, with no placeholder config left in place.
 **Do:** Finalize the Dockerfile, set real Render/Vercel env vars (including `GOOGLE_CLIENT_ID`/`VITE_GOOGLE_CLIENT_ID` and the production Google Cloud Console authorized origin), confirm CORS origin matches the real Vercel URL, seed the production Director user.

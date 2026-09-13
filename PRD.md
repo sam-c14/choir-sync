@@ -1,10 +1,29 @@
 # Product Requirements Document (PRD): Choir Part Tracker
 
-**Version:** 3.2.0
+**Version:** 3.4.0
 **Target Architecture:** Nx Monorepo — flat root layout (Express backend only)
 **Hosting Model:** 100% Free Tier (Vercel + Render + Supabase)
 
 ---
+
+---
+
+---
+
+## Changelog from v3.3.0
+
+- **Expanded §12** (renamed from "User Role Management" to "User Management (Roles & Deletion)") to add user deletion alongside role management: a Director can delete a Section Leader or Chorister, but not another Director — that's deliberately deferred to a future milestone rather than bundled in here.
+- New endpoint `DELETE /api/v1/users/:id` (§7), 403 if the target is a `DIRECTOR` — this also blocks self-deletion as a side effect, which is correct.
+- Frontend: delete action per user row, hidden (not just disabled) for Director rows, behind a shadcn `AlertDialog` confirmation.
+- Milestone 9 in `EXECUTION.md` updated to cover both capabilities; numbering unchanged (still before Deployment Readiness, now Milestone 10).
+
+## Changelog from v3.2.0
+
+- **Added User Role Management (Admin)** — see new **§12**. Follows directly from §10.2: since Google SSO lets anyone self-provision as a `CHORISTER`, Directors can now promote people via a real UI instead of a manual DB update.
+- **§10.2 resolved**: Google SSO role policy confirmed as Option A (default to `CHORISTER`, no domain restriction) — no longer an open decision.
+- New endpoints `GET /api/v1/users` and `PATCH /api/v1/users/:id/role` (§7), new schema `UpdateUserRoleSchema` (§6). No database schema changes — `role`/`leadsVoicePart` already existed on `User`.
+- Added a safety check: a Director cannot be demoted if they're the last remaining Director, preventing an accidental total lockout.
+- Scheduled as **Milestone 9** in `EXECUTION.md`, after Uniform Scheduling (Milestone 8) and before Deployment Readiness (now Milestone 10).
 
 ## Changelog from v3.1.0
 
@@ -406,6 +425,17 @@ export const CreateUniformSchema = z.object({
 
 export const UpdateUniformSchema = CreateUniformSchema.partial();
 
+export const UpdateUserRoleSchema = z
+  .object({
+    role: UserRoleEnum,
+    // Required if (and only if) role is SECTION_LEADER — enforced by .refine() below.
+    leadsVoicePart: VoicePartTypeEnum.optional(),
+  })
+  .refine((data) => data.role !== "SECTION_LEADER" || data.leadsVoicePart !== undefined, {
+    message: "leadsVoicePart is required when role is SECTION_LEADER",
+    path: ["leadsVoicePart"],
+  });
+
 export type CreateSongDto = z.infer<typeof CreateSongSchema>;
 export type UpdateSongDto = z.infer<typeof UpdateSongSchema>;
 export type CreateSongPartDto = z.infer<typeof CreateSongPartSchema>;
@@ -414,6 +444,7 @@ export type LoginDto = z.infer<typeof LoginSchema>;
 export type GoogleAuthDto = z.infer<typeof GoogleAuthSchema>;
 export type CreateUniformDto = z.infer<typeof CreateUniformSchema>;
 export type UpdateUniformDto = z.infer<typeof UpdateUniformSchema>;
+export type UpdateUserRoleDto = z.infer<typeof UpdateUserRoleSchema>;
 ```
 
 ---
@@ -439,6 +470,9 @@ Unchanged from v2.0.0 — the frontend framework swap has no effect on the API s
 | `POST` | `/api/v1/uniforms` | Create a uniform schedule entry | Director only | `CreateUniformDto` |
 | `PATCH` | `/api/v1/uniforms/:id` | Update a uniform schedule entry | Director only | `UpdateUniformDto` |
 | `DELETE` | `/api/v1/uniforms/:id` | Delete a uniform schedule entry | Director only | None |
+| `GET` | `/api/v1/users` | List all users (for role management) | Director only | None — response never includes `passwordHash` or `googleId` |
+| `PATCH` | `/api/v1/users/:id/role` | Change a user's role (and `leadsVoicePart` if promoting to Section Leader) | Director only | `UpdateUserRoleDto` (§12) |
+| `DELETE` | `/api/v1/users/:id` | Delete a non-Director user | Director only, and 403 if target is a `DIRECTOR` (§12.2) | None |
 
 Default sort (no query params) is `sortBy=createdAt&order=desc` — most recently added first. `/api/v1/uniforms` has its own default and sort rules — see §11.2.
 
@@ -573,14 +607,9 @@ Flow:
    - **Existing GOOGLE user, same `googleId`:** normal returning-user login.
 6. Server issues the same JWT format used by the `LoginDto` path. Everything downstream (`AuthContext`, `requireAuth`, `requireRole`, the Section-Leader `leadsVoicePart` check) is completely unaware of which method was used to log in.
 
-### 10.2 Open decision: role assignment for new Google sign-ins
+### 10.2 Resolved: role assignment for new Google sign-ins
 
-There's no admin UI yet for changing roles — right now that only happens via a manual DB update. Google SSO means anyone with a Google account can now create a `User` row, which is fine for read-only Choristers but needs a policy:
-
-- **Default (as specified above):** every new Google sign-in becomes a `CHORISTER`. A Director manually promotes someone to `SECTION_LEADER`/`DIRECTOR` afterward, the same way the initial seeded Director was created. Low risk since Choristers are read-only.
-- **Alternative, if the choir uses Google Workspace (a custom domain, not personal Gmail):** restrict sign-in to that domain by checking the `hd` (hosted domain) claim in the verified ID token, rejecting anyone outside it. Only worth doing if such a domain actually exists — check before implementing this, since most personal Gmail accounts don't set `hd` at all and this would need a fallback allowlist for those.
-
-Confirm which of these applies before Milestone (whichever implements this) ships, since it changes the `POST /api/v1/auth/google` implementation, not just a config value.
+**Decision: Option A.** Every new Google sign-in becomes a `CHORISTER` automatically, with no domain restriction. Directors are promoted to `SECTION_LEADER`/`DIRECTOR` afterward via the admin tooling in **§12** (previously a manual DB update, now a proper UI). Low risk as a default since new Google sign-ins land as read-only by default — but a deliberate consequence worth stating plainly: anyone with a Google account can create themselves an account the moment this ships, since there's no invite gate. Accepted as the tradeoff since this isn't a high-value target and the choir doesn't use a Google Workspace domain that would make the domain-restriction alternative viable anyway.
 
 ### 10.3 Setup Prerequisites (manual, one-time)
 
@@ -616,3 +645,31 @@ A simple, flat CRUD module — a chronological record of what to wear for upcomi
 - Default view calls `?filter=current`. A "View Past Entries" toggle switches to `?filter=past`.
 - Director-only "Add Entry" button opens a dialog using `react-hook-form` + `zodResolver(CreateUniformSchema)`, matching the existing Song form pattern (§4.3). The date field needs shadcn's `calendar` and `popover` components added via the `shadcn-component-add` skill — neither was part of the original component set in §4.3/Milestone 5a.
 - Chorister/Section Leader roles see a read-only list; only Directors see the Add/Edit/Delete controls, mirroring the existing `AuthContext`-driven conditional rendering pattern from §4.4 — same caveat applies: this is UX only, the real boundary is the `requireRole(DIRECTOR)` guard on the write endpoints.
+
+---
+
+## 12. User Management (Roles & Deletion)
+
+### 12.1 Overview
+
+Directly follows from §10.2's decision: since Google SSO lets anyone self-provision as a `CHORISTER`, Directors need a way to see who's signed up, promote people, and remove accounts — without a raw DB update every time. No new database fields — `User.role` and `User.leadsVoicePart` already exist (§5); this is purely an API + UI layer on top of them.
+
+Two capabilities, both Director-only: **role management** (promote/demote) and **user deletion**. Deletion is scoped deliberately narrow for this milestone — a Director can delete a Section Leader or Chorister, but **not another Director**. Removing a Director is a separate, more sensitive decision (it removes someone's own admin capability, not just their choir-member data) and is deferred to its own future milestone rather than bundled in here.
+
+### 12.2 Backend
+
+- `GET /api/v1/users` — Director only. Returns every user's `id`, `email`, `role`, `leadsVoicePart`, `provider`, `createdAt`. **Never include `passwordHash` or `googleId` in the response**, even to a Director — there's no legitimate UI need for either, and returning them is needless exposure of sensitive fields.
+- `PATCH /api/v1/users/:id/role` — Director only. Body: `UpdateUserRoleDto` (§6) — `role`, plus `leadsVoicePart` when promoting to `SECTION_LEADER` (enforced by the schema's `.refine()`, not left to the controller to remember). If the new role isn't `SECTION_LEADER`, the service should clear `leadsVoicePart` to `null` regardless of what was sent, so a demoted Section Leader doesn't retain a stale, meaningless value.
+  - **Safety check:** reject the request (409) if it would remove `DIRECTOR` from the last remaining Director. Without this, a solo Director could accidentally demote themselves (or the only other Director) and lock the choir out of all role-management and write-access entirely, with no path back except a manual DB fix. Count current Directors excluding the target user before allowing a non-Director role on them.
+- `DELETE /api/v1/users/:id` — Director only.
+  - **Reject with 403 if the target user's role is `DIRECTOR`.** This is a fixed policy for this milestone, not a "last one" count check like the role-demotion safety net above — no Director can delete any Director, including a Director deleting themselves (self-deletion is blocked automatically as a side effect of this rule, which is the correct behavior — accidental self-removal shouldn't be possible via this endpoint at all). A future milestone can revisit allowing Director-on-Director deletion with its own safeguards (e.g. the same "last remaining Director" count check used for role changes); don't build that here.
+  - No request body. Hard delete is fine for this milestone — `User` has no dependent relations from `Song`/`SongPart`/`SongLink`/`UniformSchedule` (none of those models reference `User` via foreign key), so there's no cascade behavior to design around. If a future milestone adds something like "created by" tracking on those models, this decision needs revisiting then, not now.
+  - Returns `204 No Content` on success.
+
+### 12.3 Frontend
+
+- New route `/admin/users`, Director-only in both the nav (hidden for other roles, per §4.4's UX-only convention) and the route itself (redirect non-Directors — the real boundary is still the API guards above).
+- A simple table/list (shadcn `Table` or stacked `Card`s) of users with a role `Select` per row; choosing `SECTION_LEADER` reveals a second `Select` for `leadsVoicePart`, matching the schema's conditional requirement.
+- A "Delete" action per row — **hidden entirely for rows where the user's role is `DIRECTOR`**, not just disabled, so it's visually obvious that action isn't available for those rows rather than a Director clicking it and being surprised by a 403. Confirm before deleting with shadcn's `AlertDialog` (add via `shadcn-component-add` — not part of the original component set) — deletion is destructive and irreversible, and shouldn't be a single accidental click.
+- A `use-users.ts` TanStack Query hook (list, role-update mutation, delete mutation), following the same pattern as `use-songs.ts`.
+- Surface both the 409 "last Director" rejection and the 403 "cannot delete a Director" rejection as inline errors, not silent failures — a Director attempting either action should understand why it was blocked.

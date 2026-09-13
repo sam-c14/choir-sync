@@ -59,3 +59,15 @@ export const GoogleAuthSchema = z.object({
   idToken: z.string().min(1, "ID token is required"),
 });
 export type GoogleAuthDto = z.infer<typeof GoogleAuthSchema>;
+
+export const CreateUniformSchema = z.object({
+  serviceDate: z.coerce.date(),
+  femaleOutfit: z.string().min(1, "Female outfit description is required").max(1000),
+  maleOutfit: z.string().min(1, "Male outfit description is required").max(1000),
+  notes: z.string().max(2000).optional().nullable(),
+});
+
+export const UpdateUniformSchema = CreateUniformSchema.partial();
+
+export type CreateUniformDto = z.infer<typeof CreateUniformSchema>;
+export type UpdateUniformDto = z.infer<typeof UpdateUniformSchema>;
