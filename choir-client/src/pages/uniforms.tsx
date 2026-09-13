@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { UniformDialog } from '../components/uniforms/uniform-dialog';
 import { DeleteUniformDialog } from '../components/uniforms/delete-uniform-dialog';
+import { Skeleton } from '../components/ui/skeleton';
 import { format } from 'date-fns';
 import { Pencil, Trash } from 'lucide-react';
 
@@ -37,18 +38,18 @@ export default function UniformsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-5xl mx-auto space-y-6 px-4 py-6 sm:px-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Uniform Schedule</h2>
-          <p className="text-muted-foreground">See what to wear for upcoming services.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Uniform Schedule</h2>
+          <p className="text-muted-foreground mt-1">See what to wear for upcoming services.</p>
         </div>
         {isDirector && (
-          <Button onClick={handleAdd}>Schedule Uniform</Button>
+          <Button onClick={handleAdd} className="w-full sm:w-auto">Schedule Uniform</Button>
         )}
       </div>
 
-      <div className="flex gap-4 border-b pb-2">
+      <div className="flex flex-wrap gap-2 border-b pb-2">
         <Button
           variant={filter === 'current' ? 'default' : 'ghost'}
           onClick={() => setFilter('current')}
@@ -64,9 +65,27 @@ export default function UniformsPage() {
       </div>
 
       {isLoading ? (
-        <p>Loading...</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-6 w-3/4" />
+              </CardHeader>
+              <CardContent className="space-y-4 mt-2">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : uniforms?.length === 0 ? (
-        <p className="text-muted-foreground">No uniform schedules found.</p>
+        <p className="text-muted-foreground py-8 text-center sm:text-left">No uniform schedules found.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {uniforms?.map((u) => (
