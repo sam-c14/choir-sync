@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,12 +17,15 @@ import {
   CardDescription,
 } from "../components/ui/card";
 import { ModeToggle } from "@/components/mode-toggle";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: Location })?.from?.pathname ?? "/";
+
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const {
     register,
@@ -60,86 +63,100 @@ export default function LoginPage() {
           </div>
         </div>
       </header>
-      <Card className="w-full max-w-sm shadow-md mx-auto my-auto">
+      <Card className="w-full max-w-sm shadow-md mx-auto my-auto overflow-hidden">
         <CardHeader className="space-y-4">
           <CardTitle className="text-2xl font-bold">Login</CardTitle>
           <CardDescription>Sign in to access the song library</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-4">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                aria-invalid={!!errors.email}
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive font-medium">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-4">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                aria-invalid={!!errors.password}
-                {...register("password")}
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive font-medium">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-            {errors.root && (
-              <p className="text-sm text-destructive font-medium">
-                {errors.root.message}
+          {isGoogleLoading ? (
+            <div className="flex flex-col items-center justify-center py-10 space-y-6">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full blur-xl bg-primary/20 animate-pulse"></div>
+                <Loader2 className="w-12 h-12 animate-spin text-primary relative z-10" />
+              </div>
+              <p className="text-base font-medium text-muted-foreground animate-pulse text-center">
+                Securely authenticating<br/>with Google...
               </p>
-            )}
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Signing in…" : "Sign in"}
-            </Button>
-            
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
             </div>
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+              <div className="space-y-4">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  aria-invalid={!!errors.email}
+                  {...register("email")}
+                />
+                {errors.email && (
+                  <p className="text-sm text-destructive font-medium">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-4">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  aria-invalid={!!errors.password}
+                  {...register("password")}
+                />
+                {errors.password && (
+                  <p className="text-sm text-destructive font-medium">
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
+              {errors.root && (
+                <p className="text-sm text-destructive font-medium">
+                  {errors.root.message}
+                </p>
+              )}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Signing in…" : "Sign in"}
+              </Button>
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
 
-            <div className="flex justify-center">
-              <GoogleLogin
-                onSuccess={async (credentialResponse) => {
-                  try {
-                    const res = await apiClient.post<{ token: string }>("/auth/google", {
-                      idToken: credentialResponse.credential,
-                    });
-                    login(res.data.token);
-                    navigate(from, { replace: true });
-                  } catch (err: unknown) {
-                    const message =
-                      (err as { response?: { data?: { error?: string } } })?.response?.data
-                        ?.error ?? "Google sign in failed.";
-                    setError("root", { message });
-                  }
-                }}
-                onError={() => {
-                  setError("root", { message: "Google sign in failed." });
-                }}
-              />
-            </div>
-          </form>
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    setIsGoogleLoading(true);
+                    try {
+                      const res = await apiClient.post<{ token: string }>("/auth/google", {
+                        idToken: credentialResponse.credential,
+                      });
+                      login(res.data.token);
+                      navigate(from, { replace: true });
+                    } catch (err: unknown) {
+                      setIsGoogleLoading(false);
+                      const message =
+                        (err as { response?: { data?: { error?: string } } })?.response?.data
+                          ?.error ?? "Google sign in failed.";
+                      setError("root", { message });
+                    }
+                  }}
+                  onError={() => {
+                    setError("root", { message: "Google sign in failed." });
+                  }}
+                />
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

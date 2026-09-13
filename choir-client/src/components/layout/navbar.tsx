@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { ModeToggle } from '../mode-toggle';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '../ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuGroup } from '../ui/dropdown-menu';
 import { Menu, Moon, Sun, Laptop, LogOut } from 'lucide-react';
 import { useTheme } from '../theme-provider';
 
@@ -19,9 +19,9 @@ export function Navbar() {
   return (
     <header className="border-b bg-background shadow-sm sticky top-0 z-10 transition-colors">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-4 sm:gap-6">
-          <div className="flex items-center gap-3">
-            <h1 className="sm:text-xl text-lg font-bold tracking-tight text-primary">Choir Sync</h1>
+        <div className="flex items-center gap-2 sm:gap-6 overflow-x-auto whitespace-nowrap no-scrollbar mask-edges">
+          <div className="flex items-center gap-2">
+            <h1 className="sm:text-xl text-lg font-bold tracking-tight text-primary truncate max-w-[120px] sm:max-w-none">Choir Sync</h1>
             <Badge variant="outline" className="hidden sm:inline-flex">{user.role}</Badge>
             {user.leadsVoicePart && (
               <Badge variant="secondary" className="hidden sm:inline-flex">
@@ -43,7 +43,7 @@ export function Navbar() {
             )}
           </nav>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 ml-2">
           <span className="text-sm text-muted-foreground hidden sm:block">
             {user.role.toLowerCase().replace('_', ' ')}
           </span>
@@ -58,27 +58,35 @@ export function Navbar() {
           <div className="sm:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9">
+                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
                   <Menu className="h-[1.2rem] w-[1.2rem]" />
                   <span className="sr-only">Open menu</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Theme</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setTheme('light')}>
-                  <Sun className="mr-2 h-4 w-4" />
-                  Light
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme('dark')}>
-                  <Moon className="mr-2 h-4 w-4" />
-                  Dark
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme('system')}>
-                  <Laptop className="mr-2 h-4 w-4" />
-                  System
-                </DropdownMenuItem>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Theme</DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => setTheme('light')}>
+                    <Sun className="mr-2 h-4 w-4" />
+                    Light
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setTheme('dark')}>
+                    <Moon className="mr-2 h-4 w-4" />
+                    Dark
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setTheme('system')}>
+                    <Laptop className="mr-2 h-4 w-4" />
+                    System
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                <DropdownMenuItem 
+                  onSelect={(e) => { 
+                    e.preventDefault(); 
+                    setLogoutOpen(true); 
+                  }} 
+                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
                 </DropdownMenuItem>
