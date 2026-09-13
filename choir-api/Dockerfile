@@ -31,11 +31,10 @@ RUN pnpm install --frozen-lockfile --prod
 # install rather than guessing a nested .pnpm path from the builder stage).
 COPY --from=builder /app/choir-api/src/prisma ./prisma
 
-# Make pnpm's global bin directory reachable so `pnpm add -g` and the
-# resulting binary are both on PATH for subsequent RUN steps and CMD.
-ENV PNPM_HOME="/root/.local/share/pnpm"
-ENV PATH="${PNPM_HOME}:${PATH}"
-RUN pnpm add -g prisma@5.22.0
+# Install Prisma CLI via npm global install — npm's global bin (/usr/local/bin)
+# is already on PATH in the node image, unlike pnpm's global store which
+# requires extra PNPM_HOME/PATH wrangling that Docker ENV doesn't resolve cleanly.
+RUN npm install -g prisma@5.22.0
 RUN prisma generate --schema=./prisma/schema.prisma
 
 COPY --from=builder /app/dist/choir-api ./dist/choir-api
