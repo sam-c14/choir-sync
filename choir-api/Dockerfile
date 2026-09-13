@@ -3,6 +3,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 RUN npm install -g pnpm@11
+RUN apk add --no-cache openssl
 
 # Copy workspace/lockfiles first for layer caching, then source
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -23,6 +24,7 @@ ENV NODE_ENV=production
 ENV PORT=3333
 
 RUN npm install -g pnpm@11
+RUN apk add --no-cache openssl
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
