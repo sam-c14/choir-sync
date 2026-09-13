@@ -14,6 +14,7 @@ export function Navbar() {
   const { setTheme } = useTheme();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const { pathname } = useLocation();
+  console.log(user)
 
   if (!user) return null;
 
@@ -55,7 +56,7 @@ export function Navbar() {
           {/* Desktop Actions */}
           <div className="hidden sm:flex items-center gap-4">
             <span className="text-sm font-medium text-foreground max-w-[160px] truncate" title={user.email}>
-              {user.email}
+              {user.email?.length > 10 ? `${user.email.slice(0, 10)}...` : user.email}
             </span>
             <ModeToggle />
             <Button variant="outline" size="sm" onClick={() => setLogoutOpen(true)}>Log out</Button>
@@ -76,7 +77,9 @@ export function Navbar() {
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none truncate" title={user.email}>{user.email}</p>
+                      <p className="text-sm font-medium leading-none truncate" title={user.email}>
+                        {user.email?.length > 10 ? `${user.email.slice(0, 10)}...` : user.email}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground capitalize">{user.role.toLowerCase().replace('_', ' ')}</p>
                     </div>
                   </DropdownMenuLabel>

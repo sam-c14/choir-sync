@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 export interface JwtPayload {
   id: string;
+  email: string;
   role: z.infer<typeof UserRoleEnum>;
   leadsVoicePart: z.infer<typeof VoicePartTypeEnum> | null;
 }
