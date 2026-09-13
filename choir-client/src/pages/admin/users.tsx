@@ -125,7 +125,7 @@ export default function AdminUsersPage() {
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           onClick={() => handleDelete(u.id)}
                         >
-                          Delete User
+                          {deleteMutation.isPending ? "Deleting..." : "Delete User"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

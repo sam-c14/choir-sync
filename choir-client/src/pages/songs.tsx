@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDebounce } from '../hooks/use-debounce';
 import { useSongs, useSong, useDeleteSong } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
 import { AddSongDialog } from '../components/songs/add-song-dialog';
@@ -134,7 +135,8 @@ function SongSection({
   onDeleteSong: (song: Song) => void;
   isDirector: boolean;
 }) {
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 300);
   const [sortKey, setSortKey] = useState<SortKey>('createdAt');
   const [page, setPage] = useState(1);
   const limit = 12;
@@ -142,11 +144,16 @@ function SongSection({
   const sortBy = sortKey === 'complexity' ? 'complexity' : sortKey === 'title' ? 'title' : 'createdAt';
   const order = sortKey === 'createdAt' ? 'desc' : 'asc';
 
+  // reset page to 1 when search changes
+  React.useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
   const { data: songsData, isLoading, error } = useSongs({
     page,
     limit,
     status,
-    search: search.trim() || undefined,
+    search: debouncedSearch.trim() || undefined,
     sortBy,
     order,
   });
@@ -154,7 +161,7 @@ function SongSection({
   const songs: Song[] = songsData?.data || [];
   const totalPages = songsData?.totalPages || 1;
 
-  if (!isLoading && !error && songs.length === 0 && !search && page === 1) {
+  if (!isLoading && !error && songs.length === 0 && !debouncedSearch && page === 1) {
     return null;
   }
 
@@ -166,10 +173,10 @@ function SongSection({
           <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              className="pl-9 w-full sm:w-[200px] h-9"
-              placeholder="Search section…"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="pl-9 w-full sm:w-64 h-9"
+              placeholder="Search section by title or artist..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
           <DropdownMenu>
