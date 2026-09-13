@@ -3,6 +3,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  --color-brand: #7a00b3;
   --font-sans: 'Geist Variable', sans-serif;
   --color-border: var(--border);
   --color-input: var(--input);
@@ -44,19 +45,19 @@
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    /* Warm ruby/crimson for primary */
-    --primary: oklch(0.45 0.16 20);
+    /* Brand color */
+    --primary: var(--color-brand);
     --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
     --muted: oklch(0.97 0 0);
     --muted-foreground: oklch(0.556 0 0);
     --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.45 0.16 20);
+    --accent-foreground: var(--color-brand);
     --destructive: oklch(0.577 0.245 27.325);
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: oklch(0.45 0.16 20 / 0.5);
+    --ring: color-mix(in srgb, var(--color-brand) 50%, transparent);
     --radius: 0.625rem;
   }
   .dark {
@@ -66,19 +67,19 @@
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    /* Brighter crimson for dark mode */
-    --primary: oklch(0.65 0.18 20);
+    /* Lighter brand color for dark mode */
+    --primary: color-mix(in srgb, var(--color-brand) 85%, white);
     --primary-foreground: oklch(0.145 0 0);
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
     --muted: oklch(0.269 0 0);
     --muted-foreground: oklch(0.708 0 0);
     --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.65 0.18 20);
+    --accent-foreground: color-mix(in srgb, var(--color-brand) 85%, white);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.65 0.18 20 / 0.5);
+    --ring: color-mix(in srgb, var(--color-brand) 50%, transparent);
   }
 }
 
