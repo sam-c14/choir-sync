@@ -95,6 +95,16 @@ export class SongsController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  async deleteLink(req: Request, res: Response) {
+    try {
+      const result = await songsService.deleteLink(req.params.id as string, req.params.linkId as string);
+      if (result.count === 0) return res.status(404).json({ error: 'Link not found' });
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 export const songsController = new SongsController();

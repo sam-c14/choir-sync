@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useSongs, useSong, useDeleteSong } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
 import { AddSongDialog } from '../components/songs/add-song-dialog';
+import { SongDetailDialog } from '../components/songs/song-detail-dialog';
+import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
 import { PartNotesEditor } from '../components/songs/part-notes-editor';
 import { LinksEditor } from '../components/songs/links-editor';
 import { Button } from '../components/ui/button';
@@ -59,6 +61,7 @@ export default function SongsPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [selectedSong, setSelectedSong] = useState<string | null>(null);
+  const [deletingSong, setDeletingSong] = useState<Song | null>(null);
 
   const activeSongs = (songs ?? []).filter((s: Song) => s.status === 'ACTIVE_SUNDAY');
   const otherSongs = (songs ?? []).filter((s: Song) => s.status !== 'ACTIVE_SUNDAY');
@@ -84,6 +87,7 @@ export default function SongsPage() {
         error={error}
         onSelectSong={setSelectedSong}
         onEditSong={setEditingSong}
+        onDeleteSong={setDeletingSong}
         isDirector={isDirector}
       />
 
@@ -94,6 +98,7 @@ export default function SongsPage() {
         error={error}
         onSelectSong={setSelectedSong}
         onEditSong={setEditingSong}
+        onDeleteSong={setDeletingSong}
         isDirector={isDirector}
       />
 
@@ -111,6 +116,13 @@ export default function SongsPage() {
           onClose={() => setSelectedSong(null)}
         />
       )}
+
+      {/* Delete song dialog */}
+      <DeleteSongDialog
+        song={deletingSong}
+        open={!!deletingSong}
+        onOpenChange={(o) => { if (!o) setDeletingSong(null); }}
+      />
     </div>
   );
 }
@@ -122,6 +134,7 @@ function SongSection({
   error,
   onSelectSong,
   onEditSong,
+  onDeleteSong,
   isDirector,
 }: {
   title: string;
@@ -130,6 +143,7 @@ function SongSection({
   error: unknown;
   onSelectSong: (id: string) => void;
   onEditSong: (song: Song) => void;
+  onDeleteSong: (song: Song) => void;
   isDirector: boolean;
 }) {
   const [search, setSearch] = useState('');
@@ -236,14 +250,24 @@ function SongSection({
                   <span className="text-xs text-muted-foreground self-center">{song.parts.length} parts</span>
                 </div>
                 {isDirector && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    onClick={(e) => { e.stopPropagation(); onEditSong(song); }}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
+                  <div className="flex">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); onEditSong(song); }}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); onDeleteSong(song); }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -251,110 +275,5 @@ function SongSection({
         ))}
       </div>
     </div>
-  );
-}
-
-function SongDetailDialog({ songId, onClose }: { songId: string; onClose: () => void }) {
-  const { user } = useAuth();
-  const isDirector = user?.role === 'DIRECTOR';
-  const { data: song, isLoading } = useSong(songId);
-  const deleteSong = useDeleteSong();
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
-
-  return (
-    <>
-      <Dialog open={!deleteConfirmOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
-          {isLoading && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Loading song details...</p>
-            </div>
-          )}
-          {song && (
-            <>
-              <DialogHeader>
-                <div className="flex justify-between items-start pr-6">
-                  <div>
-                    <DialogTitle className="text-xl leading-tight tracking-tight">{song.title}</DialogTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{song.composer ?? 'Unknown Composer'}</p>
-                  </div>
-                  {isDirector && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                      onClick={() => setDeleteConfirmOpen(true)}
-                      title="Delete song"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </DialogHeader>
-              <div className="space-y-6 mt-4">
-                <div className="flex gap-2">
-                  <Badge variant="outline" className={COMPLEXITY_COLORS[song.complexity]}>
-                    {song.complexity}
-                  </Badge>
-                  <Badge variant={(STATUS_COLORS[song.status] ?? 'outline') as 'default' | 'secondary' | 'outline'}>
-                    {song.status.replace('_', ' ')}
-                  </Badge>
-                </div>
-                <div className="pt-2 border-t">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Voice Parts</h3>
-                    <Button variant="secondary" size="sm" asChild>
-                      <Link to={`/songs/${song.id}/parts`}>Manage Parts</Link>
-                    </Button>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {song.parts?.map((p: any) => (
-                      <Badge key={p.voicePart} variant="outline" className={COMPLEXITY_COLORS[song.complexity] || ''}>
-                        {p.voicePart} {p.notes ? '(Has notes)' : ''}
-                      </Badge>
-                    ))}
-                    {!song.parts?.length && <span className="text-sm text-muted-foreground italic">No parts added</span>}
-                  </div>
-                </div>
-                <div className="pt-2 border-t">
-                  <LinksEditor songId={song.id} links={song.links ?? []} />
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Song</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete "{song?.title}"? This action cannot be undone.
-            </p>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!song) return;
-                try {
-                  await deleteSong.mutateAsync(song.id);
-                  toast.success('Song deleted successfully.');
-                  setDeleteConfirmOpen(false);
-                  onClose();
-                } catch {
-                  toast.error('Failed to delete song.');
-                }
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
   );
 }

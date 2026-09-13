@@ -110,6 +110,16 @@ export class SongsService {
       },
     });
   }
+
+  async deleteLink(songId: string, linkId: string) {
+    // Ensure the link belongs to the song
+    return prisma.songLink.deleteMany({
+      where: {
+        id: linkId,
+        songId: songId,
+      },
+    });
+  }
 }
 
 export const songsService = new SongsService();

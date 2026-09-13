@@ -14,6 +14,7 @@ router.delete('/:id', requireRole('DIRECTOR'), songsController.deleteSong.bind(s
 router.put('/:id/parts', requireRole('DIRECTOR'), songsController.updateAllParts.bind(songsController));
 router.patch('/:id/parts/:part', requirePartLeadOrDirector, songsController.updatePart.bind(songsController));
 router.post('/:id/links', requireRole('DIRECTOR'), songsController.createLink.bind(songsController));
+router.delete('/:id/links/:linkId', requireRole('DIRECTOR'), songsController.deleteLink.bind(songsController));
 
 // Any authenticated user
 router.get('/', songsController.getSongs.bind(songsController));
