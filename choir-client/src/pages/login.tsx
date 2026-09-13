@@ -39,7 +39,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm shadow-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Choir Sync</CardTitle>
@@ -58,7 +58,7 @@ export default function LoginPage() {
                 {...register('email')}
               />
               {errors.email && (
-                <p className="text-sm text-red-600">{errors.email.message}</p>
+                <p className="text-sm text-destructive font-medium">{errors.email.message}</p>
               )}
             </div>
             <div className="space-y-1">
@@ -71,11 +71,11 @@ export default function LoginPage() {
                 {...register('password')}
               />
               {errors.password && (
-                <p className="text-sm text-red-600">{errors.password.message}</p>
+                <p className="text-sm text-destructive font-medium">{errors.password.message}</p>
               )}
             </div>
             {errors.root && (
-              <p className="text-sm text-red-600">{errors.root.message}</p>
+              <p className="text-sm text-destructive font-medium">{errors.root.message}</p>
             )}
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Signing in…' : 'Sign in'}
