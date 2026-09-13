@@ -31,12 +31,14 @@ RUN pnpm install --frozen-lockfile --prod
 # install rather than guessing a nested .pnpm path from the builder stage).
 COPY --from=builder /app/choir-api/src/prisma ./prisma
 
-# Pinned to match the exact prisma/@prisma-client version in package.json —
-# a CLI/client version mismatch causes its own separate set of problems.
-RUN pnpm dlx prisma@5.22.0 generate --schema=./prisma/schema.prisma
+# Install Prisma CLI globally so it persists for both the generate RUN and the
+# migrate deploy CMD. pnpm dlx is ephemeral (temp dir, gone after the RUN step)
+# so pnpm exec prisma in CMD fails with "command not found".
+RUN pnpm add -g prisma@5.22.0
+RUN prisma generate --schema=./prisma/schema.prisma
 
 COPY --from=builder /app/dist/choir-api ./dist/choir-api
 
 EXPOSE 3333
 
-CMD ["sh", "-c", "pnpm exec prisma migrate deploy --schema=./prisma/schema.prisma && node dist/choir-api/main.js"]
+CMD ["sh", "-c", "prisma migrate deploy --schema=./prisma/schema.prisma && node dist/choir-api/main.js"]
