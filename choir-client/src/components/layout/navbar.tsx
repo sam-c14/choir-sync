@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/auth-context';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -13,8 +13,14 @@ export function Navbar() {
   const { user, logout } = useAuth();
   const { setTheme } = useTheme();
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const { pathname } = useLocation();
 
   if (!user) return null;
+
+  const getLinkClass = (path: string) => {
+    const isActive = path === '/' ? pathname === '/' : pathname.startsWith(path);
+    return `text-sm font-medium transition-colors hover:text-primary ${isActive ? 'text-primary' : 'text-muted-foreground'}`;
+  };
 
   return (
     <header className="border-b bg-background shadow-sm sticky top-0 z-10 transition-colors">
@@ -22,7 +28,9 @@ export function Navbar() {
         <div className="flex items-center sm:justify-start justify-between gap-2 sm:gap-6 overflow-x-auto whitespace-nowrap no-scrollbar mask-edges sm:w-auto w-11/12">
           <div className="flex items-center gap-2">
             <h1 className="sm:text-xl text-lg font-bold tracking-tight text-primary truncate">CSync</h1>
-            <Badge variant="outline" className="hidden sm:inline-flex">{user.role}</Badge>
+            <Badge variant="outline" className="hidden sm:inline-flex capitalize">
+              {user.role.toLowerCase().replace('_', ' ')}
+            </Badge>
             {user.leadsVoicePart && (
               <Badge variant="secondary" className="hidden sm:inline-flex">
                 {user.leadsVoicePart} Leader
@@ -30,26 +38,25 @@ export function Navbar() {
             )}
           </div>
           <nav className="flex items-center space-x-3 sm:space-x-4 sm:mr-0 mr-5">
-            <Link to="/" className="text-sm font-medium transition-colors hover:text-primary">
+            <Link to="/" className={getLinkClass('/')}>
               Songs
             </Link>
-            <Link to="/uniforms" className="text-sm font-medium transition-colors hover:text-primary">
+            <Link to="/uniforms" className={getLinkClass('/uniforms')}>
               Uniforms
             </Link>
             {user.role === 'DIRECTOR' && (
-              <Link to="/admin/users" className="text-sm font-medium transition-colors hover:text-primary">
+              <Link to="/admin/users" className={getLinkClass('/admin/users')}>
                 Users
               </Link>
             )}
           </nav>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 ml-2">
-          <span className="text-sm text-muted-foreground hidden sm:block">
-            {user.role.toLowerCase().replace('_', ' ')}
-          </span>
-          
           {/* Desktop Actions */}
           <div className="hidden sm:flex items-center gap-4">
+            <span className="text-sm font-medium text-foreground max-w-[160px] truncate" title={user.email}>
+              {user.email}
+            </span>
             <ModeToggle />
             <Button variant="outline" size="sm" onClick={() => setLogoutOpen(true)}>Log out</Button>
           </div>
@@ -66,6 +73,13 @@ export function Navbar() {
                 <span className="sr-only">Open menu</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none truncate" title={user.email}>{user.email}</p>
+                    <p className="text-xs leading-none text-muted-foreground capitalize">{user.role.toLowerCase().replace('_', ' ')}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>Theme</DropdownMenuLabel>
                   <DropdownMenuItem onSelect={() => setTheme('light')}>
