@@ -1,6 +1,6 @@
 # EXECUTION.md — Choir Part Tracker Build Plan
 
-This breaks `PRD.md` into milestones. **One milestone per session.** Each milestone ends with the `milestone-report` skill's fixed summary, and the agent stops and waits for explicit approval before starting the next one — see `RULES.md`.
+This breaks `PRD.md` into milestones. **One milestone per session.** Each milestone ends with the `milestone-report` skill's fixed summary, and the agent stops and waits for explicit approval before starting the next one — see `.agent/rules.md`.
 
 Do not skip ahead. Do not combine milestones "to save time." A milestone that hasn't been through its verification skill is not done, regardless of how confident the implementation looks.
 
@@ -11,7 +11,7 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 **Goal:** Nx workspace exists with both apps and both shared libs generated and wired together.
 **Do:**
 - `npx create-nx-workspace@latest choir-workspace --preset=apps`
-- Generate `choir-api` (Express) and `choir-client` (Next.js).
+- Generate `apps/choir-api` (Express) and `apps/choir-client` (Next.js).
 - Generate `libs/shared/types` and `libs/shared/validation`.
 **Verify with:** `nx-workspace-verify`
 **Done when:** `nx show projects` lists all four projects; a trivial import from `libs/shared/validation` works in both apps.
@@ -54,14 +54,19 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 
 ---
 
-## Milestone 5 — Frontend Foundation
+## Milestone 5a — Frontend Design System Scaffold
 **PRD refs:** §4.1, §4.3
-**Goal:** Next.js app has shadcn/ui initialized, Tailwind configured, the `cn()` helper in place, an API client, and TanStack Query hooks for songs.
-- [x] **Milestone 5a: Frontend Scaffold & Tooling** (Tailwind + shadcn + one component verification)
-- [x] **Milestone 5b: Frontend Data Layer** (api-client.ts/query-keys.ts/use-songs.ts)
-**Do:** `shadcn init` + add the component set from §4.3; `lib/utils.ts`, `lib/api-client.ts`, `hooks/use-songs.ts`.
-**Verify with:** `shadcn-component-add` (for the initial component set), `nx-workspace-verify`
-**Done when:** a bare catalog page can fetch and render the song list from the live API.
+**Goal:** `choir-client` (Vite + React 19) has Tailwind configured via `@nx/react:setup-tailwind`, shadcn/ui initialized and the full §4.3 component set added — scoped to `choir-client/` so Nx's own config isn't disturbed — and the `cn()` helper in place. Verified with a single rendered component before building real UI on top of it.
+**Do:** `npx nx g @nx/react:setup-tailwind --project=choir-client`; `cd choir-client && npx shadcn@latest init`; `cd choir-client && npx shadcn@latest add button input textarea select form dialog card badge dropdown-menu sonner`; confirm `vite.config.ts`'s alias resolution (check for a conflict between `shadcn init`'s own edits and Nx's `nxViteTsPaths()` plugin, if present) before moving on.
+**Verify with:** `shadcn-component-add`, `frontend-browser-verify` (dev server starts clean, no console errors, the placeholder component renders with real Tailwind styling).
+**Done when:** the app renders a styled shadcn component with a clean console, and the actual file structure (confirmed: `src/app/app.tsx`, `src/styles.css`, not the originally assumed `src/App.tsx`/`src/index.css`) is reflected in `PRD.md`.
+
+## Milestone 5b — Frontend Data Layer
+**PRD refs:** §4.1, §4.3
+**Goal:** The client can actually talk to the live API.
+**Do:** `src/lib/api-client.ts` (Axios instance, `VITE_API_URL`, JWT header attachment per §4.4), `src/lib/query-keys.ts`, `src/hooks/use-songs.ts` (TanStack Query hooks: list/detail/create/update/delete).
+**Verify with:** `nx-workspace-verify`
+**Done when:** a bare page can fetch and render the live song list from the API — no styled UI required yet, that's Milestone 6.
 
 ---
 
@@ -92,9 +97,27 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 
 ---
 
-## Milestone 8 — Deployment Readiness
+## Milestone 8 — Uniform Scheduling Module
+**PRD refs:** §5 (`UniformSchedule`), §6 (`CreateUniformSchema`/`UpdateUniformSchema`), §7 (uniforms rows), §11
+**Goal:** Directors can schedule and edit what's worn for upcoming/past services; everyone else can view it. Replaces the Excel-based tracking.
+**Do:**
+- Add the `UniformSchedule` model to `choir-api/src/prisma/schema.prisma` exactly as in §5 — migrate via `prisma-create-migration`.
+- Add `CreateUniformSchema`/`UpdateUniformSchema` (and both DTO types) to `libs/shared/validation`, using `z.coerce.date()` for `serviceDate` — not `z.string().datetime()`.
+- Implement `choir-api/src/modules/uniforms/` per `api-endpoint-scaffold`: `GET` open to any authenticated user, `POST`/`PATCH`/`DELETE` gated to `requireRole(DIRECTOR)`.
+- Implement the `?filter=current|past|all` logic exactly per §11.2 — **the "current" comparison must use start-of-today, not the current timestamp**, or today's entry disappears from view on the day it's needed. Get this specific comparison right before moving to the frontend; it's the one part of this milestone that's easy to get subtly wrong and hard to notice without deliberately testing it on the actual boundary.
+- Frontend: new `/uniforms` route in `routes.tsx` with a nav link; default view calls `?filter=current`, with a "View Past Entries" toggle switching to `?filter=past`. Add shadcn's `calendar` and `popover` components via `shadcn-component-add` (not part of the original Milestone 5a set) for the date picker in the Director's add/edit dialog, built with `react-hook-form` + `zodResolver(CreateUniformSchema)` matching the existing Song form pattern.
+**Verify with:**
+- `api-endpoint-scaffold` while building the endpoints.
+- `auth-guard-verify` — extend the existing role matrix with the four `/uniforms` endpoints; confirm Chorister/Section Leader get 403 on all three write endpoints and 200 on `GET`, same shape as the Songs matrix.
+- A dedicated boundary check as part of this milestone's own verification, not just `frontend-browser-verify`: seed one entry with `serviceDate` = today, and confirm it appears under `?filter=current` when tested at multiple times of day (not just once, right after seeding) — this is the one thing in this milestone actually worth a targeted manual check rather than trusting the general test suite.
+- `frontend-browser-verify` for the UI itself (list rendering, the past/current toggle, the add-entry dialog and its validation).
+**Done when:** the auth matrix passes for all four endpoints, the current/past boundary is confirmed correct at more than one point in the day, and a Director can create/edit/delete entries through the UI while other roles cannot.
+
+---
+
+## Milestone 9 — Deployment Readiness
 **PRD refs:** §8
 **Goal:** The app is actually deployable to Render + Vercel on the free tier, per §8, with no placeholder config left in place.
-**Do:** Finalize the Dockerfile, set real Render/Vercel env vars, confirm CORS origin matches the real Vercel URL, seed the production Director user.
+**Do:** Finalize the Dockerfile, set real Render/Vercel env vars (including `GOOGLE_CLIENT_ID`/`VITE_GOOGLE_CLIENT_ID` and the production Google Cloud Console authorized origin), confirm CORS origin matches the real Vercel URL, seed the production Director user.
 **Verify with:** `docker-build-test`, `env-config-audit`
 **Done when:** both audits pass and a real deploy (or a full local simulation of one) succeeds end to end.

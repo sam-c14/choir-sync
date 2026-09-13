@@ -39,14 +39,22 @@ enum UserRole {
   CHORISTER
 }
 
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
 model User {
   id             String         @id @default(uuid())
   email          String         @unique
-  passwordHash   String
+  passwordHash   String?
+  provider       AuthProvider   @default(LOCAL)
+  googleId       String?        @unique
   role           UserRole       @default(CHORISTER)
   // Only meaningful when role = SECTION_LEADER; which part they're allowed to edit
   leadsVoicePart VoicePartType?
   createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @default(now()) @updatedAt
 
   @@index([role])
 }

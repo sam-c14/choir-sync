@@ -1,10 +1,18 @@
 # Product Requirements Document (PRD): Choir Part Tracker
 
-**Version:** 3.1.0
+**Version:** 3.2.0
 **Target Architecture:** Nx Monorepo — flat root layout (Express backend only)
 **Hosting Model:** 100% Free Tier (Vercel + Render + Supabase)
 
 ---
+
+## Changelog from v3.1.0
+
+- **Added Uniform Scheduling** as a new, independent module — see new **§11**. Flat CRUD (no nested relations), Director-only writes, everyone reads.
+- New model `UniformSchedule` (§5), new schemas `CreateUniformSchema`/`UpdateUniformSchema` (§6), new endpoints under `/api/v1/uniforms` (§7).
+- Fixed a date-boundary bug present in the original feature request before it reached the schema: "current" filtering must compare against start-of-today, not the current instant, or today's entry disappears from view during the day it's actually needed (§11.2).
+- `serviceDate` validated with `z.coerce.date()`, not `z.string().datetime()` — the latter requires a full ISO-8601 datetime with an offset, which a calendar picker won't produce.
+- Scheduled as **Milestone 8** in `EXECUTION.md`, after Google SSO (Milestone 7) and before Deployment Readiness (now Milestone 9).
 
 ## Changelog from v3.0.0
 
@@ -322,6 +330,18 @@ model SongLink {
 
   @@index([songId])
 }
+
+model UniformSchedule {
+  id           String   @id @default(uuid())
+  serviceDate  DateTime // Stored as midnight UTC of the service day — see §11.2 on why comparisons must account for this
+  femaleOutfit String
+  maleOutfit   String
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([serviceDate])
+}
 ```
 
 ---
@@ -374,12 +394,26 @@ export const GoogleAuthSchema = z.object({
   idToken: z.string().min(1),
 });
 
+export const CreateUniformSchema = z.object({
+  // z.coerce.date() (not z.string().datetime()) — a calendar picker sends a
+  // bare date or a Date object, not a full ISO-8601 datetime with a Z/offset
+  // suffix that .datetime() would require. coerce.date() accepts either.
+  serviceDate: z.coerce.date(),
+  femaleOutfit: z.string().min(1, "Female outfit description required"),
+  maleOutfit: z.string().min(1, "Male outfit description required"),
+  notes: z.string().optional(),
+});
+
+export const UpdateUniformSchema = CreateUniformSchema.partial();
+
 export type CreateSongDto = z.infer<typeof CreateSongSchema>;
 export type UpdateSongDto = z.infer<typeof UpdateSongSchema>;
 export type CreateSongPartDto = z.infer<typeof CreateSongPartSchema>;
 export type CreateSongLinkDto = z.infer<typeof CreateSongLinkSchema>;
 export type LoginDto = z.infer<typeof LoginSchema>;
 export type GoogleAuthDto = z.infer<typeof GoogleAuthSchema>;
+export type CreateUniformDto = z.infer<typeof CreateUniformSchema>;
+export type UpdateUniformDto = z.infer<typeof UpdateUniformSchema>;
 ```
 
 ---
@@ -401,8 +435,12 @@ Unchanged from v2.0.0 — the frontend framework swap has no effect on the API s
 | `PATCH` | `/api/v1/songs/:id/parts/:part` | Update a single part's notes | Director, or Section Leader whose `leadsVoicePart` matches `:part` | `UpdateSongPartDto` |
 | `POST` | `/api/v1/songs/:id/links` | Add a reference link | Director only | `CreateSongLinkDto` |
 | `DELETE` | `/api/v1/songs/:id/links/:linkId` | Remove a reference link | Director only | None |
+| `GET` | `/api/v1/uniforms` | List uniform schedule entries | Any authenticated user | `?filter=current\|past\|all` (§11.2) |
+| `POST` | `/api/v1/uniforms` | Create a uniform schedule entry | Director only | `CreateUniformDto` |
+| `PATCH` | `/api/v1/uniforms/:id` | Update a uniform schedule entry | Director only | `UpdateUniformDto` |
+| `DELETE` | `/api/v1/uniforms/:id` | Delete a uniform schedule entry | Director only | None |
 
-Default sort (no query params) is `sortBy=createdAt&order=desc` — most recently added first.
+Default sort (no query params) is `sortBy=createdAt&order=desc` — most recently added first. `/api/v1/uniforms` has its own default and sort rules — see §11.2.
 
 ---
 
@@ -550,3 +588,31 @@ Confirm which of these applies before Milestone (whichever implements this) ship
 2. Add **Authorized JavaScript origins**: `http://localhost:4200` (local dev) and the real Vercel URL once deployed.
 3. Copy the Client ID into `GOOGLE_CLIENT_ID` (backend env) and `VITE_GOOGLE_CLIENT_ID` (frontend env, per §8.3) — same value, both are needed since verification happens server-side but the button needs it client-side to initiate the flow.
 4. No Client Secret is needed for this flow (ID-token verification only, no code exchange) — do not generate or store one.
+
+---
+
+## 11. Uniform Scheduling
+
+### 11.1 Overview
+
+A simple, flat CRUD module — a chronological record of what to wear for upcoming and past services, replacing an Excel sheet. No nested relations (unlike Songs' parts/links), no Section-Leader-scoped editing — only Directors write, everyone reads.
+
+**Fields:**
+- `serviceDate` (Required) — the Sunday/event date. Stored as a `DateTime` at midnight, but treated as a date-only value everywhere in application logic — see §11.2 for why the distinction matters.
+- `femaleOutfit` / `maleOutfit` (Required, String) — free-text dress code description.
+- `notes` (Optional, String) — extra instructions.
+
+### 11.2 Date Filtering — Semantics (read before implementing)
+
+`GET /api/v1/uniforms?filter=current|past|all`:
+
+- **`current`** (default when `filter` is omitted): `serviceDate >= startOfToday`, ascending order (soonest upcoming first). **Must compare against the start of today, not the current timestamp.** If the comparison uses `new Date()` (the current instant) instead of midnight of today, a service date stored as midnight will incorrectly fall out of "current" the moment any time passes on the day of the service itself — meaning a choir member checking "what are we wearing today" on the actual Sunday morning would see today's entry excluded. This is the entire reason this section exists as an explicit spec rather than an implementation detail: get the boundary wrong and the feature fails on exactly the day it matters most.
+- **`past`**: `serviceDate < startOfToday`, descending order (most recent past first) — Directors browsing backward want last month before last year.
+- **`all`**: every entry, ordered by `serviceDate` ascending. Not in the original ask, but cheap to include and useful for a Director doing a full review.
+
+### 11.3 Frontend
+
+- A new route (`/uniforms`, added to `routes.tsx` per §4.4 — react-router, not Next.js's file-based routing) with a nav link in the app shell.
+- Default view calls `?filter=current`. A "View Past Entries" toggle switches to `?filter=past`.
+- Director-only "Add Entry" button opens a dialog using `react-hook-form` + `zodResolver(CreateUniformSchema)`, matching the existing Song form pattern (§4.3). The date field needs shadcn's `calendar` and `popover` components added via the `shadcn-component-add` skill — neither was part of the original component set in §4.3/Milestone 5a.
+- Chorister/Section Leader roles see a read-only list; only Directors see the Add/Edit/Delete controls, mirroring the existing `AuthContext`-driven conditional rendering pattern from §4.4 — same caveat applies: this is UX only, the real boundary is the `requireRole(DIRECTOR)` guard on the write endpoints.

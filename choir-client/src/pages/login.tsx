@@ -1,4 +1,5 @@
 import React from "react";
+import { GoogleLogin } from "@react-oauth/google";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoginSchema, type LoginDto } from "@choir-workspace/shared-validation";
@@ -105,6 +106,39 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Signing in…" : "Sign in"}
             </Button>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={async (credentialResponse) => {
+                  try {
+                    const res = await apiClient.post<{ token: string }>("/auth/google", {
+                      idToken: credentialResponse.credential,
+                    });
+                    login(res.data.token);
+                    navigate(from, { replace: true });
+                  } catch (err: unknown) {
+                    const message =
+                      (err as { response?: { data?: { error?: string } } })?.response?.data
+                        ?.error ?? "Google sign in failed.";
+                    setError("root", { message });
+                  }
+                }}
+                onError={() => {
+                  setError("root", { message: "Google sign in failed." });
+                }}
+              />
+            </div>
           </form>
         </CardContent>
       </Card>

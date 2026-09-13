@@ -52,3 +52,10 @@ export type CreateSongPartDto = z.infer<typeof CreateSongPartSchema>;
 export type CreateSongLinkDto = z.infer<typeof CreateSongLinkSchema>;
 export type LoginDto = z.infer<typeof LoginSchema>;
 export type UpdateSongPartDto = z.infer<typeof UpdateSongPartSchema>;
+
+export const AuthProviderEnum = z.enum(["LOCAL", "GOOGLE"]);
+
+export const GoogleAuthSchema = z.object({
+  idToken: z.string().min(1, "ID token is required"),
+});
+export type GoogleAuthDto = z.infer<typeof GoogleAuthSchema>;

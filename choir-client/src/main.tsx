@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './app/app';
 import { ThemeProvider } from './components/theme-provider';
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -19,10 +21,12 @@ const root = ReactDOM.createRoot(
 
 root.render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="choir-sync-theme">
-        <App />
-      </ThemeProvider>
-    </QueryClientProvider>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider defaultTheme="system" storageKey="choir-sync-theme">
+          <App />
+        </ThemeProvider>
+      </QueryClientProvider>
+    </GoogleOAuthProvider>
   </StrictMode>
 );
