@@ -1,10 +1,18 @@
 # Product Requirements Document (PRD): Choir Part Tracker
 
-**Version:** 3.0.0
+**Version:** 3.1.0
 **Target Architecture:** Nx Monorepo — flat root layout (Express backend only)
 **Hosting Model:** 100% Free Tier (Vercel + Render + Supabase)
 
 ---
+
+## Changelog from v3.0.0
+
+- **Added Google SSO** as an additional sign-in method alongside email/password — see new **§10**. Implemented via Google Identity Services ID-token verification (no full OAuth redirect flow, no refresh tokens — this app only needs identity, not Google API access).
+- `User` model updated: `passwordHash` is now nullable, plus new `provider` (`LOCAL`/`GOOGLE`) and `googleId` fields (§5) to support accounts created via Google and account-linking by verified email.
+- New endpoint: `POST /api/v1/auth/google` (§7).
+- New env vars: `GOOGLE_CLIENT_ID` (backend), `VITE_GOOGLE_CLIENT_ID` (frontend) — §8.
+- **Applied the Milestone 5 verification diffs that hadn't landed yet**: `api-client.ts` documented as Axios (not the originally-planned fetch wrapper), Tailwind confirmed as v4 with `tailwind.config.js` removed from the file tree (CSS-first `@theme` config instead).
 
 ## Changelog from v2.0.0
 
@@ -108,7 +116,9 @@ choir-sync/                           # repo root — no apps/ folder
 ├── choir-client/                     # Vite + React 19 SPA
 │   ├── src/
 │   │   ├── main.tsx                  # ReactDOM root + <RouterProvider>/<BrowserRouter>
-│   │   ├── App.tsx                   # top-level layout, route outlet
+│   │   ├── app/
+│   │   │   ├── app.tsx                # top-level layout, route outlet (Nx's actual generated path/casing — not src/App.tsx)
+│   │   │   └── app.module.css
 │   │   ├── routes.tsx                # react-router route definitions
 │   │   ├── pages/
 │   │   │   ├── login-page.tsx
@@ -126,13 +136,13 @@ choir-sync/                           # repo root — no apps/ folder
 │   │   │   └── ui/                   # shadcn-generated primitives (button, input, select, form, dialog, card, badge, ...)
 │   │   ├── lib/
 │   │   │   ├── utils.ts              # cn() helper — clsx + tailwind-merge
-│   │   │   ├── api-client.ts         # Axios instance against VITE_API_URL, attaches JWT
+│   │   │   ├── api-client.ts         # Axios instance against VITE_API_URL, attaches JWT (interceptors for auth header + 401 logout)
 │   │   │   └── query-keys.ts
 │   │   ├── hooks/
 │   │   │   └── use-songs.ts          # TanStack Query hooks: list/detail/create/update/delete
 │   │   ├── auth/
 │   │   │   └── auth-context.tsx      # holds JWT + current user/role, see §4.4
-│   │   └── index.css                 # Tailwind entry
+│   │   └── styles.css                # Tailwind entry (Nx's actual generated filename — not src/index.css)
 │   ├── public/
 │   ├── index.html
 │   ├── components.json               # shadcn/ui config — framework: vite
@@ -161,9 +171,9 @@ choir-sync/                           # repo root — no apps/ folder
 ### 4.2 Technology Stack
 
 - **Monorepo Management:** Nx, flat root layout, pnpm workspaces
-- **Frontend:** **Vite** + **React 19**, **react-router** (tentative) for client-side routing, Tailwind CSS v4, **shadcn/ui** (Radix-based component primitives, copied into `components/ui`, not a pnpm dependency), **clsx** + `tailwind-merge` (combined into a `cn()` helper), **react-hook-form** + `@hookform/resolvers/zod` for forms, TanStack Query, Lucide Icons
+- **Frontend:** **Vite** + **React 19**, **react-router** (tentative) for client-side routing, **Tailwind CSS v4** (CSS-first `@theme` config, no `tailwind.config.js`), **shadcn/ui** (Radix-based component primitives, copied into `components/ui`, not a pnpm dependency), **clsx** + `tailwind-merge` (combined into a `cn()` helper), **react-hook-form** + `@hookform/resolvers/zod` for forms, **Axios** (API client — interceptors for JWT injection and 401 handling), TanStack Query, Lucide Icons, `@react-oauth/google` (Google Identity Services wrapper, §10)
 - **Backend:** Node.js, **Express** (plain — no NestJS), Prisma ORM
-- **Auth:** JWT (stateless — no session table needed), bcrypt for password hashing, held client-side per §4.4
+- **Auth:** JWT (stateless — no session table needed), bcrypt for password hashing for local accounts, **Google OAuth** as an additional sign-in method (§10), held client-side per §4.4
 - **Shared Libraries:** Zod for schema validation and TypeScript contracts shared client/server
 - **Database:** Managed PostgreSQL via **Supabase**
 
@@ -198,7 +208,7 @@ const form = useForm<CreateSongDto>({
 
 There's no server layer on the frontend anymore, so the whole auth flow lives in the browser:
 
-- On login, the API's JWT is stored in `localStorage` and held in an `AuthContext` (`src/auth/auth-context.tsx`) alongside the decoded user's `role` and `leadsVoicePart`.
+- On login — either email/password or Google (§10) — the API's own JWT (never Google's token) is stored in `localStorage` and held in an `AuthContext` (`src/auth/auth-context.tsx`) alongside the decoded user's `role` and `leadsVoicePart`. Both paths converge to the same JWT/AuthContext shape; nothing downstream of login needs to know which method was used.
 - `api-client.ts` attaches the token as an `Authorization: Bearer <token>` header on every request; a `401` response clears the stored token and redirects to `/login`.
 - react-router routes are wrapped in a `<RequireAuth>` element that redirects unauthenticated users to `/login`.
 - UI elements are conditionally rendered/disabled based on the role in `AuthContext` (e.g. a Chorister never sees an "Add Song" button; a Section Leader only sees an editable state on their own voice part's notes) — **this is a UX convenience only**. The actual permission boundary is enforced server-side per §7's access column, and the UI must never be the only thing standing between a Chorister and a write endpoint.
@@ -251,10 +261,19 @@ enum UserRole {
   CHORISTER
 }
 
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
 model User {
   id             String         @id @default(uuid())
   email          String         @unique
-  passwordHash   String
+  // Nullable: a GOOGLE-provider user has no local password.
+  passwordHash   String?
+  provider       AuthProvider   @default(LOCAL)
+  // Google's stable per-user subject identifier. Null for LOCAL users.
+  googleId       String?        @unique
   role           UserRole       @default(CHORISTER)
   // Only meaningful when role = SECTION_LEADER; which part they're allowed to edit
   leadsVoicePart VoicePartType?
@@ -348,11 +367,19 @@ export const LoginSchema = z.object({
   password: z.string().min(8),
 });
 
+export const GoogleAuthSchema = z.object({
+  // The raw ID token (JWT) returned by Google Identity Services on the client.
+  // The server verifies signature, audience, issuer, and email_verified —
+  // never trust decoded fields from the client without that verification.
+  idToken: z.string().min(1),
+});
+
 export type CreateSongDto = z.infer<typeof CreateSongSchema>;
 export type UpdateSongDto = z.infer<typeof UpdateSongSchema>;
 export type CreateSongPartDto = z.infer<typeof CreateSongPartSchema>;
 export type CreateSongLinkDto = z.infer<typeof CreateSongLinkSchema>;
 export type LoginDto = z.infer<typeof LoginSchema>;
+export type GoogleAuthDto = z.infer<typeof GoogleAuthSchema>;
 ```
 
 ---
@@ -363,7 +390,8 @@ Unchanged from v2.0.0 — the frontend framework swap has no effect on the API s
 
 | Method | Route | Description | Access | Body / Query |
 |---|---|---|---|---|
-| `POST` | `/api/v1/auth/login` | Log in, returns a JWT | Public | `LoginDto` |
+| `POST` | `/api/v1/auth/login` | Log in with email/password, returns a JWT | Public | `LoginDto` |
+| `POST` | `/api/v1/auth/google` | Verify a Google ID token, create/link the User, returns a JWT | Public | `GoogleAuthDto` |
 | `GET` | `/api/v1/songs` | List songs — search, filter, sort | Any authenticated user | `?search=&voicePart=&complexity=&status=&sortBy=title\|createdAt\|complexity&order=asc\|desc` |
 | `POST` | `/api/v1/songs` | Create a song with parts & links | Director only | `CreateSongDto` |
 | `GET` | `/api/v1/songs/:id` | Fetch full song detail | Any authenticated user | None |
@@ -460,12 +488,13 @@ CMD npx prisma migrate deploy --schema=./prisma/schema.prisma && node dist/main.
   - `JWT_SECRET` — random 32+ char string
   - `PORT`: `3333`
   - `CORS_ORIGIN`: `https://your-choir-client.vercel.app`
+  - `GOOGLE_CLIENT_ID` — from Google Cloud Console (§10), used to verify the ID token's audience
 
 ### 8.3 Frontend: Vercel Setup
 
 1. Import the GitHub repo into Vercel.
 2. **Framework Preset:** Vite (or "Other" if Vercel doesn't auto-detect it inside an Nx monorepo) · **Root Directory:** `choir-client` · **Build Command:** `npx nx build choir-client --configuration=production` · **Output Directory:** `dist` (Vite's default — **not** `.next`).
-3. **Environment Variables:** `VITE_API_URL` → `https://choir-api.onrender.com/api/v1`. Note the `VITE_` prefix is required — Vite only exposes env vars to client code if they're prefixed this way, unlike Next.js's `NEXT_PUBLIC_` convention.
+3. **Environment Variables:** `VITE_API_URL` → `https://choir-api.onrender.com/api/v1`; `VITE_GOOGLE_CLIENT_ID` → same Google OAuth Client ID as the backend's `GOOGLE_CLIENT_ID` (§10) — this one is intentionally public, it's what Google Identity Services needs client-side to render the sign-in button. Note the `VITE_` prefix is required — Vite only exposes env vars to client code if they're prefixed this way, unlike Next.js's `NEXT_PUBLIC_` convention.
 
 ---
 
@@ -483,3 +512,41 @@ CMD npx prisma migrate deploy --schema=./prisma/schema.prisma && node dist/main.
 10. [ ] Implement `AuthContext`, `RequireAuth` route wrapper, and the `api-client.ts` JWT interceptor per §4.4.
 11. [ ] Build the catalog view with shadcn primitives: search bar, S/A/T filter chips, sort dropdown (Title / Recently Added / Complexity), react-hook-form-driven add/edit song dialog (incl. complexity field), inline part-notes editor, and a small links section per song (platform icon + URL).
 12. [ ] Seed one Director user manually (or via a one-off script) to bootstrap login before building a signup flow.
+13. [ ] Create a Google Cloud OAuth Client ID (§10), add `GOOGLE_CLIENT_ID`/`VITE_GOOGLE_CLIENT_ID` to env config.
+14. [ ] Backend: implement `POST /api/v1/auth/google` — verify the ID token via `google-auth-library`, then create-or-link the `User` record per §10's rules.
+15. [ ] Frontend: install `@react-oauth/google`, add the Google sign-in button to the login page, wire its callback to `POST /api/v1/auth/google` and into the existing `AuthContext` flow.
+
+---
+
+## 10. Google SSO (OAuth)
+
+### 10.1 Approach
+
+Google sign-in is implemented via **Google Identity Services (GIS)** — the client renders Google's own sign-in button, which returns a signed **ID token** (a JWT) directly to the browser after the user authenticates with Google. No redirect-based OAuth Authorization Code flow, no refresh tokens, no server-side token exchange — this app only needs to confirm *who someone is*, not access any Google API on their behalf, so the lighter ID-token-verification approach is sufficient and meaningfully less to build and secure than full OAuth.
+
+Flow:
+1. Client renders Google's sign-in button via `@react-oauth/google`'s `<GoogleLogin>` component, configured with `VITE_GOOGLE_CLIENT_ID`.
+2. On success, Google hands the client an ID token (JWT) — the client does **not** decode or trust any of its contents itself.
+3. Client `POST`s `{ idToken }` to `/api/v1/auth/google`.
+4. Server verifies the token using `google-auth-library`'s `OAuth2Client.verifyIdToken()`: checks signature against Google's public keys, confirms `aud` matches `GOOGLE_CLIENT_ID`, confirms `iss` is `accounts.google.com` or `https://accounts.google.com`, and confirms `email_verified` is `true`. Only after verification does the server trust the token's `email`/`sub` claims.
+5. Server looks up `User` by `email`:
+   - **No existing user:** create one with `provider: GOOGLE`, `googleId: <sub>`, `role: CHORISTER` (see 10.2 on why this default), `passwordHash: null`.
+   - **Existing LOCAL user, same email:** link the account — set `googleId` on the existing row rather than creating a duplicate. This is safe because Google has already verified the email's ownership (`email_verified: true`); the alternative (rejecting and forcing two separate accounts) would be more secure against email-spoofing but more confusing for choir members who forget which method they used originally. Flagged as a decision worth revisiting if account-linking abuse ever becomes a concern (it's a low-risk choir app, not a high-value target).
+   - **Existing GOOGLE user, same `googleId`:** normal returning-user login.
+6. Server issues the same JWT format used by the `LoginDto` path. Everything downstream (`AuthContext`, `requireAuth`, `requireRole`, the Section-Leader `leadsVoicePart` check) is completely unaware of which method was used to log in.
+
+### 10.2 Open decision: role assignment for new Google sign-ins
+
+There's no admin UI yet for changing roles — right now that only happens via a manual DB update. Google SSO means anyone with a Google account can now create a `User` row, which is fine for read-only Choristers but needs a policy:
+
+- **Default (as specified above):** every new Google sign-in becomes a `CHORISTER`. A Director manually promotes someone to `SECTION_LEADER`/`DIRECTOR` afterward, the same way the initial seeded Director was created. Low risk since Choristers are read-only.
+- **Alternative, if the choir uses Google Workspace (a custom domain, not personal Gmail):** restrict sign-in to that domain by checking the `hd` (hosted domain) claim in the verified ID token, rejecting anyone outside it. Only worth doing if such a domain actually exists — check before implementing this, since most personal Gmail accounts don't set `hd` at all and this would need a fallback allowlist for those.
+
+Confirm which of these applies before Milestone (whichever implements this) ships, since it changes the `POST /api/v1/auth/google` implementation, not just a config value.
+
+### 10.3 Setup Prerequisites (manual, one-time)
+
+1. In Google Cloud Console, create an OAuth 2.0 Client ID (type: **Web application**).
+2. Add **Authorized JavaScript origins**: `http://localhost:4200` (local dev) and the real Vercel URL once deployed.
+3. Copy the Client ID into `GOOGLE_CLIENT_ID` (backend env) and `VITE_GOOGLE_CLIENT_ID` (frontend env, per §8.3) — same value, both are needed since verification happens server-side but the button needs it client-side to initiate the flow.
+4. No Client Secret is needed for this flow (ID-token verification only, no code exchange) — do not generate or store one.

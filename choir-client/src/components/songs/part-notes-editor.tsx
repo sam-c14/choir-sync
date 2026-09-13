@@ -8,6 +8,7 @@ import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Label } from '../ui/label';
+import { toast } from 'sonner';
 
 interface SongPart {
   voicePart: string;
@@ -71,17 +72,22 @@ function PartRow({
   });
 
   const onSubmit = async (data: UpdateSongPartDto) => {
-    await updatePart.mutateAsync({ songId, part, data });
+    try {
+      await updatePart.mutateAsync({ songId, part, data });
+      toast.success(`${part} notes updated successfully.`);
+    } catch (_err) {
+      toast.error(`Failed to update notes for ${part}.`);
+    }
   };
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Badge variant="outline" className={`w-20 justify-center ${PART_COLORS[part] || ''}`}>{part}</Badge>
         {!canEdit && <span className="text-xs text-muted-foreground">Read only</span>}
       </div>
       {canEdit ? (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-1">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Textarea
             rows={2}
             placeholder={`Notes for ${part} section…`}

@@ -48,15 +48,8 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
   const createSong = useCreateSong();
   const updateSong = useUpdateSong();
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors, isSubmitting },
-    reset,
-  } = useForm<CreateSongDto | UpdateSongDto>({
-    resolver: zodResolver(isEditing ? UpdateSongSchema : CreateSongSchema),
-    defaultValues: editingSong
+  const defaultValues = React.useMemo(() => {
+    return editingSong
       ? {
           title: editingSong.title,
           composer: editingSong.composer ?? undefined,
@@ -64,8 +57,24 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
           status: editingSong.status as CreateSongDto['status'],
           tags: editingSong.tags,
         }
-      : { complexity: 'MODERATE', status: 'ACTIVE_SUNDAY', tags: [], parts: [], links: [] },
+      : { complexity: 'MODERATE', status: 'ACTIVE_SUNDAY', tags: [], parts: [], links: [] } as any;
+  }, [editingSong]);
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<CreateSongDto | UpdateSongDto>({
+    resolver: zodResolver(isEditing ? UpdateSongSchema : CreateSongSchema),
+    defaultValues,
   });
+
+  React.useEffect(() => {
+    reset(defaultValues);
+  }, [reset, defaultValues]);
 
   const onSubmit = async (data: CreateSongDto | UpdateSongDto) => {
     if (isEditing) {
@@ -97,10 +106,12 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
             <div className="space-y-1">
               <Label>Complexity</Label>
               <Select
-                defaultValue={editingSong?.complexity ?? 'MODERATE'}
-                onValueChange={(v) => setValue('complexity', v as CreateSongDto['complexity'])}
+                value={watch('complexity')}
+                onValueChange={(v) => setValue('complexity', v as CreateSongDto['complexity'], { shouldDirty: true })}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {SongComplexityEnum.options.map((o) => (
                     <SelectItem key={o} value={o}>{o}</SelectItem>
@@ -111,10 +122,12 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
             <div className="space-y-1">
               <Label>Status</Label>
               <Select
-                defaultValue={editingSong?.status ?? 'ACTIVE_SUNDAY'}
-                onValueChange={(v) => setValue('status', v as CreateSongDto['status'])}
+                value={watch('status')}
+                onValueChange={(v) => setValue('status', v as CreateSongDto['status'], { shouldDirty: true })}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {SongStatusEnum.options.map((o) => (
                     <SelectItem key={o} value={o}>{o.replace('_', ' ')}</SelectItem>

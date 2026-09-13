@@ -10,6 +10,7 @@ import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
 import { Music, PlayCircle, Trash2, Link as LinkIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
 const PLATFORM_ICONS: Record<string, React.ReactNode> = {
   SPOTIFY: <Music className="w-4 h-4 text-green-500" />,
@@ -48,8 +49,13 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
   });
 
   const onSubmit = async (data: CreateSongLinkDto) => {
-    await addLink.mutateAsync({ songId, data });
-    reset();
+    try {
+      await addLink.mutateAsync({ songId, data });
+      toast.success('Link added successfully.');
+      reset();
+    } catch (_err) {
+      toast.error('Failed to add link.');
+    }
   };
 
   return (
@@ -76,8 +82,15 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="ml-auto shrink-0 text-slate-400 hover:text-red-500"
-                onClick={() => deleteLink.mutate({ songId, linkId: link.id })}
+                className="ml-auto shrink-0 text-slate-400 hover:text-destructive"
+                onClick={async () => {
+                  try {
+                    await deleteLink.mutateAsync({ songId, linkId: link.id });
+                    toast.success('Link deleted.');
+                  } catch {
+                    toast.error('Failed to delete link.');
+                  }
+                }}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
