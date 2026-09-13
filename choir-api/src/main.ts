@@ -1,12 +1,20 @@
 import express from 'express';
 import * as path from 'path';
 import cors from 'cors';
+import morgan from 'morgan';
+import { logger } from './lib/logger';
 import authRoutes from './modules/auth/auth.routes';
 import songsRoutes from './modules/songs/songs.routes';
 import uniformsRoutes from './modules/uniforms/uniforms.routes';
 import usersRoutes from './modules/users/users.routes';
 
 const app = express();
+
+// Use morgan for HTTP request logging. Pipe its output to winston info level.
+const stream = {
+  write: (message: string) => logger.info(message.trim()),
+};
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', { stream }));
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
@@ -27,6 +35,6 @@ app.get('/api', (req, res) => {
 
 const port = process.env.PORT || 3333;
 const server = app.listen(port, () => {
-  console.log(`Listening at http://localhost:${port}/api`);
+  logger.info(`Listening at http://localhost:${port}/api`);
 });
-server.on('error', console.error);
+server.on('error', (err) => logger.error(err));

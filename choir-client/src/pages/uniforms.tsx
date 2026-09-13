@@ -82,82 +82,80 @@ export default function UniformsPage() {
           </Button>
         </div>
 
-        {filter === 'past' && (
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium whitespace-nowrap">From:</Label>
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-[140px] sm:w-[160px] justify-start text-left font-normal h-9",
-                        !fromDate && "text-muted-foreground"
-                      )}
-                    />
-                  }
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                  {fromDate ? format(fromDate, "PPP") : <span>Pick a date</span>}
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={fromDate}
-                    onSelect={(d) => {
-                      setFromDate(d);
-                      if (d && !toDate) setToDate(new Date());
-                      setPage(1);
-                    }}
-                    autoFocus
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Label className="text-sm font-medium whitespace-nowrap">From:</Label>
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[140px] sm:w-[160px] justify-start text-left font-normal h-9",
+                      !fromDate && "text-muted-foreground"
+                    )}
                   />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium whitespace-nowrap">To:</Label>
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-[140px] sm:w-[160px] justify-start text-left font-normal h-9",
-                        !toDate && "text-muted-foreground"
-                      )}
-                    />
-                  }
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                  {toDate ? format(toDate, "PPP") : <span>Pick a date</span>}
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={toDate}
-                    onSelect={(d) => {
-                      setToDate(d);
-                      if (d && !fromDate) setFromDate(new Date());
-                      setPage(1);
-                    }}
-                    autoFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            {(fromDate || toDate) && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => { setFromDate(undefined); setToDate(undefined); setPage(1); }}
-                className="text-muted-foreground hover:text-foreground shrink-0"
+                }
               >
-                Clear
-              </Button>
-            )}
+                <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                {fromDate ? format(fromDate, "PPP") : <span>Pick a date</span>}
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={fromDate}
+                  onSelect={(d) => {
+                    setFromDate(d);
+                    if (d && !toDate) setToDate(new Date(d.getTime() + 7 * 24 * 60 * 60 * 1000));
+                    setPage(1);
+                  }}
+                  autoFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <Label className="text-sm font-medium whitespace-nowrap">To:</Label>
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[140px] sm:w-[160px] justify-start text-left font-normal h-9",
+                      !toDate && "text-muted-foreground"
+                    )}
+                  />
+                }
+              >
+                <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                {toDate ? format(toDate, "PPP") : <span>Pick a date</span>}
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={toDate}
+                  onSelect={(d) => {
+                    setToDate(d);
+                    if (d && !fromDate) setFromDate(d);
+                    setPage(1);
+                  }}
+                  autoFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          {(fromDate || toDate) && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => { setFromDate(undefined); setToDate(undefined); setPage(1); }}
+              className="text-muted-foreground hover:text-foreground shrink-0"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (

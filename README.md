@@ -94,3 +94,5 @@ And join the Nx community:
 - [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
 - [Our Youtube channel](https://www.youtube.com/@nxdevtools)
 - [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+
+"\nInvalid `prisma.uniformSchedule.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"26000\", message: \"prepared statement \\\"s16\\\" does not exist\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })"

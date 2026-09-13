@@ -8,19 +8,23 @@ export class UniformsService {
 
     let whereClause: any = {};
     if (filter === 'current') {
-      whereClause = {
-        serviceDate: {
-          gte: today,
-        },
-      };
+      const dateFilter: any = { gte: today };
+      if (fromDate) {
+        const from = new Date(fromDate);
+        dateFilter.gte = from > today ? from : today;
+      }
+      if (toDate) {
+        dateFilter.lte = new Date(toDate);
+      }
+      whereClause = { serviceDate: dateFilter };
     } else if (filter === 'past') {
       const dateFilter: any = { lt: today };
       if (fromDate) dateFilter.gte = new Date(fromDate);
-      if (toDate) dateFilter.lte = new Date(toDate);
-      
-      whereClause = {
-        serviceDate: dateFilter,
-      };
+      if (toDate) {
+        const to = new Date(toDate);
+        dateFilter.lte = to < today ? to : new Date(today.getTime() - 1);
+      }
+      whereClause = { serviceDate: dateFilter };
     }
 
     const skip = (page - 1) * limit;
