@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
-import { useUniforms, useDeleteUniform } from '../hooks/use-uniforms';
+import { useUniforms } from '../hooks/use-uniforms';
 import { useAuth } from '../auth/auth-context';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { UniformDialog } from '../components/uniforms/uniform-dialog';
+import { DeleteUniformDialog } from '../components/uniforms/delete-uniform-dialog';
 import { format } from 'date-fns';
 import { Pencil, Trash } from 'lucide-react';
-import { ModeToggle } from '@/components/mode-toggle';
 
 export default function UniformsPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<'current' | 'past'>('current');
   const { data: uniforms, isLoading } = useUniforms(filter);
-  const deleteMutation = useDeleteUniform();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUniform, setEditingUniform] = useState<any>(null);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingUniformId, setDeletingUniformId] = useState<string | null>(null);
 
   const isDirector = user?.role === 'DIRECTOR';
 
@@ -29,10 +31,9 @@ export default function UniformsPage() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this schedule?')) {
-      await deleteMutation.mutateAsync(id);
-    }
+  const handleDeleteClick = (id: string) => {
+    setDeletingUniformId(id);
+    setDeleteDialogOpen(true);
   };
 
   return (
@@ -79,7 +80,7 @@ export default function UniformsPage() {
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(u)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(u.id)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(u.id)}>
                       <Trash className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -110,6 +111,11 @@ export default function UniformsPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         editingUniform={editingUniform}
+      />
+      <DeleteUniformDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        uniformId={deletingUniformId}
       />
     </div>
   );
