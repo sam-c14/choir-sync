@@ -14,7 +14,6 @@ export function Navbar() {
   const { setTheme } = useTheme();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const { pathname } = useLocation();
-  console.log(user)
 
   if (!user) return null;
 

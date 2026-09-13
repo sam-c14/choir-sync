@@ -22,6 +22,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from '../components/ui/dropdown-menu';
 import { Loader2, Plus, Search, ChevronDown, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -187,12 +189,14 @@ function SongSection({
                 <Button variant="outline" size="sm" className="h-9 gap-1 shrink-0" />
               }
             >
-              Sort <ChevronDown className="w-3.5 h-3.5" />
+              Sort: {sortKey === 'title' ? 'Title A–Z' : sortKey === 'complexity' ? 'Complexity' : 'Recently Added'} <ChevronDown className="w-3.5 h-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => { setSortKey('createdAt'); setPage(1); }}>Recently Added</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setSortKey('title'); setPage(1); }}>Title A–Z</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setSortKey('complexity'); setPage(1); }}>Complexity</DropdownMenuItem>
+              <DropdownMenuRadioGroup value={sortKey} onValueChange={(v) => { setSortKey(v as SortKey); setPage(1); }}>
+                <DropdownMenuRadioItem value="createdAt">Recently Added</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="title">Title A–Z</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="complexity">Complexity</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
