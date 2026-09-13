@@ -89,7 +89,7 @@ function PartRow({
       {canEdit ? (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Textarea
-            rows={2}
+            rows={5}
             placeholder={`Notes for ${part} section…`}
             className="resize-none text-sm"
             {...register('notes')}

@@ -93,17 +93,17 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
           <DialogTitle>{isEditing ? 'Edit Song' : 'Add Song'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
-          <div className="space-y-1">
+          <div className="space-y-3">
             <Label htmlFor="title">Title *</Label>
             <Input id="title" placeholder="Song title" {...register('title')} aria-invalid={!!errors.title} />
             {errors.title && <p className="text-sm text-red-600">{errors.title.message as string}</p>}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-3">
             <Label htmlFor="composer">Composer</Label>
             <Input id="composer" placeholder="e.g. Handel" {...register('composer')} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
+            <div className="space-y-3">
               <Label>Complexity</Label>
               <Select
                 value={watch('complexity')}
@@ -119,7 +119,7 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-3">
               <Label>Status</Label>
               <Select
                 value={watch('status')}

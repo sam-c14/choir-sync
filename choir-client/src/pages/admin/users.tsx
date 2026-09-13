@@ -79,7 +79,7 @@ export default function AdminUsersPage() {
 
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
                 <Select value={u.role} onValueChange={(v) => handleRoleChange(u.id, v)}>
-                  <SelectTrigger className="w-[140px] sm:w-[160px]">
+                  <SelectTrigger className="w-44 sm:w-48">
                     <SelectValue placeholder="Role" />
                   </SelectTrigger>
                   <SelectContent>

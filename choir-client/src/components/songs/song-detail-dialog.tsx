@@ -32,7 +32,7 @@ export function SongDetailDialog({ songId, onClose }: { songId: string; onClose:
   return (
     <>
       <Dialog open={!deleteConfirmOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto sm:max-h-[90vh]">
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -42,12 +42,20 @@ export function SongDetailDialog({ songId, onClose }: { songId: string; onClose:
           {song && (
             <>
               <DialogHeader>
-                <div className="flex justify-between items-start pr-6">
                   <div>
                     <DialogTitle className="text-xl leading-tight tracking-tight">{song.title}</DialogTitle>
                     <p className="text-sm text-muted-foreground mt-1">{song.composer ?? 'Unknown Composer'}</p>
                   </div>
-                  {isDirector && (
+              </DialogHeader>
+              <div className="space-y-6 mt-4">
+                <div className="flex gap-2 items-center">
+                  <Badge variant="outline" className={COMPLEXITY_COLORS[song.complexity]}>
+                    {song.complexity}
+                  </Badge>
+                  <Badge variant={(STATUS_COLORS[song.status] ?? 'outline') as 'default' | 'secondary' | 'outline'}>
+                    {song.status.replace('_', ' ')}
+                  </Badge>
+                   {isDirector && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -58,16 +66,6 @@ export function SongDetailDialog({ songId, onClose }: { songId: string; onClose:
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   )}
-                </div>
-              </DialogHeader>
-              <div className="space-y-6 mt-4">
-                <div className="flex gap-2">
-                  <Badge variant="outline" className={COMPLEXITY_COLORS[song.complexity]}>
-                    {song.complexity}
-                  </Badge>
-                  <Badge variant={(STATUS_COLORS[song.status] ?? 'outline') as 'default' | 'secondary' | 'outline'}>
-                    {song.status.replace('_', ' ')}
-                  </Badge>
                 </div>
                 <div className="pt-2 border-t">
                   <div className="flex items-center justify-between mb-4">
