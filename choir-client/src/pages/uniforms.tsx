@@ -6,24 +6,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { UniformDialog } from '../components/uniforms/uniform-dialog';
 import { DeleteUniformDialog } from '../components/uniforms/delete-uniform-dialog';
 import { Skeleton } from '../components/ui/skeleton';
-import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Calendar } from '../components/ui/calendar';
+import { CalendarIcon, Pencil, Trash } from 'lucide-react';
 import { format } from 'date-fns';
-import { Pencil, Trash } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 export default function UniformsPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<'current' | 'past'>('current');
   const [page, setPage] = useState(1);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
   
   const { data: uniformsData, isLoading } = useUniforms({
     filter,
     page,
     limit: 20,
-    from: fromDate || undefined,
-    to: toDate || undefined,
+    from: fromDate?.toISOString(),
+    to: toDate?.toISOString(),
   });
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -81,32 +83,62 @@ export default function UniformsPage() {
         </div>
 
         {filter === 'past' && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <Label htmlFor="from-date" className="text-sm font-medium whitespace-nowrap">From:</Label>
-              <Input
-                id="from-date"
-                type="date"
-                className="w-36 h-9"
-                value={fromDate}
-                onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
-              />
+              <Label className="text-sm font-medium whitespace-nowrap">From:</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[140px] sm:w-[160px] justify-start text-left font-normal h-9",
+                      !fromDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                    {fromDate ? format(fromDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={fromDate}
+                    onSelect={(d) => { setFromDate(d); setPage(1); }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="flex items-center gap-2">
-              <Label htmlFor="to-date" className="text-sm font-medium whitespace-nowrap">To:</Label>
-              <Input
-                id="to-date"
-                type="date"
-                className="w-36 h-9"
-                value={toDate}
-                onChange={(e) => { setToDate(e.target.value); setPage(1); }}
-              />
+              <Label className="text-sm font-medium whitespace-nowrap">To:</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[140px] sm:w-[160px] justify-start text-left font-normal h-9",
+                      !toDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                    {toDate ? format(toDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={toDate}
+                    onSelect={(d) => { setToDate(d); setPage(1); }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             {(fromDate || toDate) && (
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => { setFromDate(''); setToDate(''); setPage(1); }}
+                onClick={() => { setFromDate(undefined); setToDate(undefined); setPage(1); }}
                 className="text-muted-foreground hover:text-foreground shrink-0"
               >
                 Clear
