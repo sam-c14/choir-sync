@@ -34,8 +34,9 @@ export function UniformDialog({
     reset,
     formState: { errors, isSubmitting },
   } = useForm<CreateUniformDto>({
-    resolver: zodResolver(CreateUniformSchema),
+    resolver: zodResolver(CreateUniformSchema) as any,
     defaultValues: {
+      serviceDate: undefined as any,
       femaleOutfit: '',
       maleOutfit: '',
       notes: '',
@@ -54,7 +55,7 @@ export function UniformDialog({
       });
     } else if (open) {
       reset({
-        serviceDate: undefined,
+        serviceDate: undefined as any,
         femaleOutfit: '',
         maleOutfit: '',
         notes: '',
@@ -88,24 +89,26 @@ export function UniformDialog({
           <div className="space-y-2 flex flex-col">
             <Label>Service Date</Label>
             <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !serviceDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {serviceDate ? format(serviceDate, "PPP") : <span>Pick a date</span>}
-                </Button>
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !serviceDate && "text-muted-foreground"
+                    )}
+                  />
+                }
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {serviceDate ? format(serviceDate, "PPP") : <span>Pick a date</span>}
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
                 <Calendar
                   mode="single"
                   selected={serviceDate}
                   onSelect={(date) => date && setValue('serviceDate', date)}
-                  initialFocus
+                  autoFocus
                 />
               </PopoverContent>
             </Popover>

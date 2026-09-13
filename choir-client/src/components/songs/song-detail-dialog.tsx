@@ -72,8 +72,8 @@ export function SongDetailDialog({ songId, onClose }: { songId: string; onClose:
                 <div className="pt-2 border-t">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Voice Parts</h3>
-                    <Button variant="secondary" size="sm" asChild>
-                      <Link to={`/songs/${song.id}/parts`}>Manage Parts</Link>
+                    <Button variant="secondary" size="sm" render={<Link to={`/songs/${song.id}/parts`} />}>
+                      Manage Parts
                     </Button>
                   </div>
                   <div className="flex gap-2 flex-wrap">

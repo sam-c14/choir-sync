@@ -113,7 +113,7 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SongComplexityEnum.options.map((o) => (
+                  {SongComplexityEnum.options.map((o: string) => (
                     <SelectItem key={o} value={o}>{o}</SelectItem>
                   ))}
                 </SelectContent>
@@ -129,7 +129,7 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SongStatusEnum.options.map((o) => (
+                  {SongStatusEnum.options.map((o: string) => (
                     <SelectItem key={o} value={o}>{o.replace('_', ' ')}</SelectItem>
                   ))}
                 </SelectContent>

@@ -3,10 +3,13 @@
     "jsx": "react-jsx",
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
+    "ignoreDeprecations": "6.0",
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@choir-workspace/shared-validation": ["../libs/shared/validation/src/index.ts"],
+      "@choir-workspace/shared-types": ["../libs/shared/types/src/index.ts"]
     },
     "types": [
       "vite/client"

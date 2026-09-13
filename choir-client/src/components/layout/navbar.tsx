@@ -57,11 +57,13 @@ export function Navbar() {
           {/* Mobile Actions Dropdown */}
           <div className="sm:hidden">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
-                  <Menu className="h-[1.2rem] w-[1.2rem]" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" />
+                }
+              >
+                <Menu className="h-[1.2rem] w-[1.2rem]" />
+                <span className="sr-only">Open menu</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuGroup>

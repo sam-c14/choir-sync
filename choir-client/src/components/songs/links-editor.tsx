@@ -132,7 +132,7 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {LinkPlatformEnum.options.map((o) => (
+                {LinkPlatformEnum.options.map((o: string) => (
                   <SelectItem key={o} value={o}>
                     {o}
                   </SelectItem>

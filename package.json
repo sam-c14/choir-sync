@@ -7,7 +7,10 @@
     "dev:api": "nx serve choir-api",
     "dev:client": "nx serve choir-client",
     "build": "nx run-many -t build --all",
-    "lint": "nx run-many -t lint --all"
+    "lint": "nx run-many -t lint --all",
+    "typecheck:api": "tsc -b choir-api/tsconfig.json",
+    "typecheck:client": "tsc -b choir-client/tsconfig.json",
+    "typecheck": "npm run typecheck:api && npm run typecheck:client"
   },
   "private": true,
   "devDependencies": {

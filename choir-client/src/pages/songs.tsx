@@ -173,10 +173,12 @@ function SongSection({
             />
           </div>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 gap-1 shrink-0">
-                Sort <ChevronDown className="w-3.5 h-3.5" />
-              </Button>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" size="sm" className="h-9 gap-1 shrink-0" />
+              }
+            >
+              Sort <ChevronDown className="w-3.5 h-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => { setSortKey('createdAt'); setPage(1); }}>Recently Added</DropdownMenuItem>

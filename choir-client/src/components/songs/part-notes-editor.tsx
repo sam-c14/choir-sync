@@ -27,7 +27,7 @@ export function PartNotesEditor({ songId, parts }: PartNotesEditorProps) {
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Voice Parts</h3>
-      {VoicePartTypeEnum.options.map((part) => {
+      {VoicePartTypeEnum.options.map((part: string) => {
         const existing = parts.find((p) => p.voicePart === part);
         const canEdit = isDirector || (user?.role === 'SECTION_LEADER' && user?.leadsVoicePart === part);
         return (

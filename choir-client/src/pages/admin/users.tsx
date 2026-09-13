@@ -19,11 +19,13 @@ export default function AdminUsersPage() {
   const updateRoleMutation = useUpdateUserRole();
   const deleteMutation = useDeleteUser();
 
-  const handleRoleChange = (userId: string, newRole: string) => {
+  const handleRoleChange = (userId: string, newRole: string | null) => {
+    if (!newRole) return;
     updateRoleMutation.mutate({ id: userId, data: { role: newRole as any } });
   };
 
-  const handleVoicePartChange = (userId: string, newPart: string) => {
+  const handleVoicePartChange = (userId: string, newPart: string | null) => {
+    if (!newPart) return;
     updateRoleMutation.mutate({ id: userId, data: { role: 'SECTION_LEADER', leadsVoicePart: newPart as any } });
   };
 
@@ -88,7 +90,7 @@ export default function AdminUsersPage() {
                 </Select>
 
                 {u.role === 'SECTION_LEADER' && (
-                  <Select value={u.leadsVoicePart || undefined} onValueChange={(v) => handleVoicePartChange(u.id, v)}>
+                  <Select value={u.leadsVoicePart ?? ""} onValueChange={(v) => handleVoicePartChange(u.id, v)}>
                     <SelectTrigger className="w-[110px] sm:w-[120px]">
                       <SelectValue placeholder="Part" />
                     </SelectTrigger>
@@ -102,11 +104,13 @@ export default function AdminUsersPage() {
 
                 {u.role !== 'DIRECTOR' && (
                   <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="ml-auto sm:ml-2">
-                        <Trash className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </AlertDialogTrigger>
+                    <AlertDialogTrigger
+                      render={
+                        <Button variant="ghost" size="icon" className="ml-auto sm:ml-2">
+                          <Trash className="h-4 w-4 text-destructive" />
+                        </Button>
+                      }
+                    />
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
