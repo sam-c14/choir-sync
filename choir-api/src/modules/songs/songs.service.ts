@@ -9,14 +9,68 @@ import {
 import { VoicePartType } from '@prisma/client';
 
 export class SongsService {
-  async getSongs() {
-    return prisma.song.findMany({
-      include: {
-        parts: true,
-        links: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getSongs(options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    voicePart?: string;
+    complexity?: string;
+    status?: string;
+    sortBy?: string;
+    order?: 'asc' | 'desc';
+  } = {}) {
+    const page = options.page || 1;
+    const limit = options.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    
+    if (options.search) {
+      where.OR = [
+        { title: { contains: options.search, mode: 'insensitive' } },
+        { composer: { contains: options.search, mode: 'insensitive' } }
+      ];
+    }
+    
+    if (options.status) {
+      const statuses = options.status.split(',');
+      where.status = { in: statuses };
+    }
+    
+    if (options.complexity) {
+      where.complexity = options.complexity;
+    }
+
+    if (options.voicePart) {
+      where.parts = {
+        some: { voicePart: options.voicePart }
+      };
+    }
+
+    const orderBy: any = {};
+    if (options.sortBy) {
+      orderBy[options.sortBy] = options.order || 'asc';
+    } else {
+      orderBy.createdAt = 'desc';
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.song.findMany({
+        where,
+        include: { parts: true, links: true },
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      prisma.song.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async getSongById(id: string) {

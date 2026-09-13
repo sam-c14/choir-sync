@@ -12,7 +12,18 @@ import { songsService } from './songs.service';
 export class SongsController {
   async getSongs(req: Request, res: Response) {
     try {
-      const songs = await songsService.getSongs();
+      const options = {
+        page: req.query.page ? parseInt(req.query.page as string) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+        search: req.query.search as string,
+        voicePart: req.query.voicePart as string,
+        complexity: req.query.complexity as string,
+        status: req.query.status as string,
+        sortBy: req.query.sortBy as string,
+        order: req.query.order as 'asc' | 'desc',
+      };
+      
+      const songs = await songsService.getSongs(options);
       res.json(songs);
     } catch (_err) {
       res.status(500).json({ message: 'Failed to fetch songs' });

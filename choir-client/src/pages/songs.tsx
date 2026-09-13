@@ -55,16 +55,12 @@ interface Song {
 
 export default function SongsPage() {
   const { user } = useAuth();
-  const { data: songs, isLoading, error } = useSongs();
   const isDirector = user?.role === 'DIRECTOR';
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [selectedSong, setSelectedSong] = useState<string | null>(null);
   const [deletingSong, setDeletingSong] = useState<Song | null>(null);
-
-  const activeSongs = (songs ?? []).filter((s: Song) => s.status === 'ACTIVE_SUNDAY');
-  const otherSongs = (songs ?? []).filter((s: Song) => s.status !== 'ACTIVE_SUNDAY');
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
@@ -82,9 +78,7 @@ export default function SongsPage() {
 
       <SongSection
         title="Active Sunday"
-        songs={activeSongs}
-        isLoading={isLoading}
-        error={error}
+        status="ACTIVE_SUNDAY"
         onSelectSong={setSelectedSong}
         onEditSong={setEditingSong}
         onDeleteSong={setDeletingSong}
@@ -93,9 +87,7 @@ export default function SongsPage() {
 
       <SongSection
         title="Rehearsal & Archived"
-        songs={otherSongs}
-        isLoading={isLoading}
-        error={error}
+        status="REHEARSAL,ARCHIVED"
         onSelectSong={setSelectedSong}
         onEditSong={setEditingSong}
         onDeleteSong={setDeletingSong}
@@ -129,18 +121,14 @@ export default function SongsPage() {
 
 function SongSection({
   title,
-  songs,
-  isLoading,
-  error,
+  status,
   onSelectSong,
   onEditSong,
   onDeleteSong,
   isDirector,
 }: {
   title: string;
-  songs: Song[];
-  isLoading: boolean;
-  error: unknown;
+  status: string;
   onSelectSong: (id: string) => void;
   onEditSong: (song: Song) => void;
   onDeleteSong: (song: Song) => void;
@@ -148,27 +136,32 @@ function SongSection({
 }) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('createdAt');
+  const [page, setPage] = useState(1);
+  const limit = 12;
 
-  const filtered = songs
-    .filter((s) => {
-      const q = search.toLowerCase();
-      return !q || s.title.toLowerCase().includes(q) || (s.composer ?? '').toLowerCase().includes(q);
-    })
-    .sort((a, b) => {
-      if (sortKey === 'title') return a.title.localeCompare(b.title);
-      if (sortKey === 'complexity')
-        return (COMPLEXITY_ORDER[a.complexity] ?? 0) - (COMPLEXITY_ORDER[b.complexity] ?? 0);
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+  const sortBy = sortKey === 'complexity' ? 'complexity' : sortKey === 'title' ? 'title' : 'createdAt';
+  const order = sortKey === 'createdAt' ? 'desc' : 'asc';
 
-  if (!isLoading && !error && songs.length === 0) {
-    return null; // Don't show empty sections initially if they literally have 0 songs total
+  const { data: songsData, isLoading, error } = useSongs({
+    page,
+    limit,
+    status,
+    search: search.trim() || undefined,
+    sortBy,
+    order,
+  });
+
+  const songs: Song[] = songsData?.data || [];
+  const totalPages = songsData?.totalPages || 1;
+
+  if (!isLoading && !error && songs.length === 0 && !search && page === 1) {
+    return null;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
-        <h2 className="text-xl font-semibold tracking-tight">{title} <Badge variant="secondary" className="ml-2">{songs.length}</Badge></h2>
+        <h2 className="text-xl font-semibold tracking-tight">{title} <Badge variant="secondary" className="ml-2">{songsData?.total ?? 0}</Badge></h2>
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -176,7 +169,7 @@ function SongSection({
               className="pl-9 w-[200px] h-9"
               placeholder="Search section…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
           </div>
           <DropdownMenu>
@@ -186,9 +179,9 @@ function SongSection({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSortKey('createdAt')}>Recently Added</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortKey('title')}>Title A–Z</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortKey('complexity')}>Complexity</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setSortKey('createdAt'); setPage(1); }}>Recently Added</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setSortKey('title'); setPage(1); }}>Title A–Z</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setSortKey('complexity'); setPage(1); }}>Complexity</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -219,14 +212,14 @@ function SongSection({
         </div>
       )}
 
-      {!isLoading && !error && filtered.length === 0 && (
+      {!isLoading && !error && songs.length === 0 && (
         <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
           No songs match your search in this section.
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((song) => (
+        {songs.map((song) => (
           <Card
             key={song.id}
             className="cursor-pointer shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
@@ -274,6 +267,32 @@ function SongSection({
           </Card>
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { CreateUniformDto, UpdateUniformDto } from '@choir-workspace/shared-vali
 import { startOfDay } from 'date-fns';
 
 export class UniformsService {
-  async getUniforms(filter: string) {
+  async getUniforms(filter: string, page: number = 1, limit: number = 20) {
     const today = startOfDay(new Date());
 
     let whereClause = {};
@@ -21,10 +21,24 @@ export class UniformsService {
       };
     }
 
-    return prisma.uniformSchedule.findMany({
-      where: whereClause,
-      orderBy: filter === 'past' ? { serviceDate: 'desc' } : { serviceDate: 'asc' },
-    });
+    const skip = (page - 1) * limit;
+    
+    const [data, total] = await Promise.all([
+      prisma.uniformSchedule.findMany({
+        where: whereClause,
+        orderBy: filter === 'past' ? { serviceDate: 'desc' } : { serviceDate: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.uniformSchedule.count({ where: whereClause }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async createUniform(dto: CreateUniformDto) {

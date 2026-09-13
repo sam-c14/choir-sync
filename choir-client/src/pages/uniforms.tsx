@@ -12,7 +12,8 @@ import { Pencil, Trash } from 'lucide-react';
 export default function UniformsPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<'current' | 'past'>('current');
-  const { data: uniforms, isLoading } = useUniforms(filter);
+  const [page, setPage] = useState(1);
+  const { data: uniformsData, isLoading } = useUniforms(filter, page, 20);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUniform, setEditingUniform] = useState<any>(null);
@@ -37,6 +38,9 @@ export default function UniformsPage() {
     setDeleteDialogOpen(true);
   };
 
+  const uniforms = uniformsData?.data || [];
+  const totalPages = uniformsData?.totalPages || 1;
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 px-4 py-6 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -52,13 +56,13 @@ export default function UniformsPage() {
       <div className="flex flex-wrap gap-2 border-b pb-2">
         <Button
           variant={filter === 'current' ? 'default' : 'ghost'}
-          onClick={() => setFilter('current')}
+          onClick={() => { setFilter('current'); setPage(1); }}
         >
           Upcoming & Current
         </Button>
         <Button
           variant={filter === 'past' ? 'default' : 'ghost'}
-          onClick={() => setFilter('past')}
+          onClick={() => { setFilter('past'); setPage(1); }}
         >
           Past Entries
         </Button>
@@ -84,45 +88,73 @@ export default function UniformsPage() {
             </Card>
           ))}
         </div>
-      ) : uniforms?.length === 0 ? (
+      ) : uniforms.length === 0 ? (
         <p className="text-muted-foreground py-8 text-center sm:text-left">No uniform schedules found.</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {uniforms?.map((u) => (
-            <Card key={u.id}>
-              <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-                <div>
-                  <CardTitle>{format(new Date(u.serviceDate), 'EEEE, MMMM do, yyyy')}</CardTitle>
-                </div>
-                {isDirector && (
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(u)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(u.id)}>
-                      <Trash className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Female Outfit</h4>
-                  <p>{u.femaleOutfit}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Male Outfit</h4>
-                  <p>{u.maleOutfit}</p>
-                </div>
-                {u.notes && (
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {uniforms.map((u) => (
+              <Card key={u.id}>
+                <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
                   <div>
-                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Notes</h4>
-                    <p className="text-sm italic">{u.notes}</p>
+                    <CardTitle>{format(new Date(u.serviceDate), 'EEEE, MMMM do, yyyy')}</CardTitle>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  {isDirector && (
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(u)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(u.id)}>
+                        <Trash className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Female Outfit</h4>
+                    <p>{u.femaleOutfit}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Male Outfit</h4>
+                    <p>{u.maleOutfit}</p>
+                  </div>
+                  {u.notes && (
+                    <div>
+                      <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Notes</h4>
+                      <p className="text-sm italic">{u.notes}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          {filter === 'past' && totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <p className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -10,11 +10,18 @@ interface UniformSchedule {
   notes: string | null;
 }
 
-export function useUniforms(filter: 'current' | 'past' | 'all' = 'current') {
+export interface PaginatedUniforms {
+  data: UniformSchedule[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export function useUniforms(filter: 'current' | 'past' | 'all' = 'current', page: number = 1, limit: number = 20) {
   return useQuery({
-    queryKey: ['uniforms', filter],
+    queryKey: ['uniforms', filter, page, limit],
     queryFn: async () => {
-      const res = await apiClient.get<UniformSchedule[]>(`/uniforms?filter=${filter}`);
+      const res = await apiClient.get<PaginatedUniforms>(`/uniforms?filter=${filter}&page=${page}&limit=${limit}`);
       return res.data;
     },
   });

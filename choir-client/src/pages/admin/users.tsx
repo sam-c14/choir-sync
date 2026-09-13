@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../components/ui/alert-dialog';
 import { Trash } from 'lucide-react';
 
+import { Skeleton } from '../../components/ui/skeleton';
+
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
   const [page, setPage] = useState(1);
@@ -46,7 +48,20 @@ export default function AdminUsersPage() {
       </div>
 
       {isLoading ? (
-        <p>Loading users...</p>
+        <div className="grid gap-4">
+          {[...Array(5)].map((_, i) => (
+            <Card key={i} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4">
+              <div className="space-y-2 w-full sm:w-auto">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Skeleton className="h-10 w-full sm:w-[160px]" />
+                <Skeleton className="h-10 w-10 sm:w-10 ml-auto sm:ml-2 shrink-0" />
+              </div>
+            </Card>
+          ))}
+        </div>
       ) : (
         <div className="grid gap-4">
           {usersData?.data.map((u) => (

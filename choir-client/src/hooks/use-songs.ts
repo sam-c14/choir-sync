@@ -9,11 +9,39 @@ import type {
   UpdateSongPartDto,
 } from '@choir-workspace/shared-validation';
 
-export function useSongs() {
+export interface PaginatedSongs {
+  data: any[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export function useSongs(options: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  voicePart?: string;
+  complexity?: string;
+  status?: string;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+} = {}) {
+  const queryParams = new URLSearchParams();
+  if (options.page) queryParams.append('page', options.page.toString());
+  if (options.limit) queryParams.append('limit', options.limit.toString());
+  if (options.search) queryParams.append('search', options.search);
+  if (options.voicePart && options.voicePart !== 'ALL') queryParams.append('voicePart', options.voicePart);
+  if (options.complexity && options.complexity !== 'ALL') queryParams.append('complexity', options.complexity);
+  if (options.status && options.status !== 'ALL') queryParams.append('status', options.status);
+  if (options.sortBy) queryParams.append('sortBy', options.sortBy);
+  if (options.order) queryParams.append('order', options.order);
+
+  const queryString = queryParams.toString();
+
   return useQuery({
-    queryKey: queryKeys.songs.all,
+    queryKey: [...queryKeys.songs.all, options],
     queryFn: async () => {
-      const response = await apiClient.get('/songs');
+      const response = await apiClient.get<PaginatedSongs>(`/songs?${queryString}`);
       return response.data;
     },
   });
