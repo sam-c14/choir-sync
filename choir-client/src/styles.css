@@ -3,7 +3,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-brand: #9418d9;
+  --color-brand: #850bc4;
   --font-sans: 'Geist Variable', sans-serif;
   --color-border: var(--border);
   --color-input: var(--input);
