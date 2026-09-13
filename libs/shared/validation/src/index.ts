@@ -69,5 +69,16 @@ export const CreateUniformSchema = z.object({
 
 export const UpdateUniformSchema = CreateUniformSchema.partial();
 
+export const UpdateUserRoleSchema = z
+  .object({
+    role: UserRoleEnum,
+    leadsVoicePart: VoicePartTypeEnum.optional(),
+  })
+  .refine((data) => data.role !== "SECTION_LEADER" || data.leadsVoicePart !== undefined, {
+    message: "leadsVoicePart is required when role is SECTION_LEADER",
+    path: ["leadsVoicePart"],
+  });
+
 export type CreateUniformDto = z.infer<typeof CreateUniformSchema>;
 export type UpdateUniformDto = z.infer<typeof UpdateUniformSchema>;
+export type UpdateUserRoleDto = z.infer<typeof UpdateUserRoleSchema>;

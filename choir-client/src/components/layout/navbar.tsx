@@ -32,6 +32,11 @@ export function Navbar() {
             <Link to="/uniforms" className="text-sm font-medium transition-colors hover:text-primary">
               Uniforms
             </Link>
+            {user.role === 'DIRECTOR' && (
+              <Link to="/admin/users" className="text-sm font-medium transition-colors hover:text-primary text-destructive">
+                Users
+              </Link>
+            )}
           </nav>
         </div>
         <div className="flex items-center gap-4">
