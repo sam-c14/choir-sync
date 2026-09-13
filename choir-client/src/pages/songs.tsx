@@ -25,7 +25,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from '../components/ui/dropdown-menu';
-import { Loader2, Plus, Search, ChevronDown, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Search, ChevronDown, Pencil, Trash2, Music, SearchX } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
@@ -165,10 +165,6 @@ function SongSection({
   const songs: Song[] = songsData?.data || [];
   const totalPages = songsData?.totalPages || 1;
 
-  if (!isLoading && !error && songs.length === 0 && !debouncedSearch && page === 1) {
-    return null;
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
@@ -229,8 +225,29 @@ function SongSection({
       )}
 
       {!isLoading && !error && songs.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
-          No songs match your search in this section.
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed rounded-xl bg-slate-50/50 dark:bg-slate-900/20">
+          {!debouncedSearch ? (
+            <>
+              <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                <Music className="h-6 w-6 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">No songs here yet</h3>
+              <p className="text-sm text-slate-500 max-w-sm">
+                There are currently no songs in the {title} section.
+                {isDirector && ' Click "Add Song" above to start building your repertoire.'}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                <SearchX className="h-6 w-6 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">No results found</h3>
+              <p className="text-sm text-slate-500 max-w-sm">
+                We couldn't find any songs matching "{debouncedSearch}" in this section. Try adjusting your search.
+              </p>
+            </>
+          )}
         </div>
       )}
 
