@@ -64,13 +64,13 @@ export default function SongsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Songs Library</h1>
           <p className="text-muted-foreground mt-1">Manage and view the choir's repertoire</p>
         </div>
         {isDirector && (
-          <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+          <Button onClick={() => setAddDialogOpen(true)} className="gap-2 w-full sm:w-auto">
             <Plus className="w-4 h-4" /> Add Song
           </Button>
         )}
@@ -162,11 +162,11 @@ function SongSection({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
         <h2 className="text-xl font-semibold tracking-tight">{title} <Badge variant="secondary" className="ml-2">{songsData?.total ?? 0}</Badge></h2>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              className="pl-9 w-[200px] h-9"
+              className="pl-9 w-full sm:w-[200px] h-9"
               placeholder="Search section…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -174,7 +174,7 @@ function SongSection({
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 gap-1">
+              <Button variant="outline" size="sm" className="h-9 gap-1 shrink-0">
                 Sort <ChevronDown className="w-3.5 h-3.5" />
               </Button>
             </DropdownMenuTrigger>

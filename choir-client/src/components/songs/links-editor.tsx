@@ -89,7 +89,7 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[220px]"
+              className="text-blue-600 dark:text-blue-400 hover:underline truncate flex-1 min-w-0"
             >
               {link.url}
             </a>
@@ -118,9 +118,9 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
       {isDirector && (
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex items-start gap-2 pt-1"
+          className="flex flex-col sm:flex-row sm:items-start gap-3 pt-2"
         >
-          <div className="space-y-3">
+          <div className="space-y-2 w-full sm:w-32 shrink-0">
             <Label className="text-xs">Platform</Label>
             <Select
               defaultValue="YOUTUBE"
@@ -128,7 +128,7 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
                 setValue("platform", v as CreateSongLinkDto["platform"])
               }
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -140,8 +140,8 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-end w-full gap-x-2">
-            <div className="flex flex-col space-y-3 w-11/12">
+          <div className="flex items-end w-full gap-2">
+            <div className="flex flex-col space-y-2 w-full">
               <Label className="text-xs">URL</Label>
               <Input
                 placeholder="https://…"
@@ -153,7 +153,7 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
                 <p className="text-xs text-red-600">{errors.url.message}</p>
               )}
             </div>
-            <Button type="submit" size="default" disabled={isSubmitting}>
+            <Button type="submit" size="default" disabled={isSubmitting} className="shrink-0 h-9">
               Add
             </Button>
           </div>

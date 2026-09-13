@@ -18,8 +18,8 @@ export function Navbar() {
 
   return (
     <header className="border-b bg-background shadow-sm sticky top-0 z-10 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2 sm:gap-6 overflow-x-auto whitespace-nowrap no-scrollbar mask-edges">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center sm:justify-between">
+        <div className="flex items-center gap-2 sm:gap-6 overflow-x-auto whitespace-nowrap no-scrollbar mask-edges sm:w-auto w-11/12">
           <div className="flex items-center gap-2">
             <h1 className="sm:text-xl text-lg font-bold tracking-tight text-primary truncate max-w-[120px] sm:max-w-none">Choir Sync</h1>
             <Badge variant="outline" className="hidden sm:inline-flex">{user.role}</Badge>
@@ -29,7 +29,7 @@ export function Navbar() {
               </Badge>
             )}
           </div>
-          <nav className="flex items-center space-x-3 sm:space-x-4">
+          <nav className="flex items-center space-x-3 sm:space-x-4 w-full">
             <Link to="/" className="text-sm font-medium transition-colors hover:text-primary">
               Songs
             </Link>
@@ -37,7 +37,7 @@ export function Navbar() {
               Uniforms
             </Link>
             {user.role === 'DIRECTOR' && (
-              <Link to="/admin/users" className="text-sm font-medium transition-colors hover:text-primary text-destructive">
+              <Link to="/admin/users" className="text-sm font-medium transition-colors hover:text-primary">
                 Users
               </Link>
             )}
