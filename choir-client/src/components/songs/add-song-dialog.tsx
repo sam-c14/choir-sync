@@ -56,6 +56,8 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
           complexity: editingSong.complexity as CreateSongDto['complexity'],
           status: editingSong.status as CreateSongDto['status'],
           tags: editingSong.tags,
+          lyrics: (editingSong as any).lyrics ?? undefined,
+          originalKey: (editingSong as any).originalKey ?? undefined,
         }
       : { complexity: 'MODERATE', status: 'ACTIVE_SUNDAY', tags: [], parts: [], links: [] } as any;
   }, [editingSong]);
@@ -101,6 +103,19 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
           <div className="space-y-3">
             <Label htmlFor="composer">Composer</Label>
             <Input id="composer" placeholder="e.g. Handel" {...register('composer')} />
+          </div>
+          <div className="space-y-3">
+            <Label htmlFor="originalKey">Original Key</Label>
+            <Input id="originalKey" placeholder="e.g. C Major, Gm, Eb..." {...register('originalKey')} />
+          </div>
+          <div className="space-y-3">
+            <Label htmlFor="lyrics">Lyrics</Label>
+            <textarea
+              id="lyrics"
+              className="flex min-h-20 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
+              placeholder="Song lyrics..."
+              {...register('lyrics')}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-3">

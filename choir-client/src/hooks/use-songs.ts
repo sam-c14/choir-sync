@@ -85,6 +85,20 @@ export function useUpdateSong() {
   });
 }
 
+export function useUpdateLyrics() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { lyrics?: string | null, originalKey?: string | null } }) => {
+      const response = await apiClient.patch(`/songs/${id}/lyrics`, data);
+      return response.data;
+    },
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.songs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.songs.detail(variables.id) });
+    },
+  });
+}
+
 export function useAddSongPart() {
   const queryClient = useQueryClient();
   return useMutation({

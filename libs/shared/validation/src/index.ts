@@ -31,6 +31,8 @@ export const CreateSongSchema = z.object({
   complexity: SongComplexityEnum.default("MODERATE"),
   tags: z.array(z.string()).default([]),
   status: SongStatusEnum.default("ACTIVE_SUNDAY"),
+  lyrics: z.string().max(10000).optional().nullable(),
+  originalKey: z.string().max(20).optional().nullable(),
   parts: z.array(CreateSongPartSchema).default([]),
   links: z.array(CreateSongLinkSchema).default([]),
 });

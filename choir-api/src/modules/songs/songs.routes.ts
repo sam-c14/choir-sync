@@ -10,6 +10,7 @@ router.use(requireAuth);
 
 router.post('/', requireRole('DIRECTOR'), songsController.createSong.bind(songsController));
 router.patch('/:id', requireRole('DIRECTOR'), songsController.updateSong.bind(songsController));
+router.patch('/:id/lyrics', songsController.updateLyrics.bind(songsController));
 router.delete('/:id', requireRole('DIRECTOR'), songsController.deleteSong.bind(songsController));
 router.put('/:id/parts', requireRole('DIRECTOR'), songsController.updateAllParts.bind(songsController));
 router.patch('/:id/parts/:part', requirePartLeadOrDirector, songsController.updatePart.bind(songsController));

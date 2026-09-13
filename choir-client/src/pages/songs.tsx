@@ -49,6 +49,8 @@ interface Song {
   complexity: string;
   status: string;
   tags: string[];
+  lyrics: string | null;
+  originalKey: string | null;
   createdAt: string;
   parts: { voicePart: string; notes?: string | null }[];
   links: { id: string; platform: string; url: string }[];

@@ -8,6 +8,7 @@ import { Loader2, Trash2 } from 'lucide-react';
 import { PartNotesEditor } from './part-notes-editor';
 import { LinksEditor } from './links-editor';
 import { DeleteSongDialog } from './delete-song-dialog';
+import { LyricsKeyEditor } from './lyrics-key-editor';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -82,6 +83,9 @@ export function SongDetailDialog({ songId, onClose }: { songId: string; onClose:
                     ))}
                     {!song.parts?.length && <span className="text-sm text-muted-foreground italic">No parts added</span>}
                   </div>
+                </div>
+                <div className="pt-2 border-t">
+                  <LyricsKeyEditor songId={song.id} initialLyrics={song.lyrics} initialKey={song.originalKey} />
                 </div>
                 <div className="pt-2 border-t">
                   <LinksEditor songId={song.id} links={song.links ?? []} />

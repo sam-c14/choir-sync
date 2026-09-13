@@ -62,6 +62,22 @@ export class SongsController {
     }
   }
 
+  async updateLyrics(req: Request, res: Response) {
+    try {
+      const schema = z.object({
+        lyrics: z.string().max(10000).optional().nullable(),
+        originalKey: z.string().max(20).optional().nullable(),
+      });
+      const dto = schema.parse(req.body);
+      const song = await songsService.updateSong(req.params.id as string, dto as any);
+      res.status(200).json(song);
+    } catch (error: any) {
+      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Song not found' });
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   async deleteSong(req: Request, res: Response) {
     try {
       await songsService.deleteSong(req.params.id as string);

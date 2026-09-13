@@ -77,10 +77,12 @@ model Song {
   composer   String?
   complexity SongComplexity @default(MODERATE)
   tags       String[]       @default([])
-  status     SongStatus     @default(ACTIVE_SUNDAY)
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  parts      SongPart[]
+  status      SongStatus     @default(ACTIVE_SUNDAY)
+  lyrics      String?
+  originalKey String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  parts       SongPart[]
   links      SongLink[]
 
   @@index([title])
