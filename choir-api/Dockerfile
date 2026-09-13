@@ -31,9 +31,10 @@ RUN pnpm install --frozen-lockfile --prod
 # install rather than guessing a nested .pnpm path from the builder stage).
 COPY --from=builder /app/choir-api/src/prisma ./prisma
 
-# Install Prisma CLI globally so it persists for both the generate RUN and the
-# migrate deploy CMD. pnpm dlx is ephemeral (temp dir, gone after the RUN step)
-# so pnpm exec prisma in CMD fails with "command not found".
+# Make pnpm's global bin directory reachable so `pnpm add -g` and the
+# resulting binary are both on PATH for subsequent RUN steps and CMD.
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="${PNPM_HOME}:${PATH}"
 RUN pnpm add -g prisma@5.22.0
 RUN prisma generate --schema=./prisma/schema.prisma
 
