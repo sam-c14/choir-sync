@@ -10,7 +10,10 @@ import { Trash } from 'lucide-react';
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
-  const { data: users, isLoading } = useUsers();
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
+  const { data: usersData, isLoading } = useUsers(page, limit);
   const updateRoleMutation = useUpdateUserRole();
   const deleteMutation = useDeleteUser();
 
@@ -46,20 +49,20 @@ export default function AdminUsersPage() {
         <p>Loading users...</p>
       ) : (
         <div className="grid gap-4">
-          {users?.map((u) => (
+          {usersData?.data.map((u) => (
             <Card key={u.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4">
-              <div className="space-y-1">
-                <p className="font-medium text-lg leading-none">{u.email}</p>
-                <div className="flex gap-2 text-sm text-muted-foreground items-center">
+              <div className="space-y-1 w-full sm:w-auto">
+                <p className="font-medium text-lg leading-none truncate max-w-[250px] sm:max-w-xs">{u.email}</p>
+                <div className="flex gap-2 text-sm text-muted-foreground items-center mt-1">
                   <span>{new Date(u.createdAt).toLocaleDateString()}</span>
                   <span>&bull;</span>
                   <Badge variant="outline">{u.provider}</Badge>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
                 <Select value={u.role} onValueChange={(v) => handleRoleChange(u.id, v)}>
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-[140px] sm:w-[160px]">
                     <SelectValue placeholder="Role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -71,7 +74,7 @@ export default function AdminUsersPage() {
 
                 {u.role === 'SECTION_LEADER' && (
                   <Select value={u.leadsVoicePart || undefined} onValueChange={(v) => handleVoicePartChange(u.id, v)}>
-                    <SelectTrigger className="w-[120px]">
+                    <SelectTrigger className="w-[110px] sm:w-[120px]">
                       <SelectValue placeholder="Part" />
                     </SelectTrigger>
                     <SelectContent>
@@ -85,7 +88,7 @@ export default function AdminUsersPage() {
                 {u.role !== 'DIRECTOR' && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="ml-auto">
+                      <Button variant="ghost" size="icon" className="ml-auto sm:ml-2">
                         <Trash className="h-4 w-4 text-destructive" />
                       </Button>
                     </AlertDialogTrigger>
@@ -93,7 +96,7 @@ export default function AdminUsersPage() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently delete the account for <strong>{u.email}</strong>.
+                          This will permanently delete the account for <strong className="break-all">{u.email}</strong>.
                           This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -112,6 +115,32 @@ export default function AdminUsersPage() {
               </div>
             </Card>
           ))}
+          
+          {usersData && usersData.totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 border-t pt-4">
+              <p className="text-sm text-muted-foreground">
+                Showing page {usersData.page} of {usersData.totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={usersData.page === 1}
+                >
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => Math.min(usersData.totalPages, p + 1))}
+                  disabled={usersData.page === usersData.totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

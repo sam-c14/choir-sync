@@ -12,11 +12,18 @@ export interface User {
   createdAt: string;
 }
 
-export function useUsers() {
+export interface PaginatedUsers {
+  data: User[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export function useUsers(page: number = 1, limit: number = 20) {
   return useQuery({
-    queryKey: ['users'],
+    queryKey: ['users', page, limit],
     queryFn: async () => {
-      const res = await apiClient.get<User[]>('/users');
+      const res = await apiClient.get<PaginatedUsers>(`/users?page=${page}&limit=${limit}`);
       return res.data;
     },
   });

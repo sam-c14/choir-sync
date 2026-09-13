@@ -2,18 +2,32 @@ import { prisma } from '../../lib/prisma';
 import { UpdateUserRoleDto } from '@choir-workspace/shared-validation';
 
 export class UsersService {
-  async getUsers() {
-    return prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        leadsVoicePart: true,
-        provider: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getUsers(page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    
+    const [data, total] = await Promise.all([
+      prisma.user.findMany({
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          leadsVoicePart: true,
+          provider: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.user.count(),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async updateUserRole(id: string, dto: UpdateUserRoleDto) {

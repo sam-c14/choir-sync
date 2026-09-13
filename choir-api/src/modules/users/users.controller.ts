@@ -5,8 +5,10 @@ import { UpdateUserRoleSchema } from '@choir-workspace/shared-validation';
 export class UsersController {
   async getUsers(req: Request, res: Response) {
     try {
-      const users = await usersService.getUsers();
-      res.json(users);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const result = await usersService.getUsers(page, limit);
+      res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: 'Failed to fetch users' });
     }
