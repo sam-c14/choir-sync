@@ -30,7 +30,10 @@ export default defineConfig(() => ({
     nxCopyAssetsPlugin(['*.md']),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'icon-192x192.png', 'icon-512x512.png'],
+      devOptions: {
+        enabled: true
+      },
+      includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'screenshot-mobile.png', 'screenshot-desktop.png'],
       manifest: {
         name: 'Choir Sync',
         short_name: 'Choir Sync',
@@ -46,14 +49,40 @@ export default defineConfig(() => ({
             src: '/icon-192x192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'any',
+          },
+          {
+            src: '/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
           },
           {
             src: '/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'any',
           },
+          {
+            src: '/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+        screenshots: [
+          {
+            src: '/screenshot-mobile.png',
+            sizes: '1080x2400',
+            type: 'image/png',
+            form_factor: 'narrow'
+          },
+          {
+            src: '/screenshot-desktop.png',
+            sizes: '2560x1600',
+            type: 'image/png',
+            form_factor: 'wide'
+          }
         ],
       },
       workbox: {
