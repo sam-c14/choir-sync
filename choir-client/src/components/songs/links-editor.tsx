@@ -1,10 +1,8 @@
-import React from "react";
-import { useAddSongLink, useDeleteSongLink } from "../../hooks/use-songs";
+import React, { useState, useRef, useEffect } from "react";
+import { useAddSongLink, useDeleteSongLink, useSearchExternalMusic } from "../../hooks/use-songs";
 import { useAuth } from "../../auth/auth-context";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useDebounce } from "../../hooks/use-debounce";
 import {
-  CreateSongLinkSchema,
   LinkPlatformEnum,
   type CreateSongLinkDto,
 } from "@choir-workspace/shared-validation";
@@ -19,7 +17,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Label } from "../ui/label";
-import { Music, PlayCircle, Trash2, Link as LinkIcon } from "lucide-react";
+import { Music, PlayCircle, Trash2, Link as LinkIcon, Search, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 const PLATFORM_ICONS: Record<string, React.ReactNode> = {
@@ -28,6 +26,9 @@ const PLATFORM_ICONS: Record<string, React.ReactNode> = {
   AUDIOMACK: <Music className="w-4 h-4 text-orange-500" />,
   OTHER: <LinkIcon className="w-4 h-4 text-slate-500" />,
 };
+
+/** Platforms that support the search-to-add flow */
+const SEARCHABLE_PLATFORMS = new Set(["SPOTIFY", "YOUTUBE"]);
 
 interface SongLink {
   id: string;
@@ -40,69 +41,273 @@ interface LinksEditorProps {
   links: SongLink[];
 }
 
-export function LinksEditor({ songId, links }: LinksEditorProps) {
-  const { user } = useAuth();
-  const isDirector = user?.role === "DIRECTOR";
+// ---------------------------------------------------------------------------
+// Embed helpers
+// ---------------------------------------------------------------------------
+function getEmbedUrl(platform: string, url: string): string | null {
+  try {
+    if (platform === "YOUTUBE") {
+      const videoId = url.match(
+        /(?:youtu\.be\/|youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=))([^"&?/\s]{11})/i
+      )?.[1];
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+    }
+    if (platform === "SPOTIFY") {
+      const trackId = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/i)?.[1];
+      if (trackId)
+        return `https://open.spotify.com/embed/track/${trackId}?utm_source=generator`;
+    }
+    if (platform === "AUDIOMACK") {
+      const path = url.match(/audiomack\.com\/(.+)/i)?.[1];
+      if (path) return `https://audiomack.com/embed/${path}?background=1`;
+    }
+  } catch {
+    // Return null if parsing fails
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Search result row shared between Spotify and YouTube
+// ---------------------------------------------------------------------------
+interface SearchResult {
+  title: string;
+  composer?: string;
+  thumbnailUrl?: string;
+  spotifyUrl?: string;
+  youtubeUrl?: string;
+  originalKey?: string;
+  tempoBpm?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Search-to-add panel (shown for SPOTIFY and YOUTUBE)
+// ---------------------------------------------------------------------------
+interface SearchAddPanelProps {
+  platform: "SPOTIFY" | "YOUTUBE";
+  songId: string;
+  onAdded: () => void;
+}
+
+function SearchAddPanel({ platform, songId, onAdded }: SearchAddPanelProps) {
+  const [query, setQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const debouncedQuery = useDebounce(query, 350);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const addLink = useAddSongLink();
-  const deleteLink = useDeleteSongLink();
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<CreateSongLinkDto>({
-    resolver: zodResolver(CreateSongLinkSchema),
-    defaultValues: { platform: "YOUTUBE", url: "" },
-  });
+  const source = platform === "SPOTIFY" ? "spotify" : "youtube";
+  const { data: results, isFetching } = useSearchExternalMusic(
+    debouncedQuery,
+    source
+  );
 
-  const onSubmit = async (data: CreateSongLinkDto) => {
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = async (result: SearchResult) => {
+    const url =
+      platform === "SPOTIFY" ? result.spotifyUrl : result.youtubeUrl;
+    if (!url) return;
+
+    const data: CreateSongLinkDto = { platform, url };
+
     try {
       await addLink.mutateAsync({ songId, data });
-      toast.success("Link added successfully.");
-      reset();
-    } catch (_err) {
+      toast.success("Link added.");
+      setQuery("");
+      setShowDropdown(false);
+      onAdded();
+    } catch {
       toast.error("Failed to add link.");
     }
   };
 
-  const getEmbedUrl = (platform: string, url: string) => {
+  const showResults = showDropdown && debouncedQuery.length >= 2;
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder={`Search ${platform === "SPOTIFY" ? "Spotify" : "YouTube"}…`}
+          value={query}
+          className="pl-8 pr-8 min-h-10"
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setShowDropdown(true);
+          }}
+          onFocus={() => {
+            if (query.length >= 2) setShowDropdown(true);
+          }}
+        />
+        {isFetching && (
+          <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-muted-foreground" />
+        )}
+      </div>
+
+      {showResults && (
+        <div className="absolute z-20 left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg max-h-64 overflow-y-auto">
+          {isFetching && !results?.length ? (
+            <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Searching…
+            </div>
+          ) : results && results.length > 0 ? (
+            results.map((item: SearchResult) => {
+              const key = item.spotifyUrl ?? item.youtubeUrl ?? item.title;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left hover:bg-muted transition-colors border-b last:border-0 focus:outline-none focus:bg-muted"
+                  onClick={() => handleSelect(item)}
+                  disabled={addLink.isPending}
+                >
+                  {item.thumbnailUrl ? (
+                    <img
+                      src={item.thumbnailUrl}
+                      alt=""
+                      className="w-10 h-10 rounded object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                      {PLATFORM_ICONS[platform]}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{item.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {item.composer}
+                      {item.originalKey && ` · ${item.originalKey}`}
+                      {item.tempoBpm && ` · ${item.tempoBpm} BPM`}
+                    </p>
+                  </div>
+                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                </button>
+              );
+            })
+          ) : (
+            <div className="py-4 text-sm text-muted-foreground text-center">
+              No results found
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Manual URL input (for AUDIOMACK / OTHER)
+// ---------------------------------------------------------------------------
+interface ManualUrlInputProps {
+  songId: string;
+  platform: string;
+  onAdded: () => void;
+}
+
+function ManualUrlInput({ songId, platform, onAdded }: ManualUrlInputProps) {
+  const [url, setUrl] = useState("");
+  const [urlError, setUrlError] = useState("");
+  const addLink = useAddSongLink();
+
+  const handleAdd = async () => {
     try {
-      if (platform === 'YOUTUBE') {
-        const videoId = url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=))([^"&?\/\s]{11})/i)?.[1];
-        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
-      }
-      if (platform === 'SPOTIFY') {
-        const trackId = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/i)?.[1];
-        if (trackId) return `https://open.spotify.com/embed/track/${trackId}?utm_source=generator`;
-      }
-      if (platform === 'AUDIOMACK') {
-        const path = url.match(/audiomack\.com\/(.+)/i)?.[1];
-        if (path) return `https://audiomack.com/embed/${path}?background=1`;
-      }
-    } catch (e) {
-      // Return null if parsing fails
+      new URL(url); // basic validation
+    } catch {
+      setUrlError("Please enter a valid URL.");
+      return;
     }
-    return null;
+    setUrlError("");
+
+    const data: CreateSongLinkDto = {
+      platform: platform as CreateSongLinkDto["platform"],
+      url,
+    };
+
+    try {
+      await addLink.mutateAsync({ songId, data });
+      toast.success("Link added.");
+      setUrl("");
+      onAdded();
+    } catch {
+      toast.error("Failed to add link.");
+    }
   };
+
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <div className="flex gap-2">
+        <Input
+          placeholder="https://…"
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            setUrlError("");
+          }}
+          aria-invalid={!!urlError}
+          className="w-full"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+        />
+        <Button
+          type="button"
+          size="default"
+          className="shrink-0 h-9"
+          disabled={addLink.isPending || !url}
+          onClick={handleAdd}
+        >
+          {addLink.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
+        </Button>
+      </div>
+      {urlError && <p className="text-xs text-destructive">{urlError}</p>}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+export function LinksEditor({ songId, links }: LinksEditorProps) {
+  const { user } = useAuth();
+  const isDirector = user?.role === "DIRECTOR";
+  const deleteLink = useDeleteSongLink();
+
+  const [platform, setPlatform] = useState<CreateSongLinkDto["platform"]>("YOUTUBE");
+  const [addKey, setAddKey] = useState(0); // bump to reset child panels after add
 
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
         Reference Links
       </h3>
+
       {links.length === 0 && (
-        <p className="text-sm text-muted-foreground italic">
-          No links added yet.
-        </p>
+        <p className="text-sm text-muted-foreground italic">No links added yet.</p>
       )}
+
+      {/* Existing links */}
       <div className="space-y-4">
         {links.map((link) => {
           const embedUrl = getEmbedUrl(link.platform, link.url);
           return (
-            <div key={link.id} className="flex flex-col gap-2 rounded-lg border bg-card p-3 shadow-sm">
+            <div
+              key={link.id}
+              className="flex flex-col gap-2 rounded-lg border bg-card p-3 shadow-sm"
+            >
               <div className="flex items-center gap-2 text-sm">
                 {PLATFORM_ICONS[link.platform] ?? PLATFORM_ICONS["OTHER"]}
                 <Badge variant="secondary" className="shrink-0">
@@ -135,34 +340,34 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
                   </Button>
                 )}
               </div>
-              
+
               {embedUrl && (
                 <div className="w-full mt-2 rounded-md overflow-hidden bg-slate-100 dark:bg-slate-800">
-                  {link.platform === 'YOUTUBE' && (
+                  {link.platform === "YOUTUBE" && (
                     <div className="relative w-full aspect-video">
-                      <iframe 
-                        className="absolute top-0 left-0 w-full h-full border-0" 
-                        src={embedUrl} 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowFullScreen 
+                      <iframe
+                        className="absolute top-0 left-0 w-full h-full border-0"
+                        src={embedUrl}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
                       />
                     </div>
                   )}
-                  {link.platform === 'SPOTIFY' && (
-                    <iframe 
-                      className="w-full border-0 rounded-md" 
-                      src={embedUrl} 
-                      height="152" 
-                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                  {link.platform === "SPOTIFY" && (
+                    <iframe
+                      className="w-full border-0 rounded-md"
+                      src={embedUrl}
+                      height="152"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                       loading="lazy"
                     />
                   )}
-                  {link.platform === 'AUDIOMACK' && (
-                    <iframe 
-                      className="w-full border-0" 
-                      src={embedUrl} 
-                      height="252" 
-                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                  {link.platform === "AUDIOMACK" && (
+                    <iframe
+                      className="w-full border-0"
+                      src={embedUrl}
+                      height="252"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                     />
                   )}
                 </div>
@@ -172,18 +377,18 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
         })}
       </div>
 
+      {/* Add link — directors only */}
       {isDirector && (
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col sm:flex-row sm:items-start gap-3 pt-2"
-        >
-          <div className="space-y-2 w-full sm:w-32 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3 pt-2">
+          {/* Platform selector */}
+          <div className="space-y-2 w-full sm:w-36 shrink-0">
             <Label className="text-xs">Platform</Label>
             <Select
-              defaultValue="YOUTUBE"
-              onValueChange={(v) =>
-                setValue("platform", v as CreateSongLinkDto["platform"])
-              }
+              value={platform}
+              onValueChange={(v) => {
+                setPlatform(v as CreateSongLinkDto["platform"]);
+                setAddKey((k) => k + 1); // reset whichever panel is active
+              }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -191,30 +396,38 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
               <SelectContent>
                 {LinkPlatformEnum.options.map((o: string) => (
                   <SelectItem key={o} value={o}>
-                    {o}
+                    <span className="flex items-center gap-2">
+                      {PLATFORM_ICONS[o]}
+                      {o.charAt(0) + o.slice(1).toLowerCase()}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-end w-full gap-2">
-            <div className="flex flex-col space-y-2 w-full">
-              <Label className="text-xs">URL</Label>
-              <Input
-                placeholder="https://…"
-                aria-invalid={!!errors.url}
-                {...register("url")}
-                className="w-full"
+
+          {/* Search panel or manual URL input */}
+          <div className="flex flex-col gap-2 w-full">
+            <Label className="text-xs">
+              {SEARCHABLE_PLATFORMS.has(platform) ? "Search" : "URL"}
+            </Label>
+            {SEARCHABLE_PLATFORMS.has(platform) ? (
+              <SearchAddPanel
+                key={`${platform}-${addKey}`}
+                platform={platform as "SPOTIFY" | "YOUTUBE"}
+                songId={songId}
+                onAdded={() => setAddKey((k) => k + 1)}
               />
-              {errors.url && (
-                <p className="text-xs text-red-600">{errors.url.message}</p>
-              )}
-            </div>
-            <Button type="submit" size="default" disabled={isSubmitting} className="shrink-0 h-9">
-              Add
-            </Button>
+            ) : (
+              <ManualUrlInput
+                key={`manual-${platform}-${addKey}`}
+                platform={platform}
+                songId={songId}
+                onAdded={() => setAddKey((k) => k + 1)}
+              />
+            )}
           </div>
-        </form>
+        </div>
       )}
     </div>
   );
