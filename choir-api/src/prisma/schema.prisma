@@ -92,6 +92,7 @@ model Song {
   status      SongStatus     @default(ACTIVE_SUNDAY)
   lyrics      String?
   originalKey String?
+  tempoBpm    Int?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   parts       SongPart[]

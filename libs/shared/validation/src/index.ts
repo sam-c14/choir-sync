@@ -33,6 +33,7 @@ export const CreateSongSchema = z.object({
   status: SongStatusEnum.default("ACTIVE_SUNDAY"),
   lyrics: z.string().max(10000).optional().nullable(),
   originalKey: z.string().max(20).optional().nullable(),
+  tempoBpm: z.coerce.number().optional().nullable(),
   parts: z.array(CreateSongPartSchema).default([]),
   links: z.array(CreateSongLinkSchema).default([]),
 });

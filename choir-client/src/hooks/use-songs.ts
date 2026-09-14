@@ -58,6 +58,18 @@ export function useSong(id: string) {
   });
 }
 
+export function useSearchExternalMusic(query: string) {
+  return useQuery({
+    queryKey: ['external-music', 'search', query],
+    queryFn: async () => {
+      if (!query || query.length < 2) return [];
+      const response = await apiClient.get(`/external-music/search?q=${encodeURIComponent(query)}`);
+      return response.data;
+    },
+    enabled: !!query && query.length >= 2,
+  });
+}
+
 export function useCreateSong() {
   const queryClient = useQueryClient();
   return useMutation({
