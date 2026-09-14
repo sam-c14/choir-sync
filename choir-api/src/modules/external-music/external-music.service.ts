@@ -64,24 +64,29 @@ export async function searchSpotifyTracks(query: string) {
 
   const trackIds = tracks.map((t: any) => t.id).join(',');
 
-  const audioFeaturesResponse = await fetch(`https://api.spotify.com/v1/audio-features?ids=${trackIds}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-
-  if (!audioFeaturesResponse.ok) {
-    throw new Error('Failed to fetch audio features');
-  }
-
-  const audioFeaturesData = await audioFeaturesResponse.json();
-  const featuresMap = new Map();
-  if (audioFeaturesData.audio_features) {
-    for (const feature of audioFeaturesData.audio_features) {
-      if (feature) {
-        featuresMap.set(feature.id, feature);
+  let featuresMap = new Map();
+  try {
+    const audioFeaturesResponse = await fetch(`https://api.spotify.com/v1/audio-features?ids=${trackIds}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
+    });
+
+    if (audioFeaturesResponse.ok) {
+      const audioFeaturesData = await audioFeaturesResponse.json();
+      if (audioFeaturesData.audio_features) {
+        for (const feature of audioFeaturesData.audio_features) {
+          if (feature) {
+            featuresMap.set(feature.id, feature);
+          }
+        }
+      }
+    } else {
+      // Spotify deprecated Audio Features API in late 2024 (returns 403)
+      console.warn(`Spotify Audio Features API returned ${audioFeaturesResponse.status} - degrading gracefully`);
     }
+  } catch (error) {
+    console.warn(`Failed to fetch Spotify Audio Features, degrading gracefully:`, error);
   }
 
   return tracks.map((track: any) => {
