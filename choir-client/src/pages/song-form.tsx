@@ -58,8 +58,9 @@ export default function SongFormPage() {
     setError,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<CreateSongDto | UpdateSongDto>({
-    resolver: zodResolver(isEditing ? UpdateSongSchema : CreateSongSchema),
+  } = useForm<CreateSongDto>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(isEditing ? UpdateSongSchema : CreateSongSchema) as any,
     defaultValues,
   });
 
