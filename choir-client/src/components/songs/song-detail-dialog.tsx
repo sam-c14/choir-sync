@@ -33,7 +33,7 @@ export function SongDetailDialog({ songId, onClose }: { songId: string; onClose:
   return (
     <>
       <Dialog open={!deleteConfirmOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
-        <DialogContent className="sm:max-w-lg max-h-[75vh] overflow-y-auto sm:max-h-[90vh]">
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto sm:max-h-[90vh]">
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
