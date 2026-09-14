@@ -122,7 +122,7 @@ function SongSection({
   isDirector: boolean;
 }) {
   const [searchInput, setSearchInput] = useState('');
-  const debouncedSearch = useDebounce(searchInput, 300);
+  const debouncedSearch = useDebounce(searchInput, 600);
   const [sortKey, setSortKey] = useState<SortKey>('createdAt');
   const [page, setPage] = useState(1);
   const limit = 12;
@@ -258,22 +258,22 @@ function SongSection({
                   <span className="text-xs text-muted-foreground self-center">{song.parts.length} parts</span>
                 </div>
                 {isDirector && (
-                  <div className="flex">
+                  <div className="flex gap-2">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      className="h-8 px-2.5 text-muted-foreground hover:text-foreground transition-colors"
                       onClick={(e) => { e.stopPropagation(); onEditSong(song); }}
                     >
-                      <Pencil className="w-3.5 h-3.5" />
+                      Edit <Pencil className="w-3.5 h-3.5 ml-1.5" />
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="h-7 px-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      className="h-8 px-2.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50 transition-colors"
                       onClick={(e) => { e.stopPropagation(); onDeleteSong(song); }}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete <Trash2 className="w-3.5 h-3.5 ml-1.5" />
                     </Button>
                   </div>
                 )}

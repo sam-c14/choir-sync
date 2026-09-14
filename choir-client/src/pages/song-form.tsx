@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { toast } from 'sonner';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Wand2, Loader2 } from 'lucide-react';
 
 export default function SongFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,7 +30,7 @@ export default function SongFormPage() {
 
   const [searchSource, setSearchSource] = useState<'spotify' | 'youtube'>('spotify');
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearch = useDebounce(searchQuery, 300);
+  const debouncedSearch = useDebounce(searchQuery, 600);
   const [showSearch, setShowSearch] = useState(false);
   const { data: searchResults, isLoading: isSearchLoading } = useSearchExternalMusic(debouncedSearch, searchSource);
 
@@ -84,7 +84,38 @@ export default function SongFormPage() {
     }
   };
 
-  const handleSelectTrack = (track: any) => {
+  const [isGeneratingLyrics, setIsGeneratingLyrics] = useState(false);
+
+  const handleAutoGenerateLyrics = async () => {
+    const title = watch('title');
+    const composer = watch('composer');
+    if (!title) {
+      toast.error('Please enter a title first to auto-generate lyrics.');
+      return;
+    }
+    setIsGeneratingLyrics(true);
+    try {
+      const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(title)}${composer ? `&artist_name=${encodeURIComponent(composer)}` : ''}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.plainLyrics) {
+          setValue('lyrics', data.plainLyrics, { shouldDirty: true });
+          toast.success('Lyrics auto-generated successfully.');
+          return;
+        }
+      }
+      setValue('lyrics', 'No Lyrics could be found for this song, Please input the lyrics manually', { shouldDirty: true });
+      toast.error('No lyrics could be found for this song.');
+    } catch (e) {
+      setValue('lyrics', 'No Lyrics could be found for this song, Please input the lyrics manually', { shouldDirty: true });
+      toast.error('No lyrics could be found for this song.');
+    } finally {
+      setIsGeneratingLyrics(false);
+    }
+  };
+
+  const handleSelectTrack = async (track: any) => {
     setValue('title', track.title, { shouldValidate: true, shouldDirty: true });
     if (track.composer) setValue('composer', track.composer, { shouldValidate: true, shouldDirty: true });
     if (track.originalKey) setValue('originalKey', track.originalKey, { shouldValidate: true, shouldDirty: true });
@@ -103,6 +134,25 @@ export default function SongFormPage() {
     
     setShowSearch(false);
     setSearchQuery('');
+
+    // Fetch Lyrics from LRCLIB silently
+    try {
+      if (track.title) {
+        const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(track.title)}${track.composer ? `&artist_name=${encodeURIComponent(track.composer)}` : ''}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.plainLyrics) {
+            setValue('lyrics', data.plainLyrics, { shouldDirty: true });
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      // Fall through
+    }
+
+    setValue('lyrics', 'No Lyrics could be found for this song, Please input the lyrics manually', { shouldDirty: true });
   };
 
   if (isEditing && isSongLoading) {
@@ -254,12 +304,18 @@ export default function SongFormPage() {
             </div>
             <div className="space-y-3">
               <Label htmlFor="tempoBpm">Tempo (BPM)</Label>
-              <Input id="tempoBpm" type="number" placeholder="e.g. 120" {...register('tempoBpm', { valueAsNumber: true })} />
+              <Input id="tempoBpm" type="number" placeholder="e.g. 120" {...register('tempoBpm', { setValueAs: (v) => v === "" || Number.isNaN(Number(v)) ? null : Number(v) })} />
             </div>
           </div>
           
           <div className="space-y-3">
-            <Label htmlFor="lyrics">Lyrics</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="lyrics">Lyrics</Label>
+              <Button type="button" variant="outline" size="sm" onClick={handleAutoGenerateLyrics} disabled={isGeneratingLyrics}>
+                {isGeneratingLyrics ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 mr-1.5" />}
+                Auto-generate
+              </Button>
+            </div>
             <textarea
               id="lyrics"
               className="flex min-h-32 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"

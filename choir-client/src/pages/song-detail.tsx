@@ -142,7 +142,7 @@ export default function SongDetailPage() {
           </div>
         </div>
         <div className="pt-6 border-t">
-          <LyricsKeyEditor songId={song.id} initialLyrics={song.lyrics} initialKey={song.originalKey} />
+          <LyricsKeyEditor songId={song.id} initialLyrics={song.lyrics} initialKey={song.originalKey} title={song.title} composer={song.composer} />
         </div>
         <div className="pt-6 border-t">
           <LinksEditor songId={song.id} links={song.links ?? []} />

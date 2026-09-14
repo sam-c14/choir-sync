@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Label } from "../ui/label";
-import { Music, PlayCircle, Trash2, Link as LinkIcon, Search, Loader2, ExternalLink } from "lucide-react";
+import { Music, PlayCircle, Trash2, Link as LinkIcon, Search, Loader2, ExternalLink, X } from "lucide-react";
 import { toast } from "sonner";
 
 const PLATFORM_ICONS: Record<string, React.ReactNode> = {
@@ -89,12 +89,19 @@ interface SearchAddPanelProps {
   onAdded: () => void;
 }
 
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "../ui/dialog";
+
 function SearchAddPanel({ platform, songId, onAdded }: SearchAddPanelProps) {
   const [query, setQuery] = useState("");
-  const [showDropdown, setShowDropdown] = useState(false);
-  const debouncedQuery = useDebounce(query, 350);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const debouncedQuery = useDebounce(query, 600);
   const addLink = useAddSongLink();
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedUrl, setSelectedUrl] = useState("");
 
   const source = platform === "SPOTIFY" ? "spotify" : "youtube";
   const { data: results, isFetching } = useSearchExternalMusic(
@@ -102,106 +109,141 @@ function SearchAddPanel({ platform, songId, onAdded }: SearchAddPanelProps) {
     source
   );
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
+  const handleSelect = (result: SearchResult) => {
+    const url = platform === "SPOTIFY" ? result.spotifyUrl : result.youtubeUrl;
+    if (url) {
+      setSelectedUrl(url);
+      setModalOpen(false);
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  };
 
-  const handleSelect = async (result: SearchResult) => {
-    const url =
-      platform === "SPOTIFY" ? result.spotifyUrl : result.youtubeUrl;
-    if (!url) return;
-
-    const data: CreateSongLinkDto = { platform, url };
-
+  const handleAdd = async () => {
+    if (!selectedUrl) return;
+    const data: CreateSongLinkDto = { platform, url: selectedUrl };
     try {
       await addLink.mutateAsync({ songId, data });
       toast.success("Link added.");
       setQuery("");
-      setShowDropdown(false);
+      setSelectedUrl("");
       onAdded();
     } catch {
       toast.error("Failed to add link.");
     }
   };
 
-  const showResults = showDropdown && debouncedQuery.length >= 2;
-
   return (
-    <div className="relative w-full" ref={dropdownRef}>
-      <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-        <Input
-          placeholder={`Search ${platform === "SPOTIFY" ? "Spotify" : "YouTube"}…`}
-          value={query}
-          className="pl-8 pr-8 min-h-10"
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setShowDropdown(true);
-          }}
-          onFocus={() => {
-            if (query.length >= 2) setShowDropdown(true);
-          }}
-        />
-        {isFetching && (
-          <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-muted-foreground" />
-        )}
-      </div>
-
-      {showResults && (
-        <div className="absolute z-20 left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg max-h-64 overflow-y-auto">
-          {isFetching && !results?.length ? (
-            <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Searching…
+    <div className="flex flex-col gap-1 w-full">
+      <div className="flex gap-2 w-full">
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogTrigger
+            render={
+              <div
+                className="flex items-center h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors cursor-pointer hover:bg-muted/50 overflow-hidden"
+                role="button"
+                tabIndex={0}
+              />
+            }
+          >
+            <Search className="w-4 h-4 mr-2 text-muted-foreground flex-shrink-0" />
+            <span className={selectedUrl ? "text-foreground truncate block min-w-0" : "text-muted-foreground truncate block min-w-0"}>
+              {selectedUrl || "Search for a Song"}
+            </span>
+          </DialogTrigger>
+          <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md p-0 overflow-hidden gap-0 rounded-xl" showCloseButton={false}>
+            <div className="p-3 border-b">
+               <div className="relative">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                 <Input
+                   placeholder={`Search ${platform === "SPOTIFY" ? "Spotify" : "YouTube"}…`}
+                   value={query}
+                   className="pl-9 pr-9 h-10 border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-base sm:text-sm"
+                   onChange={(e) => setQuery(e.target.value)}
+                   autoFocus
+                 />
+                 {query && !isFetching && (
+                   <button
+                     type="button"
+                     onClick={() => setQuery("")}
+                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                   >
+                     <X className="w-4 h-4" />
+                   </button>
+                 )}
+                 {isFetching && (
+                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                 )}
+               </div>
             </div>
-          ) : results && results.length > 0 ? (
-            results.map((item: SearchResult) => {
-              const key = item.spotifyUrl ?? item.youtubeUrl ?? item.title;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left hover:bg-muted transition-colors border-b last:border-0 focus:outline-none focus:bg-muted"
-                  onClick={() => handleSelect(item)}
-                  disabled={addLink.isPending}
-                >
-                  {item.thumbnailUrl ? (
-                    <img
-                      src={item.thumbnailUrl}
-                      alt=""
-                      className="w-10 h-10 rounded object-cover flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                      {PLATFORM_ICONS[platform]}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{item.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {item.composer}
-                      {item.originalKey && ` · ${item.originalKey}`}
-                      {item.tempoBpm && ` · ${item.tempoBpm} BPM`}
-                    </p>
+            <div className="h-80 overflow-y-auto p-2">
+              {!query ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-3">
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                    {platform === 'SPOTIFY' ? (
+                      <Music className="w-8 h-8 text-green-500" />
+                    ) : platform === 'YOUTUBE' ? (
+                      <PlayCircle className="w-8 h-8 text-red-500" />
+                    ) : (
+                      PLATFORM_ICONS[platform]
+                    )}
                   </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                </button>
-              );
-            })
-          ) : (
-            <div className="py-4 text-sm text-muted-foreground text-center">
-              No results found
+                  <p className="text-sm">Type to search for a song</p>
+                </div>
+              ) : isFetching && !results?.length ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-3">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                  <p className="text-sm">Searching...</p>
+                </div>
+              ) : results && results.length > 0 ? (
+                results.map((item: SearchResult) => {
+                  const key = item.spotifyUrl ?? item.youtubeUrl ?? item.title;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className="w-full flex items-center gap-3 p-3 text-sm text-left hover:bg-muted transition-colors rounded-md focus:outline-none focus:bg-muted"
+                      onClick={() => handleSelect(item)}
+                    >
+                      {item.thumbnailUrl ? (
+                        <img
+                          src={item.thumbnailUrl}
+                          alt=""
+                          className="w-10 h-10 rounded object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                          {PLATFORM_ICONS[platform]}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{item.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {item.composer}
+                          {item.originalKey && ` · ${item.originalKey}`}
+                          {item.tempoBpm && ` · ${item.tempoBpm} BPM`}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-2">
+                   <p className="text-sm">No results found</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
+          </DialogContent>
+        </Dialog>
+        
+        <Button
+          type="button"
+          size="default"
+          className="shrink-0 h-9"
+          disabled={addLink.isPending || !selectedUrl}
+          onClick={handleAdd}
+        >
+          {addLink.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
+        </Button>
+      </div>
     </div>
   );
 }

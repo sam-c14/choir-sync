@@ -2,15 +2,38 @@ import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { Input } from '../ui/input';
-import { Pencil, Check, X } from 'lucide-react';
+import { Pencil, Check, X, Wand2, Loader2 } from 'lucide-react';
 import { useUpdateLyrics } from '../../hooks/use-songs';
 import { toast } from 'sonner';
 
-export function LyricsKeyEditor({ songId, initialLyrics, initialKey }: { songId: string; initialLyrics: string | null; initialKey: string | null }) {
+export function LyricsKeyEditor({ songId, initialLyrics, initialKey, title, composer }: { songId: string; initialLyrics: string | null; initialKey: string | null; title: string; composer?: string | null }) {
   const [isEditing, setIsEditing] = useState(false);
   const [lyrics, setLyrics] = useState(initialLyrics || '');
   const [originalKey, setOriginalKey] = useState(initialKey || '');
+  const [isGenerating, setIsGenerating] = useState(false);
   const updateLyrics = useUpdateLyrics();
+
+  const handleAutoGenerate = async () => {
+    if (!title) return;
+    setIsGenerating(true);
+    try {
+      const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(title)}${composer ? `&artist_name=${encodeURIComponent(composer)}` : ''}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.plainLyrics) {
+          setLyrics(data.plainLyrics);
+          toast.success('Lyrics auto-generated. Click Save to apply changes.');
+          return;
+        }
+      }
+      toast.error('No lyrics could be found for this song.');
+    } catch (e) {
+      toast.error('No lyrics could be found for this song.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -51,7 +74,13 @@ export function LyricsKeyEditor({ songId, initialLyrics, initialKey }: { songId:
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Lyrics</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-muted-foreground block">Lyrics</label>
+              <Button type="button" variant="outline" size="sm" onClick={handleAutoGenerate} disabled={isGenerating}>
+                {isGenerating ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 mr-1.5" />}
+                Auto-generate
+              </Button>
+            </div>
             <Textarea
               value={lyrics}
               onChange={(e) => setLyrics(e.target.value)}
