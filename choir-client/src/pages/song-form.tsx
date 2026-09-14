@@ -179,12 +179,12 @@ export default function SongFormPage() {
 
       <div className="bg-card border rounded-xl p-6">
         {!isEditing && (
-          <div className="relative space-y-2 mb-6 pb-6 border-b">
+          <div className="relative space-y-4 mb-6 pb-6 border-b">
             <div className="flex items-center justify-between">
               <Label htmlFor="search">Search External Music</Label>
               <Select value={searchSource} onValueChange={(v) => setSearchSource(v as 'spotify' | 'youtube')}>
                 <SelectTrigger className="w-[120px] h-8 text-xs">
-                  <SelectValue />
+                  <SelectValue className="capitalize" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="spotify">Spotify</SelectItem>
