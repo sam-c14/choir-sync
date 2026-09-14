@@ -39,7 +39,7 @@ export default function SongPartsPage() {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{song.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{song.title} - {song.composer}</h1>
           <p className="text-muted-foreground text-sm">Voice Parts Management</p>
         </div>
       </div>
