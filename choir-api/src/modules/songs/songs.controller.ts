@@ -26,7 +26,7 @@ export class SongsController {
       
       const songs = await songsService.getSongs(options);
       res.json(songs);
-    } catch (_err) {
+    } catch (error) {
       logger.error(error);
       res.status(500).json({ message: 'Failed to fetch songs' });
     }
@@ -36,7 +36,8 @@ export class SongsController {
     try {
       const song = await songsService.getSongById(req.params.id as string);
       res.json(song);
-    } catch (_err) {
+    } catch (error) {
+      logger.error(error);
       res.status(404).json({ message: 'Song not found' });
     }
   }

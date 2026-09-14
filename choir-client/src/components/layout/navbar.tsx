@@ -72,7 +72,7 @@ export function Navbar() {
                 <Menu className="h-[1.2rem] w-[1.2rem]" />
                 <span className="sr-only">Open menu</span>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
