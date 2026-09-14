@@ -42,10 +42,11 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
   const createSong = useCreateSong();
   const updateSong = useUpdateSong();
 
+  const [searchSource, setSearchSource] = useState<'spotify' | 'youtube'>('spotify');
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
   const [showSearch, setShowSearch] = useState(false);
-  const { data: searchResults, isLoading: isSearchLoading } = useSearchExternalMusic(debouncedSearch);
+  const { data: searchResults, isLoading: isSearchLoading } = useSearchExternalMusic(debouncedSearch, searchSource);
 
   const defaultValues = React.useMemo(() => {
     return editingSong
@@ -94,11 +95,15 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
     if (track.originalKey) setValue('originalKey', track.originalKey, { shouldValidate: true, shouldDirty: true });
     if (track.tempoBpm) setValue('tempoBpm', track.tempoBpm, { shouldValidate: true, shouldDirty: true });
     
-    // Add spotify link
+    // Add reference link
+    const currentLinks = watch('links') || [];
     if (track.spotifyUrl) {
-      const currentLinks = watch('links') || [];
-      if (!currentLinks.find((l: any) => l.platform === 'SPOTIFY')) {
+      if (!currentLinks.find((l: any) => l.platform === 'SPOTIFY' && l.url === track.spotifyUrl)) {
         setValue('links', [...currentLinks, { platform: 'SPOTIFY', url: track.spotifyUrl }], { shouldDirty: true });
+      }
+    } else if (track.youtubeUrl) {
+      if (!currentLinks.find((l: any) => l.platform === 'YOUTUBE' && l.url === track.youtubeUrl)) {
+        setValue('links', [...currentLinks, { platform: 'YOUTUBE', url: track.youtubeUrl }], { shouldDirty: true });
       }
     }
     
@@ -115,10 +120,21 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
         
         {!isEditing && (
           <div className="relative space-y-2 mb-4">
-            <Label htmlFor="search">Search External Music (Spotify)</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="search">Search External Music</Label>
+              <Select value={searchSource} onValueChange={(v) => setSearchSource(v as 'spotify' | 'youtube')}>
+                <SelectTrigger className="w-[120px] h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="spotify">Spotify</SelectItem>
+                  <SelectItem value="youtube">YouTube</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Input 
               id="search" 
-              placeholder="Search by title or artist to auto-fill..."
+              placeholder={`Search by title or artist on ${searchSource === 'spotify' ? 'Spotify' : 'YouTube'}...`}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -135,13 +151,18 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
                 ) : searchResults && searchResults.length > 0 ? (
                   searchResults.map((track: any) => (
                     <div 
-                      key={track.spotifyId} 
-                      className="p-3 text-sm hover:bg-muted cursor-pointer border-b last:border-0"
+                      key={track.spotifyId || track.youtubeUrl} 
+                      className="p-3 text-sm hover:bg-muted cursor-pointer border-b last:border-0 flex gap-3"
                       onClick={() => handleSelectTrack(track)}
                     >
-                      <div className="font-medium">{track.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {track.composer} {track.originalKey && ` • ${track.originalKey}`} {track.tempoBpm && ` • ${track.tempoBpm} BPM`}
+                      {track.thumbnailUrl && (
+                        <img src={track.thumbnailUrl} alt="" className="w-12 h-12 object-cover rounded flex-shrink-0" />
+                      )}
+                      <div>
+                        <div className="font-medium">{track.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {track.composer} {track.originalKey && ` • ${track.originalKey}`} {track.tempoBpm && ` • ${track.tempoBpm} BPM`}
+                        </div>
                       </div>
                     </div>
                   ))

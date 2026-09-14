@@ -58,12 +58,12 @@ export function useSong(id: string) {
   });
 }
 
-export function useSearchExternalMusic(query: string) {
+export function useSearchExternalMusic(query: string, source: 'spotify' | 'youtube' = 'spotify') {
   return useQuery({
-    queryKey: ['external-music', 'search', query],
+    queryKey: ['external-music', 'search', query, source],
     queryFn: async () => {
       if (!query || query.length < 2) return [];
-      const response = await apiClient.get(`/external-music/search?q=${encodeURIComponent(query)}`);
+      const response = await apiClient.get(`/external-music/search?q=${encodeURIComponent(query)}&source=${source}`);
       return response.data;
     },
     enabled: !!query && query.length >= 2,

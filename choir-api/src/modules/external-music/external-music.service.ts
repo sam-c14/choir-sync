@@ -110,3 +110,41 @@ export async function searchSpotifyTracks(query: string) {
     };
   });
 }
+
+function unescapeHtml(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
+}
+
+export async function searchYouTubeVideos(query: string) {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    throw new Error('YouTube API key not configured');
+  }
+
+  const searchResponse = await fetch(
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&q=${encodeURIComponent(query)}&key=${apiKey}`
+  );
+
+  if (!searchResponse.ok) {
+    const errorText = await searchResponse.text();
+    logger.error('Failed to search YouTube videos', { errorText });
+    throw new Error('Failed to search YouTube videos');
+  }
+
+  const searchData = await searchResponse.json();
+  const videos = searchData.items || [];
+
+  return videos.map((video: any) => ({
+    title: unescapeHtml(video.snippet.title),
+    composer: unescapeHtml(video.snippet.channelTitle),
+    youtubeUrl: `https://www.youtube.com/watch?v=${video.id.videoId}`,
+    thumbnailUrl: video.snippet.thumbnails?.default?.url
+  }));
+}

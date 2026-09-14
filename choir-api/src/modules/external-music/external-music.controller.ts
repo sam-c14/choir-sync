@@ -1,15 +1,18 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { searchSpotifyTracks } from './external-music.service';
+import { searchSpotifyTracks, searchYouTubeVideos } from './external-music.service';
 
 const SearchQuerySchema = z.object({
-  q: z.string().min(1, "Query is required")
+  q: z.string().min(1, "Query is required"),
+  source: z.enum(['spotify', 'youtube']).optional().default('spotify')
 });
 
 export const searchExternalMusic = async (req: Request, res: Response) => {
   try {
-    const { q } = SearchQuerySchema.parse(req.query);
-    const results = await searchSpotifyTracks(q);
+    const { q, source } = SearchQuerySchema.parse(req.query);
+    const results = source === 'youtube' 
+      ? await searchYouTubeVideos(q)
+      : await searchSpotifyTracks(q);
     res.json(results);
   } catch (error) {
     if (error instanceof z.ZodError) {
