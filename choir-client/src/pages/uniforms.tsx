@@ -9,7 +9,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { Label } from '../components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Calendar } from '../components/ui/calendar';
-import { CalendarIcon, Pencil, Trash } from 'lucide-react';
+import { CalendarIcon, Pencil, Trash, Shirt, SearchX } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
 
@@ -55,7 +55,7 @@ export default function UniformsPage() {
   const totalPages = uniformsData?.totalPages || 1;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 px-4 py-6 sm:px-6">
+    <div className="sm:max-w-5xl max-w-screen mx-auto space-y-6 px-4 py-6 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Uniform Schedule</h2>
@@ -84,14 +84,14 @@ export default function UniformsPage() {
 
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 w-full xl:w-auto">
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Label className="text-sm font-medium whitespace-nowrap min-w-10">From:</Label>
+            <Label className="text-sm font-medium whitespace-nowrap sm:min-w-auto min-w-10">From:</Label>
             <Popover>
               <PopoverTrigger
                 render={
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full sm:w-[160px] justify-start text-left font-normal h-9",
+                      "w-48 sm:w-48 justify-start text-left font-normal h-9",
                       !fromDate && "text-muted-foreground"
                     )}
                   />
@@ -115,14 +115,14 @@ export default function UniformsPage() {
             </Popover>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Label className="text-sm font-medium whitespace-nowrap min-w-10">To:</Label>
+            <Label className="text-sm font-medium whitespace-nowrap sm:min-w-auto min-w-10">To:</Label>
             <Popover>
               <PopoverTrigger
                 render={
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full sm:w-[160px] justify-start text-left font-normal h-9",
+                      "w-48 sm:w-48 justify-start text-left font-normal h-9",
                       !toDate && "text-muted-foreground"
                     )}
                   />
@@ -147,10 +147,10 @@ export default function UniformsPage() {
           </div>
           {(fromDate || toDate) && (
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="sm" 
               onClick={() => { setFromDate(undefined); setToDate(undefined); setPage(1); }}
-              className="text-muted-foreground hover:text-foreground shrink-0 w-full sm:w-auto"
+              className="text-muted-foreground hover:text-foreground shrink-0 w-10 font-semibold py-2 px-4!"
             >
               Clear
             </Button>
@@ -179,7 +179,30 @@ export default function UniformsPage() {
           ))}
         </div>
       ) : uniforms.length === 0 ? (
-        <p className="text-muted-foreground py-8 text-center sm:text-left">No uniform schedules found.</p>
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed rounded-xl bg-slate-50/50 dark:bg-slate-900/20">
+          {(!fromDate && !toDate) ? (
+            <>
+              <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                <Shirt className="h-6 w-6 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">No uniforms scheduled</h3>
+              <p className="text-sm text-slate-500 max-w-sm">
+                There are currently no uniform entries in the {filter === 'current' ? 'upcoming' : 'past'} section.
+                {isDirector && filter === 'current' && ' Click "Schedule Uniform" above to create one.'}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                <SearchX className="h-6 w-6 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">No results found</h3>
+              <p className="text-sm text-slate-500 max-w-sm">
+                We couldn't find any uniform schedules for the selected date range. Try adjusting your filters.
+              </p>
+            </>
+          )}
+        </div>
       ) : (
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
