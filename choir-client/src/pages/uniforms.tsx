@@ -66,7 +66,7 @@ export default function UniformsPage() {
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-2">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b pb-4">
         <div className="flex flex-wrap gap-2">
           <Button
             variant={filter === 'current' ? 'default' : 'ghost'}
@@ -82,16 +82,16 @@ export default function UniformsPage() {
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium whitespace-nowrap">From:</Label>
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 w-full xl:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Label className="text-sm font-medium whitespace-nowrap min-w-10">From:</Label>
             <Popover>
               <PopoverTrigger
                 render={
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-[140px] sm:w-[160px] justify-start text-left font-normal h-9",
+                      "w-full sm:w-[160px] justify-start text-left font-normal h-9",
                       !fromDate && "text-muted-foreground"
                     )}
                   />
@@ -106,7 +106,7 @@ export default function UniformsPage() {
                   selected={fromDate}
                   onSelect={(d) => {
                     setFromDate(d);
-                    if (d && !toDate) setToDate(new Date(d.getTime() + 7 * 24 * 60 * 60 * 1000));
+                    if (d && !toDate) setToDate(new Date());
                     setPage(1);
                   }}
                   autoFocus
@@ -114,15 +114,15 @@ export default function UniformsPage() {
               </PopoverContent>
             </Popover>
           </div>
-          <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium whitespace-nowrap">To:</Label>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Label className="text-sm font-medium whitespace-nowrap min-w-10">To:</Label>
             <Popover>
               <PopoverTrigger
                 render={
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-[140px] sm:w-[160px] justify-start text-left font-normal h-9",
+                      "w-full sm:w-[160px] justify-start text-left font-normal h-9",
                       !toDate && "text-muted-foreground"
                     )}
                   />
@@ -137,7 +137,7 @@ export default function UniformsPage() {
                   selected={toDate}
                   onSelect={(d) => {
                     setToDate(d);
-                    if (d && !fromDate) setFromDate(d);
+                    if (d && !fromDate) setFromDate(new Date());
                     setPage(1);
                   }}
                   autoFocus
@@ -150,7 +150,7 @@ export default function UniformsPage() {
               variant="ghost" 
               size="sm" 
               onClick={() => { setFromDate(undefined); setToDate(undefined); setPage(1); }}
-              className="text-muted-foreground hover:text-foreground shrink-0"
+              className="text-muted-foreground hover:text-foreground shrink-0 w-full sm:w-auto"
             >
               Clear
             </Button>
