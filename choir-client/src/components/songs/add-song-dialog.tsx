@@ -90,7 +90,7 @@ export function AddSongDialog({ open, onOpenChange, editingSong }: AddSongDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[480px] sm:max-h-auto max-h-[75vh]">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Song' : 'Add Song'}</DialogTitle>
         </DialogHeader>
