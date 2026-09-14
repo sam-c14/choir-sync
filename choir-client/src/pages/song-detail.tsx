@@ -4,6 +4,7 @@ import { useSong, useDeleteSong } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { Skeleton } from '../components/ui/skeleton';
 import { Loader2, Trash2, ArrowLeft } from 'lucide-react';
 import { LinksEditor } from '../components/songs/links-editor';
 import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
@@ -30,9 +31,46 @@ export default function SongDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 space-y-4">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading song details...</p>
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+        <div>
+          <Skeleton className="h-9 w-32 mb-4 -ml-4" />
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <Skeleton className="h-9 w-64" />
+              <Skeleton className="h-6 w-40 mt-1" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="space-y-6">
+          <div className="flex gap-2 items-center">
+            <Skeleton className="h-6 w-24 rounded-full" />
+            <Skeleton className="h-6 w-32 rounded-full" />
+          </div>
+          <div className="pt-6 border-t">
+            <div className="flex items-center justify-between mb-4">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-9 w-28" />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-24 rounded-full" />
+              <Skeleton className="h-6 w-16 rounded-full" />
+            </div>
+          </div>
+          <div className="pt-6 border-t space-y-4">
+            <div className="flex items-center justify-between mb-2">
+               <Skeleton className="h-5 w-24" />
+               <Skeleton className="h-9 w-20" />
+            </div>
+            <Skeleton className="h-32 w-full rounded-lg" />
+          </div>
+          <div className="pt-6 border-t space-y-4">
+            <Skeleton className="h-5 w-32 mb-2" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+          </div>
+        </div>
       </div>
     );
   }
