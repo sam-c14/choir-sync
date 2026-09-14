@@ -1,3 +1,4 @@
+import { logger } from '../../lib/logger';
 import { Request, Response } from 'express';
 import { CreateUniformSchema, UpdateUniformSchema } from '@choir-workspace/shared-validation';
 import { uniformsService } from './uniforms.service';
@@ -13,6 +14,7 @@ export class UniformsController {
       const uniforms = await uniformsService.getUniforms(filter, page, limit, fromDate, toDate);
       res.json(uniforms);
     } catch (error: any) {
+      logger.error(error);
       res.status(500).json({ message: 'Failed to fetch uniforms' });
     }
   }
@@ -24,6 +26,7 @@ export class UniformsController {
       res.status(201).json(uniform);
     } catch (error: any) {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -36,6 +39,7 @@ export class UniformsController {
     } catch (error: any) {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
       if (error.code === 'P2025') return res.status(404).json({ error: 'Uniform not found' });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -46,6 +50,7 @@ export class UniformsController {
       res.status(204).send();
     } catch (error: any) {
       if (error.code === 'P2025') return res.status(404).json({ error: 'Uniform not found' });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }

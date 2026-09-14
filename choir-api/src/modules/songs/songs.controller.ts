@@ -1,3 +1,4 @@
+import { logger } from '../../lib/logger';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import {
@@ -26,6 +27,7 @@ export class SongsController {
       const songs = await songsService.getSongs(options);
       res.json(songs);
     } catch (_err) {
+      logger.error(error);
       res.status(500).json({ message: 'Failed to fetch songs' });
     }
   }
@@ -46,6 +48,7 @@ export class SongsController {
       res.status(201).json(song);
     } catch (error: any) {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -58,6 +61,7 @@ export class SongsController {
     } catch (error: any) {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
       if (error.code === 'P2025') return res.status(404).json({ error: 'Song not found' });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -74,6 +78,7 @@ export class SongsController {
     } catch (error: any) {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
       if (error.code === 'P2025') return res.status(404).json({ error: 'Song not found' });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -84,6 +89,7 @@ export class SongsController {
       res.status(204).send();
     } catch (error: any) {
       if (error.code === 'P2025') return res.status(404).json({ error: 'Song not found' });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -97,6 +103,7 @@ export class SongsController {
       res.status(200).json(result);
     } catch (error: any) {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -108,6 +115,7 @@ export class SongsController {
       res.status(200).json(result);
     } catch (error: any) {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -119,6 +127,7 @@ export class SongsController {
       res.status(201).json(result);
     } catch (error: any) {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -129,6 +138,7 @@ export class SongsController {
       if (result.count === 0) return res.status(404).json({ error: 'Link not found' });
       res.status(204).send();
     } catch (error: any) {
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }

@@ -1,3 +1,4 @@
+import { logger } from '../../lib/logger';
 import { Request, Response } from 'express';
 import { usersService } from './users.service';
 import { UpdateUserRoleSchema } from '@choir-workspace/shared-validation';
@@ -10,6 +11,7 @@ export class UsersController {
       const result = await usersService.getUsers(page, limit);
       res.json(result);
     } catch (error: any) {
+      logger.error(error);
       res.status(500).json({ error: 'Failed to fetch users' });
     }
   }
@@ -23,6 +25,7 @@ export class UsersController {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
       if (error.code === 'NOT_FOUND') return res.status(404).json({ error: error.message });
       if (error.code === 'CONFLICT') return res.status(409).json({ error: error.message });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
@@ -34,6 +37,7 @@ export class UsersController {
     } catch (error: any) {
       if (error.code === 'NOT_FOUND') return res.status(404).json({ error: error.message });
       if (error.code === 'FORBIDDEN') return res.status(403).json({ error: error.message });
+      logger.error(error);
       res.status(500).json({ error: error.message });
     }
   }
