@@ -232,3 +232,52 @@ Verification:
 2. Verify that existing Spotify search functionality continues working unchanged.
 3. Test a YouTube query and confirm that selecting a video properly populates form fields and the reference links list.
 ```
+
+## Milestone 3 — Automated Lyrics Auto-Fill (LRCLIB Integration)
+**Goal:** Automatically fetch and populate plain-text lyrics using the open-source LRCLIB API when a song is selected via external search.
+**Do:**
+1. In `choir-client/`, implement a lyrics fetch utility querying `https://lrclib.net/api/get?track_name={title}&artist_name={artist}`.
+2. Hook this utility into the external search selection workflow in the "Add/Edit Song" modal.
+3. Automatically set the form's `lyrics` field via `react-hook-form`'s `setValue` using the returned `plainLyrics`.
+4. Wrap the request in resilient error handling: silently catch `404 Not Found` or network errors without raising UI error toasts, ensuring the textarea remains cleanly open for manual input.
+**Verify with:** `frontend-browser-verify` and `nx-workspace-verify`.
+**Done when:** Selecting a recognizable track populates the lyrics field automatically, while selecting an unindexed track leaves the field empty and editable without console or UI errors.
+
+## Milestone 3 Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 3 — Automated Lyrics Auto-Fill (LRCLIB Integration).
+
+Before writing code, inspect the external search and song form handlers in `choir-client/`, then output a brief Implementation Plan.
+
+Note on workspace paths: Projects are located directly at `choir-client/`, `choir-api/`, and `libs/shared/` (not inside an `apps/` directory).
+
+Requirements (`choir-client/`):
+1. In `choir-client/`, locate the song form component (used in "Add Song" / "Edit Song") where external search results (Spotify/YouTube) are selected and mapped to form fields via `react-hook-form`.
+2. Add a helper function to query the free LRCLIB API:
+   - Endpoint: `https://lrclib.net/api/get`
+   - Method: `GET`
+   - Query Parameters: `track_name` (URI encoded) and `artist_name` (URI encoded)
+3. When a track is selected from search results:
+   - Extract the cleaned title and composer/artist.
+   - Fire the LRCLIB request asynchronously.
+   - If the request returns a `200 OK` response with a valid `plainLyrics` property, use `setValue("lyrics", data.plainLyrics)` to populate the lyrics textarea.
+4. Error Handling & Edge Cases:
+   - Wrap the fetch call in a strict `try/catch` block.
+   - If LRCLIB returns a `404`, an empty payload, or a network failure, silently ignore it. Do NOT display an error toast or alert to the user.
+   - Ensure the lyrics `<textarea>` remains fully editable at all times so the user can manually type or adjust lyrics.
+   - Do not overwrite existing lyrics if a user has already manually typed in the field, unless explicitly selecting a new track from the combobox.
+
+Verification:
+1. Run `nx-workspace-verify` to ensure TypeScript compilation passes.
+2. Verify with `frontend-browser-verify` that selecting an indexed song populates the lyrics field.
+3. Verify that selecting a song without available lyrics fails silently and leaves the input field ready for manual entry.
+```
+
+## Followup Prompt
+
+```bash
+Update the URL input for Youtube and Spotify Song selection on the Song details Page to not use a direct search bar but when it's Youtube or Spotify, it should show, 'Search for a Song' as a placeholder and when it is clicked on, it should show a modal which would contain a search bar with an empty state(must be beautiful) under it and after the user's input and the items have been fetched, they should be populated and the empty state swapped out, it should also have a fixed height, so the modal does not overflow, and when one of the items is selected, the modal should close and the placeholder text should be swapped out with the link, then when the user clicks the Add button, the rewuest should fire like normal and the link should be added, note that even after selecting a link and the modal closes, if the user clicks on the modal trigger again, it should still open the modal and allow the user to search again, although, the previous state should still be kept in local state so that if the user comes back, they still see their previous query with the items that was previously fetched, after the request has been sent, the local state can then be cleared.
+
+Also, increase the debounce across all frontend instances of the debounce function usage and ensure the debounce function is working properly
+```
