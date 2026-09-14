@@ -95,6 +95,8 @@ export class SongsService {
         complexity: dto.complexity,
         tags: dto.tags,
         status: dto.status,
+        lyrics: dto.lyrics,
+        originalKey: dto.originalKey,
         parts: {
           create: dto.parts,
         },
