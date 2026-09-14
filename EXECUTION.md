@@ -140,3 +140,95 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 **Do:** Finalize the Dockerfile, set real Render/Vercel env vars (including `GOOGLE_CLIENT_ID`/`VITE_GOOGLE_CLIENT_ID` and the production Google Cloud Console authorized origin), confirm CORS origin matches the real Vercel URL, seed the production Director user.
 **Verify with:** `docker-build-test`, `env-config-audit`
 **Done when:** both audits pass and a real deploy (or a full local simulation of one) succeeds end to end.
+
+## POST RELEASE MILESTONES
+
+## Milestone 1 — External Song Auto-Fill (Spotify Integration)
+**Goal:** Allow users to search an external music database to auto-populate the Create Song form.
+**Do:** 
+1. Add a proxy endpoint `GET /api/v1/external-music/search?q={query}` to `apps/choir-api` that calls the Spotify Web API (Search & Audio Features) to retrieve Title, Artist, BPM, and Key. Secure the Spotify Client ID/Secret in the backend `.env`.
+2. In `apps/choir-client`, add an async search combobox at the top of the "Add Song" dialog.
+3. When a search result is selected, use `react-hook-form`'s `setValue` to auto-populate the `title`, `composer`, `tempoBpm`, and `musicalKey` fields. 
+4. The user must still be able to manually edit these fields and append voice parts before submitting via the standard `CreateSongSchema`.
+**Verify with:** `api-endpoint-scaffold` for the proxy, and `frontend-browser-verify` to ensure the combobox correctly populates the form without triggering validation errors prematurely.
+**Done when:** A user can search a song, click it, see the metadata fill the form, and successfully save it to the local database.
+
+## MileStone 1 Prompt 
+
+```bash
+Execute Milestone 6.5 — External Song Auto-Fill (Spotify Integration).
+
+Before you begin writing code, output a brief Implementation Plan.
+
+I have generated my Spotify SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET and placed them in the apps/choir-api/.env file.
+
+Backend Requirements (apps/choir-api):
+
+Implement the Spotify Client Credentials flow to retrieve a bearer token. Cache this token in memory until it expires (usually 1 hour) to avoid spamming the Spotify auth endpoint.
+
+Create the GET /api/v1/external-music/search?q={query} endpoint.
+
+This endpoint must call the Spotify Search API for tracks, and then immediately call the Spotify Audio Features API for the top results to retrieve the tempo (BPM) and key/mode.
+
+Map the Spotify integer key and mode into a standard musical string (e.g., 0 and 1 becomes C Major) so it satisfies our CreateSongSchema.
+
+Return a clean array of results containing: title, composer (artist), musicalKey, and tempoBpm.
+
+Frontend Requirements (apps/choir-client):
+
+Add an async search combobox or search bar at the top of the existing "Add Song" form.
+
+Wire it to the new backend endpoint using TanStack Query.
+
+When a user selects a search result, use react-hook-form's setValue to auto-populate the title, composer, musicalKey, and tempoBpm fields.
+
+Ensure this auto-fill does not block the user from manually typing their custom Soprano, Alto, and Tenor notes before submitting the form.
+
+Verification:
+Use api-endpoint-scaffold to verify the proxy routing, and run nx-workspace-verify to ensure no TypeScript compilation errors exist between the frontend and backend. Wait for my manual approval via the built-in browser before marking this milestone complete.
+```
+
+## Milestone 2 — YouTube Search & Unified Reference Links Integration
+**Goal:** Extend external search to support YouTube, and ensure both Spotify and YouTube search results automatically append to the song's reference links.
+**Do:**
+1. Extend backend external music endpoints in `choir-api/` to integrate the YouTube Data API v3 (`search` endpoint, `part=snippet`, `type=video`), returning title, channel/artist, and video URL.
+2. In `choir-client/`, update the search combobox to toggle between Spotify and YouTube sources.
+3. Automatically append the selected Spotify track URL or YouTube video URL into the form's reference links array (`platform`: `SPOTIFY` or `YOUTUBE`).
+4. Ensure the Song Details page renders reference links with appropriate platform badges/icons (YouTube, Spotify, Audiomack) and supports manual additions/removals.
+**Verify with:** `api-endpoint-scaffold`, `nx-workspace-verify`, and manual browser verification.
+**Done when:** Searching YouTube returns video results, picking a Spotify or YouTube result populates song metadata AND adds the URL into the reference links list, and links render correctly on the song details view.
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 2 — YouTube Search & Unified Reference Links Integration.
+
+Before writing code, inspect the existing Spotify implementation in `choir-api/` and `choir-client/`, then output a brief Implementation Plan.
+
+Note on workspace paths: Projects are located directly at `choir-api/`, `choir-client/`, and `libs/shared/` (not inside an `apps/` directory).
+
+I have added `YOUTUBE_API_KEY` to `choir-api/.env`.
+
+Backend Requirements (`choir-api/`):
+1. Extend the external music module to include a YouTube service using the YouTube Data API v3 (`https://www.googleapis.com/youtube/v3/search`).
+2. The endpoint should support searching YouTube: `GET /api/v1/external-music/search?q={query}&source=youtube` (or extend the existing search controller cleanly).
+3. Query YouTube with `part=snippet`, `type=video`, and `maxResults=10`.
+4. Return a normalized payload for each result:
+   - `title`: Video title (unescaped HTML entities)
+   - `composer`: Channel title / artist name
+   - `youtubeUrl`: `https://www.youtube.com/watch?v=${videoId}`
+   - `thumbnailUrl`: Video thumbnail URL
+
+Frontend Requirements (`choir-client/`):
+1. In the "Add Song" / "Edit Song" modal:
+   - Add a source toggle to the search combobox allowing the user to select either "Spotify" or "YouTube".
+   - When searching via Spotify: keep the existing behavior (populates title, artist, key, tempo) AND automatically append an entry to the song's `links` array with `platform: "SPOTIFY"` and the track's URL.
+   - When searching via YouTube: populate `title` and `composer` (leave key/tempo blank or untouched) AND automatically append an entry to the `links` array with `platform: "YOUTUBE"` and the video URL.
+   - Prevent duplicate URLs from being added to the links list if clicked multiple times.
+2. Reference Links UI (`choir-client/`):
+   - In the song creation/editing form, ensure users can still manually add, edit, or remove links for Spotify, YouTube, and Audiomack.
+   - In the Song Details view, ensure all reference links display with corresponding platform badges/icons (YouTube, Spotify, Audiomack) and open in a new tab safely.
+
+Verification:
+1. Run `nx-workspace-verify` to ensure no TypeScript compilation or contract errors.
+2. Verify that existing Spotify search functionality continues working unchanged.
+3. Test a YouTube query and confirm that selecting a video properly populates form fields and the reference links list.
+```

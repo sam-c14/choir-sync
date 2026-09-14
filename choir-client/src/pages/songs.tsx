@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useDebounce } from '../hooks/use-debounce';
 import { useSongs, useSong, useDeleteSong } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
-import { AddSongDialog } from '../components/songs/add-song-dialog';
 import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
 import { PartNotesEditor } from '../components/songs/part-notes-editor';
 import { LinksEditor } from '../components/songs/links-editor';
@@ -63,8 +62,6 @@ export default function SongsPage() {
 
   const navigate = useNavigate();
 
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [deletingSong, setDeletingSong] = useState<Song | null>(null);
 
   return (
@@ -75,7 +72,7 @@ export default function SongsPage() {
           <p className="text-muted-foreground mt-1">Manage and view the choir's repertoire</p>
         </div>
         {isDirector && (
-          <Button onClick={() => setAddDialogOpen(true)} className="gap-2 w-full sm:w-auto">
+          <Button onClick={() => navigate('/songs/new')} className="gap-2 w-full sm:w-auto">
             <Plus className="w-4 h-4" /> Add Song
           </Button>
         )}
@@ -85,7 +82,7 @@ export default function SongsPage() {
         title="Active Sunday"
         status="ACTIVE_SUNDAY"
         onSelectSong={(id) => navigate(`/songs/${id}`)}
-        onEditSong={setEditingSong}
+        onEditSong={(song) => navigate(`/songs/${song.id}/edit`)}
         onDeleteSong={setDeletingSong}
         isDirector={isDirector}
       />
@@ -94,16 +91,9 @@ export default function SongsPage() {
         title="Rehearsal & Archived"
         status="REHEARSAL,ARCHIVED"
         onSelectSong={(id) => navigate(`/songs/${id}`)}
-        onEditSong={setEditingSong}
+        onEditSong={(song) => navigate(`/songs/${song.id}/edit`)}
         onDeleteSong={setDeletingSong}
         isDirector={isDirector}
-      />
-
-      {/* Add / Edit song dialog */}
-      <AddSongDialog
-        open={addDialogOpen || !!editingSong}
-        onOpenChange={(o) => { setAddDialogOpen(o); if (!o) setEditingSong(null); }}
-        editingSong={editingSong}
       />
 
       {/* Delete song dialog */}

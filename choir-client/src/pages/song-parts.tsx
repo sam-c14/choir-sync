@@ -25,7 +25,7 @@ export default function SongPartsPage() {
         <div className="p-4 bg-destructive/10 text-destructive rounded-md">
           Failed to load song.
         </div>
-        <Button variant="link" onClick={() => navigate('/')} className="mt-4">
+        <Button variant="link" onClick={() => navigate(`/song/${song.id}`)} className="mt-4">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Songs
         </Button>
       </div>
@@ -35,7 +35,7 @@ export default function SongPartsPage() {
   return (
     <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(`/songs/${song.id}`)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
