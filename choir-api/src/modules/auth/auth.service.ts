@@ -5,12 +5,48 @@ import { LoginDto, GoogleAuthDto } from '@choir-workspace/shared-validation';
 
 import { OAuth2Client } from 'google-auth-library';
 
+import crypto from 'crypto';
+
 const JWT_SECRET = process.env.JWT_SECRET;
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is required');
 
+const ACCESS_TOKEN_EXPIRES_IN = '2h';
+const REFRESH_TOKEN_EXPIRATION_DAYS = 30;
+
+function generateRefreshToken() {
+  return crypto.randomBytes(40).toString('hex');
+}
+
 export class AuthService {
+  private async createTokenPair(user: any) {
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        leadsVoicePart: user.leadsVoicePart,
+      },
+      JWT_SECRET,
+      { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
+    );
+
+    const refreshToken = generateRefreshToken();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRATION_DAYS);
+
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    return { token, refreshToken };
+  }
+
   async login(dto: LoginDto) {
     const user = await prisma.user.findUnique({ where: { email: dto.email } });
     if (!user || !user.passwordHash) {
@@ -22,18 +58,7 @@ export class AuthService {
       throw new Error('Invalid email or password');
     }
 
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        leadsVoicePart: user.leadsVoicePart,
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    return { token };
+    return this.createTokenPair(user);
   }
 
   async googleLogin(dto: GoogleAuthDto) {
@@ -57,7 +82,6 @@ export class AuthService {
     let user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
-      // Option A: Default to CHORISTER. No domain restriction.
       user = await prisma.user.create({
         data: {
           email,
@@ -66,25 +90,39 @@ export class AuthService {
         },
       });
     } else if (!user.googleId) {
-      // Link existing local account
       user = await prisma.user.update({
         where: { id: user.id },
         data: { googleId },
       });
     }
 
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        leadsVoicePart: user.leadsVoicePart,
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    return this.createTokenPair(user);
+  }
 
-    return { token };
+  async refreshToken(token: string) {
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!storedToken) {
+      throw new Error('Invalid refresh token');
+    }
+
+    if (storedToken.expiresAt < new Date()) {
+      await prisma.refreshToken.delete({ where: { token } });
+      throw new Error('Refresh token expired');
+    }
+
+    await prisma.refreshToken.delete({ where: { token } });
+
+    return this.createTokenPair(storedToken.user);
+  }
+
+  async logout(token: string) {
+    await prisma.refreshToken.deleteMany({
+      where: { token },
+    });
   }
 }
 

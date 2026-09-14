@@ -55,8 +55,20 @@ model User {
   leadsVoicePart VoicePartType?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  refreshTokens  RefreshToken[]
 
   @@index([role])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model UniformSchedule {

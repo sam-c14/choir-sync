@@ -38,8 +38,8 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginDto) => {
     try {
-      const res = await apiClient.post<{ token: string }>("/auth/login", data);
-      login(res.data.token);
+      const res = await apiClient.post<{ token: string, refreshToken: string }>("/auth/login", data);
+      login(res.data.token, res.data.refreshToken);
       navigate(from, { replace: true });
     } catch (err: unknown) {
       const message =
@@ -113,9 +113,10 @@ export default function LoginPage() {
                 )}
               </div>
               {errors.root && (
-                <p className="text-sm text-destructive font-medium">
-                  {errors.root.message}
-                </p>
+                <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span className="font-medium mt-0.5">{errors.root.message}</span>
+                </div>
               )}
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Signing in…" : "Sign in"}
@@ -137,10 +138,10 @@ export default function LoginPage() {
                   onSuccess={async (credentialResponse) => {
                     setIsGoogleLoading(true);
                     try {
-                      const res = await apiClient.post<{ token: string }>("/auth/google", {
+                      const res = await apiClient.post<{ token: string, refreshToken: string }>("/auth/google", {
                         idToken: credentialResponse.credential,
                       });
-                      login(res.data.token);
+                      login(res.data.token, res.data.refreshToken);
                       navigate(from, { replace: true });
                     } catch (err: unknown) {
                       setIsGoogleLoading(false);

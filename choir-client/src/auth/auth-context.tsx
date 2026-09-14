@@ -12,7 +12,7 @@ export interface JwtPayload {
 
 interface AuthContextType {
   user: JwtPayload | null;
-  login: (token: string) => void;
+  login: (token: string, refreshToken: string) => void;
   logout: () => void;
 }
 
@@ -30,14 +30,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
-  const login = (token: string) => {
+  const login = (token: string, refreshToken: string) => {
     localStorage.setItem('token', token);
+    localStorage.setItem('refreshToken', refreshToken);
     const decoded = jwtDecode<JwtPayload>(token);
     setUser(decoded);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      try {
+        await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/auth/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: refreshToken }),
+        });
+      } catch (error) {
+        // Ignore errors on logout
+      }
+    }
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     setUser(null);
   };
 
