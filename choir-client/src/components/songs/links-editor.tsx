@@ -89,7 +89,7 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 hover:underline truncate flex-1 min-w-0"
+              className="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[155px] sm:max-w-80 flex-1 min-w-0"
             >
               {link.url}
             </a>

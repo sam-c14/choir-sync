@@ -56,7 +56,7 @@ export function LyricsKeyEditor({ songId, initialLyrics, initialKey }: { songId:
               value={lyrics}
               onChange={(e) => setLyrics(e.target.value)}
               placeholder="Enter song lyrics..."
-              className="min-h-32 font-mono text-sm"
+              className="min-h-32 max-h-40 font-mono text-sm"
             />
           </div>
           <div className="flex gap-2 justify-end">
