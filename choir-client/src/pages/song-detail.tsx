@@ -2,13 +2,14 @@ import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSong, useDeleteSong } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
-import { Button } from '../components/ui/button';
+import { Button, buttonVariants } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Skeleton } from '../components/ui/skeleton';
 import { Loader2, Trash2, ArrowLeft } from 'lucide-react';
 import { LinksEditor } from '../components/songs/links-editor';
 import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
 import { LyricsKeyEditor } from '../components/songs/lyrics-key-editor';
+import { cn } from '../lib/utils';
 
 const COMPLEXITY_COLORS: Record<string, string> = {
   EASY: 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900',
@@ -88,7 +89,7 @@ export default function SongDetailPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 py-8 pb-24 space-y-8">
       <div>
         <Button variant="ghost" onClick={() => navigate('/')} className="mb-4 -ml-4 text-muted-foreground">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Library
@@ -124,9 +125,12 @@ export default function SongDetailPage() {
         <div className="pt-6 border-t">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Voice Parts</h3>
-            <Button variant="secondary" size="sm" asChild>
-              <Link to={`/songs/${song.id}/parts`}>Manage Parts</Link>
-            </Button>
+            <Link
+              to={`/songs/${song.id}/parts`}
+              className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }))}
+            >
+              Manage Parts
+            </Link>
           </div>
           <div className="flex gap-2 flex-wrap">
             {song.parts?.map((p: any) => (
