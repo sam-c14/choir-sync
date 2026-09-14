@@ -68,6 +68,26 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
     }
   };
 
+  const getEmbedUrl = (platform: string, url: string) => {
+    try {
+      if (platform === 'YOUTUBE') {
+        const videoId = url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=))([^"&?\/\s]{11})/i)?.[1];
+        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+      }
+      if (platform === 'SPOTIFY') {
+        const trackId = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/i)?.[1];
+        if (trackId) return `https://open.spotify.com/embed/track/${trackId}?utm_source=generator`;
+      }
+      if (platform === 'AUDIOMACK') {
+        const path = url.match(/audiomack\.com\/(.+)/i)?.[1];
+        if (path) return `https://audiomack.com/embed/${path}?background=1`;
+      }
+    } catch (e) {
+      // Return null if parsing fails
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
@@ -78,41 +98,78 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
           No links added yet.
         </p>
       )}
-      <div className="space-y-2">
-        {links.map((link) => (
-          <div key={link.id} className="flex items-center gap-2 text-sm">
-            {PLATFORM_ICONS[link.platform] ?? PLATFORM_ICONS["OTHER"]}
-            <Badge variant="secondary" className="shrink-0">
-              {link.platform}
-            </Badge>
-            <a
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[155px] sm:max-w-80 flex-1 min-w-0"
-            >
-              {link.url}
-            </a>
-            {isDirector && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="ml-auto shrink-0 text-slate-400 hover:text-destructive"
-                onClick={async () => {
-                  try {
-                    await deleteLink.mutateAsync({ songId, linkId: link.id });
-                    toast.success("Link deleted.");
-                  } catch {
-                    toast.error("Failed to delete link.");
-                  }
-                }}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            )}
-          </div>
-        ))}
+      <div className="space-y-4">
+        {links.map((link) => {
+          const embedUrl = getEmbedUrl(link.platform, link.url);
+          return (
+            <div key={link.id} className="flex flex-col gap-2 rounded-lg border bg-card p-3 shadow-sm">
+              <div className="flex items-center gap-2 text-sm">
+                {PLATFORM_ICONS[link.platform] ?? PLATFORM_ICONS["OTHER"]}
+                <Badge variant="secondary" className="shrink-0">
+                  {link.platform}
+                </Badge>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[155px] sm:max-w-80 flex-1 min-w-0"
+                >
+                  {link.url}
+                </a>
+                {isDirector && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto shrink-0 text-slate-400 hover:text-destructive h-8 w-8 p-0"
+                    onClick={async () => {
+                      try {
+                        await deleteLink.mutateAsync({ songId, linkId: link.id });
+                        toast.success("Link deleted.");
+                      } catch {
+                        toast.error("Failed to delete link.");
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+              
+              {embedUrl && (
+                <div className="w-full mt-2 rounded-md overflow-hidden bg-slate-100 dark:bg-slate-800">
+                  {link.platform === 'YOUTUBE' && (
+                    <div className="relative w-full aspect-video">
+                      <iframe 
+                        className="absolute top-0 left-0 w-full h-full border-0" 
+                        src={embedUrl} 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowFullScreen 
+                      />
+                    </div>
+                  )}
+                  {link.platform === 'SPOTIFY' && (
+                    <iframe 
+                      className="w-full border-0 rounded-md" 
+                      src={embedUrl} 
+                      height="152" 
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                      loading="lazy"
+                    />
+                  )}
+                  {link.platform === 'AUDIOMACK' && (
+                    <iframe 
+                      className="w-full border-0" 
+                      src={embedUrl} 
+                      height="252" 
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {isDirector && (

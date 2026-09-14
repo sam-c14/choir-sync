@@ -5,6 +5,7 @@ import { RequireAuth } from '../auth/require-auth';
 import { Navbar } from '../components/layout/navbar';
 import LoginPage from '../pages/login';
 import SongsPage from '../pages/songs';
+import SongDetailPage from '../pages/song-detail';
 import SongPartsPage from '../pages/song-parts';
 import UniformsPage from '../pages/uniforms';
 import AdminUsersPage from '../pages/admin/users';
@@ -26,6 +27,7 @@ export function App() {
                   <main>
                     <Routes>
                       <Route path="/" element={<SongsPage />} />
+                      <Route path="/songs/:id" element={<SongDetailPage />} />
                       <Route path="/uniforms" element={<UniformsPage />} />
                       <Route path="/songs/:id/parts" element={<SongPartsPage />} />
                       <Route path="/admin/users" element={<AdminUsersPage />} />

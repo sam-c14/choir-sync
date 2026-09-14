@@ -3,7 +3,6 @@ import { useDebounce } from '../hooks/use-debounce';
 import { useSongs, useSong, useDeleteSong } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
 import { AddSongDialog } from '../components/songs/add-song-dialog';
-import { SongDetailDialog } from '../components/songs/song-detail-dialog';
 import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
 import { PartNotesEditor } from '../components/songs/part-notes-editor';
 import { LinksEditor } from '../components/songs/links-editor';
@@ -27,7 +26,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Loader2, Plus, Search, ChevronDown, Pencil, Trash2, Music, SearchX } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 type SortKey = 'title' | 'createdAt' | 'complexity';
 type VoiceFilter = 'ALL' | 'SOPRANO' | 'ALTO' | 'TENOR';
@@ -62,9 +61,10 @@ export default function SongsPage() {
   const { user } = useAuth();
   const isDirector = user?.role === 'DIRECTOR';
 
+  const navigate = useNavigate();
+
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
-  const [selectedSong, setSelectedSong] = useState<string | null>(null);
   const [deletingSong, setDeletingSong] = useState<Song | null>(null);
 
   return (
@@ -84,7 +84,7 @@ export default function SongsPage() {
       <SongSection
         title="Active Sunday"
         status="ACTIVE_SUNDAY"
-        onSelectSong={setSelectedSong}
+        onSelectSong={(id) => navigate(`/songs/${id}`)}
         onEditSong={setEditingSong}
         onDeleteSong={setDeletingSong}
         isDirector={isDirector}
@@ -93,7 +93,7 @@ export default function SongsPage() {
       <SongSection
         title="Rehearsal & Archived"
         status="REHEARSAL,ARCHIVED"
-        onSelectSong={setSelectedSong}
+        onSelectSong={(id) => navigate(`/songs/${id}`)}
         onEditSong={setEditingSong}
         onDeleteSong={setDeletingSong}
         isDirector={isDirector}
@@ -105,14 +105,6 @@ export default function SongsPage() {
         onOpenChange={(o) => { setAddDialogOpen(o); if (!o) setEditingSong(null); }}
         editingSong={editingSong}
       />
-
-      {/* Song detail drawer */}
-      {selectedSong && (
-        <SongDetailDialog
-          songId={selectedSong}
-          onClose={() => setSelectedSong(null)}
-        />
-      )}
 
       {/* Delete song dialog */}
       <DeleteSongDialog
