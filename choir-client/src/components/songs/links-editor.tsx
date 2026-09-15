@@ -386,7 +386,7 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
                 )}
               </div>
 
-              {embedUrl && (
+              {embedUrl && link.platform === "YOUTUBE" && (
                 <div className="w-full mt-1.5 flex justify-end">
                   <Button
                     type="button"
@@ -398,6 +398,28 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
                     <PlayCircle className="w-3.5 h-3.5 mr-2 text-primary" />
                     Play in Background
                   </Button>
+                </div>
+              )}
+
+              {embedUrl && link.platform !== "YOUTUBE" && (
+                <div className="w-full mt-2 rounded-md overflow-hidden bg-slate-100 dark:bg-slate-800">
+                  {link.platform === "SPOTIFY" && (
+                    <iframe
+                      className="w-full border-0 rounded-md block"
+                      src={embedUrl}
+                      height="152"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      loading="lazy"
+                    />
+                  )}
+                  {link.platform === "AUDIOMACK" && (
+                    <iframe
+                      className="w-full border-0 block"
+                      src={embedUrl}
+                      height="252"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    />
+                  )}
                 </div>
               )}
             </div>
