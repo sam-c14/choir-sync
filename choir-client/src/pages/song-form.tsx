@@ -228,62 +228,60 @@ export default function SongFormPage() {
         </div>
       )}
 
-      <div className="bg-card border rounded-xl p-6">
-        {!isEditing && (
-          <div className="relative space-y-4 mb-6 pb-6 border-b">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="search">Search External Music</Label>
-              <Select value={searchSource} onValueChange={(v) => setSearchSource(v as 'spotify' | 'youtube')}>
-                <SelectTrigger className="w-[120px] h-8 text-xs">
-                  <SelectValue className="capitalize" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="spotify">Spotify</SelectItem>
-                  <SelectItem value="youtube">YouTube</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Input 
-              id="search" 
-              placeholder={`Search by title or artist on ${searchSource === 'spotify' ? 'Spotify' : 'YouTube'}...`}
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSearch(true);
-              }}
-              onFocus={() => {
-                if (searchQuery.length >= 2) setShowSearch(true);
-              }}
-            />
-            {showSearch && searchQuery.length >= 2 && (
-              <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
-                {isSearchLoading ? (
-                  <div className="p-3 text-sm text-muted-foreground text-center">Searching...</div>
-                ) : searchResults && searchResults.length > 0 ? (
-                  searchResults.map((track: any) => (
-                    <div 
-                      key={track.spotifyId || track.youtubeUrl} 
-                      className="p-3 text-sm hover:bg-muted cursor-pointer border-b last:border-0 flex gap-3"
-                      onClick={() => handleSelectTrack(track)}
-                    >
-                      {track.thumbnailUrl && (
-                        <img src={track.thumbnailUrl} alt="" className="w-12 h-12 object-cover rounded flex-shrink-0" />
-                      )}
-                      <div>
-                        <div className="font-medium">{track.title}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {track.composer} {track.originalKey && ` • ${track.originalKey}`} {track.tempoBpm && ` • ${track.tempoBpm} BPM`}
-                        </div>
+      <div className="bg-card border rounded-xl py-6 px-4">
+        <div className="relative space-y-4 mb-6 pb-6 border-b">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="search">Search External Music</Label>
+            <Select value={searchSource} onValueChange={(v) => setSearchSource(v as 'spotify' | 'youtube')}>
+              <SelectTrigger className="w-[120px] h-8 text-xs">
+                <SelectValue className="capitalize" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="spotify">Spotify</SelectItem>
+                <SelectItem value="youtube">YouTube</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Input 
+            id="search" 
+            placeholder={`Search by title or artist on ${searchSource === 'spotify' ? 'Spotify' : 'YouTube'}...`}
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setShowSearch(true);
+            }}
+            onFocus={() => {
+              if (searchQuery.length >= 2) setShowSearch(true);
+            }}
+          />
+          {showSearch && searchQuery.length >= 2 && (
+            <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
+              {isSearchLoading ? (
+                <div className="p-3 text-sm text-muted-foreground text-center">Searching...</div>
+              ) : searchResults && searchResults.length > 0 ? (
+                searchResults.map((track: any) => (
+                  <div 
+                    key={track.spotifyId || track.youtubeUrl} 
+                    className="p-3 text-sm hover:bg-muted cursor-pointer border-b last:border-0 flex gap-3"
+                    onClick={() => handleSelectTrack(track)}
+                  >
+                    {track.thumbnailUrl && (
+                      <img src={track.thumbnailUrl} alt="" className="w-12 h-12 object-cover rounded flex-shrink-0" />
+                    )}
+                    <div>
+                      <div className="font-medium">{track.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {track.composer} {track.originalKey && ` • ${track.originalKey}`} {track.tempoBpm && ` • ${track.tempoBpm} BPM`}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="p-3 text-sm text-muted-foreground text-center">No results found</div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 text-sm text-muted-foreground text-center">No results found</div>
+              )}
+            </div>
+          )}
+        </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-3">
