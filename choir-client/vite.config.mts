@@ -35,8 +35,8 @@ export default defineConfig(() => ({
       },
       includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'screenshot-mobile.png', 'screenshot-desktop.png'],
       manifest: {
-        name: 'Choir Sync',
-        short_name: 'Choir Sync',
+        name: 'CSync',
+        short_name: 'CSync',
         description: 'Choir management app for songs, parts, and rehearsals',
         theme_color: '#850bc4',
         background_color: '#1a0a2e',
