@@ -5,6 +5,7 @@ import { RequireAuth } from '../auth/require-auth';
 import { Navbar } from '../components/layout/navbar';
 import { PlayerProvider } from '../contexts/player-context';
 import { GlobalPlayer } from '../components/global-player';
+import { ScrollToTop } from '../components/scroll-to-top';
 import LoginPage from '../pages/login';
 import SongsPage from '../pages/songs';
 import SongDetailPage from '../pages/song-detail';
@@ -18,6 +19,7 @@ import { Toaster } from '../components/ui/sonner';
 export function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <PlayerProvider>
           <Routes>

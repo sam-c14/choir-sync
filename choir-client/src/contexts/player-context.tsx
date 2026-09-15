@@ -11,12 +11,15 @@ interface PlayerContextType {
   currentTrack: TrackInfo | null;
   playTrack: (track: TrackInfo) => void;
   closePlayer: () => void;
+  activePreviewUrls: string[];
+  setActivePreviewUrls: (urls: string[]) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentTrack, setCurrentTrack] = useState<TrackInfo | null>(null);
+  const [activePreviewUrls, setActivePreviewUrls] = useState<string[]>([]);
 
   const playTrack = (track: TrackInfo) => {
     setCurrentTrack(track);
@@ -25,7 +28,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const closePlayer = () => setCurrentTrack(null);
 
   return (
-    <PlayerContext.Provider value={{ currentTrack, playTrack, closePlayer }}>
+    <PlayerContext.Provider value={{ currentTrack, playTrack, closePlayer, activePreviewUrls, setActivePreviewUrls }}>
       {children}
     </PlayerContext.Provider>
   );

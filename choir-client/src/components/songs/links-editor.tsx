@@ -327,12 +327,18 @@ function ManualUrlInput({ songId, platform, onAdded }: ManualUrlInputProps) {
 // ---------------------------------------------------------------------------
 export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
   const { user } = useAuth();
-  const { playTrack } = usePlayer();
+  const { playTrack, currentTrack, setActivePreviewUrls } = usePlayer();
   const isDirector = user?.role === "DIRECTOR";
   const deleteLink = useDeleteSongLink();
 
   const [platform, setPlatform] = useState<CreateSongLinkDto["platform"]>("YOUTUBE");
   const [addKey, setAddKey] = useState(0); // bump to reset child panels after add
+
+  // Update global player context so it knows which links are currently on screen
+  useEffect(() => {
+    setActivePreviewUrls(links.map(l => l.url));
+    return () => setActivePreviewUrls([]);
+  }, [links, setActivePreviewUrls]);
 
   return (
     <div className="space-y-3">
@@ -387,6 +393,21 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
               </div>
 
               {embedUrl && link.platform === "YOUTUBE" && (
+                <div className="w-full mt-2 rounded-md overflow-hidden bg-slate-100 dark:bg-slate-800">
+                  <div className="relative w-full aspect-video">
+                    {/* The key forces the iframe to reload (and thus pause) when the background player takes over this track */}
+                    <iframe
+                      key={`iframe-${link.id}-${currentTrack?.url === link.url ? 'bg' : 'inline'}`}
+                      className="absolute top-0 left-0 w-full h-full border-0"
+                      src={embedUrl}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
+
+              {embedUrl && link.platform === "YOUTUBE" && (
                 <div className="w-full mt-1.5 flex justify-end">
                   <Button
                     type="button"
@@ -396,7 +417,7 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
                     onClick={() => playTrack({ platform: link.platform, url: link.url, embedUrl, title: songTitle })}
                   >
                     <PlayCircle className="w-3.5 h-3.5 mr-2 text-primary" />
-                    Play in Background
+                    {currentTrack?.url === link.url ? 'Playing in Background' : 'Play in Background'}
                   </Button>
                 </div>
               )}

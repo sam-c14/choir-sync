@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { usePlayer } from '../contexts/player-context';
-import { X, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, PictureInPicture2 } from 'lucide-react';
 import { Button } from './ui/button';
 
 export function GlobalPlayer() {
-  const { currentTrack, closePlayer } = usePlayer();
+  const { currentTrack, closePlayer, activePreviewUrls } = usePlayer();
   const [isMinimized, setIsMinimized] = useState(false);
 
   if (!currentTrack) return null;
+
+  const isPreviewAvailable = activePreviewUrls.includes(currentTrack.url);
 
   return (
     <div 
@@ -25,6 +27,27 @@ export function GlobalPlayer() {
           {currentTrack.title || 'Now Playing'}
         </span>
         <div className="flex items-center gap-1 shrink-0">
+          {isPreviewAvailable && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 text-[10px] mr-1 hidden sm:flex"
+              onClick={(e) => { e.stopPropagation(); closePlayer(); }}
+            >
+              <PictureInPicture2 className="w-3 h-3 mr-1.5" />
+              Switch to Preview
+            </Button>
+          )}
+          {isPreviewAvailable && (
+             <Button
+              variant="ghost"
+              size="icon"
+              className="w-8 h-8 rounded-full hover:bg-background/50 text-muted-foreground hover:text-foreground sm:hidden"
+              onClick={(e) => { e.stopPropagation(); closePlayer(); }}
+             >
+               <PictureInPicture2 className="w-4 h-4" />
+             </Button>
+          )}
           <Button 
             variant="ghost" 
             size="icon" 
