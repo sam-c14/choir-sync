@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAddSongLink, useDeleteSongLink, useSearchExternalMusic } from "../../hooks/use-songs";
 import { useAuth } from "../../auth/auth-context";
+import { usePlayer } from "../../contexts/player-context";
 import { useDebounce } from "../../hooks/use-debounce";
 import {
   LinkPlatformEnum,
@@ -39,6 +40,7 @@ interface SongLink {
 interface LinksEditorProps {
   songId: string;
   links: SongLink[];
+  songTitle?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -323,8 +325,9 @@ function ManualUrlInput({ songId, platform, onAdded }: ManualUrlInputProps) {
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
-export function LinksEditor({ songId, links }: LinksEditorProps) {
+export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
   const { user } = useAuth();
+  const { playTrack } = usePlayer();
   const isDirector = user?.role === "DIRECTOR";
   const deleteLink = useDeleteSongLink();
 
@@ -384,34 +387,17 @@ export function LinksEditor({ songId, links }: LinksEditorProps) {
               </div>
 
               {embedUrl && (
-                <div className="w-full mt-2 rounded-md overflow-hidden bg-slate-100 dark:bg-slate-800">
-                  {link.platform === "YOUTUBE" && (
-                    <div className="relative w-full aspect-video">
-                      <iframe
-                        className="absolute top-0 left-0 w-full h-full border-0"
-                        src={embedUrl}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
-                  )}
-                  {link.platform === "SPOTIFY" && (
-                    <iframe
-                      className="w-full border-0 rounded-md"
-                      src={embedUrl}
-                      height="152"
-                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                      loading="lazy"
-                    />
-                  )}
-                  {link.platform === "AUDIOMACK" && (
-                    <iframe
-                      className="w-full border-0"
-                      src={embedUrl}
-                      height="252"
-                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    />
-                  )}
+                <div className="w-full mt-1.5 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="w-full sm:w-auto h-8 text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-foreground"
+                    onClick={() => playTrack({ platform: link.platform, url: link.url, embedUrl, title: songTitle })}
+                  >
+                    <PlayCircle className="w-3.5 h-3.5 mr-2 text-primary" />
+                    Play in Background
+                  </Button>
                 </div>
               )}
             </div>
