@@ -17,16 +17,20 @@ export function Navbar() {
 
   if (!user) return null;
 
-  const getLinkClass = (path: string) => {
-    const isActive = path === '/' ? pathname === '/' : pathname.startsWith(path);
-    return `text-sm font-medium transition-colors hover:text-primary ${isActive ? 'text-primary' : 'text-muted-foreground'}`;
+  const getLinkClass = (path: string, altPath?: string) => {
+    const isActive = path === '/' ? pathname === '/' || (altPath && pathname.startsWith(altPath)) : pathname.startsWith(path) || (altPath && pathname.startsWith(altPath));
+    return `text-sm font-medium transition-all rounded-md py-1 pb-1.5 px-3 whitespace-nowrap border ${
+      isActive 
+        ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
+        : 'text-gray-300 border-transparent hover:bg-primary/10 hover:text-primary hover:border-primary/20'
+    }`;
   };
 
   return (
     <header className="border-b bg-background shadow-sm sticky top-0 z-10 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center sm:justify-between">
-        <div className="flex items-center sm:justify-start justify-between gap-2 sm:gap-6 overflow-x-auto whitespace-nowrap no-scrollbar mask-edges sm:w-auto w-11/12">
-          <div className="flex items-center gap-2">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto no-scrollbar flex-1 mask-edges py-1">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <h1 className="sm:text-xl text-lg font-bold tracking-tight text-primary truncate">CSync</h1>
             <Badge variant="outline" className="hidden sm:inline-flex capitalize">
               {user.role.toLowerCase().replace('_', ' ')}
@@ -37,8 +41,8 @@ export function Navbar() {
               </Badge>
             )}
           </div>
-          <nav className="flex items-center space-x-3 sm:space-x-4 sm:mr-0 mr-5">
-            <Link to="/" className={getLinkClass('/')}>
+          <nav className="flex items-center gap-2 sm:gap-3 flex-shrink-0 pr-4 sm:pr-0">
+            <Link to="/" className={getLinkClass('/', '/songs')}>
               Songs
             </Link>
             <Link to="/uniforms" className={getLinkClass('/uniforms')}>
@@ -51,7 +55,7 @@ export function Navbar() {
             )}
           </nav>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4 ml-2">
+        <div className="flex items-center gap-2 sm:gap-4 ml-4 flex-shrink-0">
           {/* Desktop Actions */}
           <div className="hidden sm:flex items-center gap-4">
             <span className="text-sm font-medium text-foreground max-w-[160px] truncate" title={user.email}>

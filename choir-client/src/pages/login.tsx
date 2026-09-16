@@ -38,7 +38,10 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginDto) => {
     try {
-      const res = await apiClient.post<{ token: string, refreshToken: string }>("/auth/login", data);
+      const res = await apiClient.post<{ token: string; refreshToken: string }>(
+        "/auth/login",
+        data,
+      );
       login(res.data.token, res.data.refreshToken);
       navigate(from, { replace: true });
     } catch (err: unknown) {
@@ -76,11 +79,16 @@ export default function LoginPage() {
                 <Loader2 className="w-12 h-12 animate-spin text-primary relative z-10" />
               </div>
               <p className="text-base font-medium text-muted-foreground animate-pulse text-center">
-                Securely authenticating<br/>with Google...
+                Securely authenticating
+                <br />
+                with Google...
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="space-y-4 animate-in fade-in zoom-in-95 duration-300"
+            >
               <div className="space-y-4">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -114,14 +122,35 @@ export default function LoginPage() {
               </div>
               {errors.root && (
                 <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md flex items-start gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span className="font-medium mt-0.5">{errors.root.message}</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="shrink-0"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span className="font-medium mt-0.5">
+                    {errors.root.message}
+                  </span>
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                className="w-full py-4"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? "Signing in…" : "Sign in"}
               </Button>
-              
+
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
@@ -138,7 +167,10 @@ export default function LoginPage() {
                   onSuccess={async (credentialResponse) => {
                     setIsGoogleLoading(true);
                     try {
-                      const res = await apiClient.post<{ token: string, refreshToken: string }>("/auth/google", {
+                      const res = await apiClient.post<{
+                        token: string;
+                        refreshToken: string;
+                      }>("/auth/google", {
                         idToken: credentialResponse.credential,
                       });
                       login(res.data.token, res.data.refreshToken);
@@ -146,8 +178,8 @@ export default function LoginPage() {
                     } catch (err: unknown) {
                       setIsGoogleLoading(false);
                       const message =
-                        (err as { response?: { data?: { error?: string } } })?.response?.data
-                          ?.error ?? "Google sign in failed.";
+                        (err as { response?: { data?: { error?: string } } })
+                          ?.response?.data?.error ?? "Google sign in failed.";
                       setError("root", { message });
                     }
                   }}

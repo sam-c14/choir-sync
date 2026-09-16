@@ -1,36 +1,24 @@
 import React, { useState } from 'react';
 import { useDebounce } from '../hooks/use-debounce';
-import { useSongs, useSong, useDeleteSong } from '../hooks/use-songs';
+import { useSongs } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
 import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
-import { PartNotesEditor } from '../components/songs/part-notes-editor';
-import { LinksEditor } from '../components/songs/links-editor';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog';
-import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from '../components/ui/dropdown-menu';
-import { Loader2, Plus, Search, ChevronDown, Pencil, Trash2, Music, SearchX } from 'lucide-react';
-import { toast } from 'sonner';
-import { Link, useNavigate } from 'react-router-dom';
+import { Plus, Search, ChevronDown, Pencil, Trash2, Music, SearchX } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 type SortKey = 'title' | 'createdAt' | 'complexity';
-type VoiceFilter = 'ALL' | 'SOPRANO' | 'ALTO' | 'TENOR';
 
-const COMPLEXITY_ORDER: Record<string, number> = { EASY: 0, MODERATE: 1, CHALLENGING: 2 };
 const COMPLEXITY_COLORS: Record<string, string> = {
   EASY: 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900',
   MODERATE: 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900',
@@ -72,7 +60,7 @@ export default function SongsPage() {
           <p className="text-muted-foreground mt-1">Manage and view the choir's repertoire</p>
         </div>
         {isDirector && (
-          <Button onClick={() => navigate('/songs/new')} className="gap-2 w-full sm:w-auto">
+          <Button onClick={() => navigate('/songs/new')} className="gap-2 py-4 w-full sm:w-auto">
             <Plus className="w-4 h-4" /> Add Song
           </Button>
         )}
@@ -132,6 +120,7 @@ function SongSection({
 
   // reset page to 1 when search changes
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [debouncedSearch]);
 
