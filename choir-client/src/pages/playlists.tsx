@@ -1,0 +1,136 @@
+import React, { useState } from 'react';
+import { usePlaylists, useCreatePlaylist, useDeletePlaylist } from '../hooks/use-playlists';
+import { useAuth } from '../auth/auth-context';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Loader2, Plus, ListMusic, Calendar, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
+
+export default function PlaylistsPage() {
+  const { data: playlists, isLoading } = usePlaylists();
+  const { user } = useAuth();
+  const createPlaylist = useCreatePlaylist();
+  const deletePlaylist = useDeletePlaylist();
+  const navigate = useNavigate();
+
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+
+  const isDirector = user?.role === 'DIRECTOR';
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await createPlaylist.mutateAsync({ title, description });
+      setIsCreateOpen(false);
+      navigate(`/playlists/${res.id}`);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-4 max-w-4xl space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Playlists</h1>
+        {isDirector && (
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" /> New Playlist
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Playlist</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreate} className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Title</label>
+                  <Input 
+                    required 
+                    value={title} 
+                    onChange={e => setTitle(e.target.value)} 
+                    placeholder="e.g. Sunday Service - Oct 12" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description (Optional)</label>
+                  <Input 
+                    value={description} 
+                    onChange={e => setDescription(e.target.value)} 
+                    placeholder="Theme or notes for the setlist" 
+                  />
+                </div>
+                <Button type="submit" disabled={createPlaylist.isPending} className="w-full">
+                  {createPlaylist.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Create
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      {!playlists?.length ? (
+        <div className="text-center p-12 border rounded-xl bg-card border-dashed">
+          <ListMusic className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium text-foreground">No playlists yet</h3>
+          <p className="text-muted-foreground text-sm mt-1">Create a playlist to organize songs for rehearsal or service.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {playlists.map((playlist: any) => (
+            <Link 
+              key={playlist.id} 
+              to={`/playlists/${playlist.id}`}
+              className="block group relative bg-card border rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary transition-all"
+            >
+              <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-primary transition-colors">
+                {playlist.title}
+              </h3>
+              {playlist.description && (
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  {playlist.description}
+                </p>
+              )}
+              <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
+                <span className="flex items-center">
+                  <Calendar className="w-3.5 h-3.5 mr-1" />
+                  {format(new Date(playlist.createdAt), 'MMM d, yyyy')}
+                </span>
+              </div>
+              
+              {isDirector && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (confirm('Delete this playlist?')) {
+                      deletePlaylist.mutate(playlist.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -90,3 +90,23 @@ export const UpdateUserRoleSchema = z
 export type CreateUniformDto = z.infer<typeof CreateUniformSchema>;
 export type UpdateUniformDto = z.infer<typeof UpdateUniformSchema>;
 export type UpdateUserRoleDto = z.infer<typeof UpdateUserRoleSchema>;
+
+export const CreatePlaylistSchema = z.object({
+  title: z.string().min(1, "Title is required").max(150),
+  description: z.string().max(1000).optional().nullable(),
+  serviceDate: z.coerce.date().optional().nullable(),
+});
+export const UpdatePlaylistSchema = CreatePlaylistSchema.partial();
+
+export const CreatePlaylistSongSchema = z.object({
+  songId: z.string().uuid("Invalid song ID"),
+  orderIndex: z.number().int().min(0),
+  leadSinger: z.string().max(100).optional().nullable(),
+  customKey: z.string().max(20).optional().nullable(),
+});
+export const UpdatePlaylistSongSchema = CreatePlaylistSongSchema.partial().omit({ songId: true });
+
+export type CreatePlaylistDto = z.infer<typeof CreatePlaylistSchema>;
+export type UpdatePlaylistDto = z.infer<typeof UpdatePlaylistSchema>;
+export type CreatePlaylistSongDto = z.infer<typeof CreatePlaylistSongSchema>;
+export type UpdatePlaylistSongDto = z.infer<typeof UpdatePlaylistSongSchema>;

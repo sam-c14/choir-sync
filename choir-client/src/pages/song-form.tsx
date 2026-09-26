@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { CreateSongSchema, UpdateSongSchema, SongComplexityEnum, SongStatusEnum, type CreateSongDto, type UpdateSongDto } from '@choir-workspace/shared-validation';
 import { useCreateSong, useUpdateSong, useSearchExternalMusic, useSong } from '../hooks/use-songs';
 import { useDebounce } from '../hooks/use-debounce';
+import { useSetPlaylistSongs, usePlaylist } from '../hooks/use-playlists';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -23,10 +24,14 @@ export default function SongFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const playlistId = searchParams.get('playlistId');
 
   const { data: song, isLoading: isSongLoading, isError: isSongError } = useSong(id || '');
+  const { data: playlist } = usePlaylist(playlistId || '');
   const createSong = useCreateSong();
   const updateSong = useUpdateSong();
+  const setPlaylistSongs = useSetPlaylistSongs();
 
   const [searchSource, setSearchSource] = useState<'spotify' | 'youtube'>('spotify');
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,7 +82,26 @@ export default function SongFormPage() {
       } else {
         const result = await createSong.mutateAsync(data as CreateSongDto);
         toast.success('Song added!');
-        navigate(`/songs/${result.id}`);
+        
+        if (playlistId && playlist) {
+          const currentSongs = playlist.songs || [];
+          await setPlaylistSongs.mutateAsync({
+            id: playlistId,
+            songs: [
+              ...currentSongs.map((s: any) => ({
+                songId: s.songId,
+                orderIndex: s.orderIndex,
+                leadSinger: s.leadSinger,
+                customKey: s.customKey
+              })),
+              { songId: result.id, orderIndex: currentSongs.length }
+            ]
+          });
+          toast.success('Added to playlist.');
+          navigate(`/playlists/${playlistId}`);
+        } else {
+          navigate(`/songs/${result.id}`);
+        }
       }
     } catch (err: any) {
       setError('root', { message: err.message || 'Failed to save song.' });

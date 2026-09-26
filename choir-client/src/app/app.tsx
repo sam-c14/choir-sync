@@ -13,6 +13,8 @@ import SongPartsPage from '../pages/song-parts';
 import SongFormPage from '../pages/song-form';
 import UniformsPage from '../pages/uniforms';
 import AdminUsersPage from '../pages/admin/users';
+import PlaylistsPage from '../pages/playlists';
+import PlaylistDetailsPage from '../pages/playlist-details';
 
 import { Toaster } from '../components/ui/sonner';
 
@@ -37,7 +39,8 @@ export function App() {
                         <Route path="/songs/:id/edit" element={<SongFormPage />} />
                         <Route path="/songs/:id" element={<SongDetailPage />} />
                         <Route path="/uniforms" element={<UniformsPage />} />
-                        <Route path="/songs/:id/parts" element={<SongPartsPage />} />
+                        <Route path="/playlists" element={<PlaylistsPage />} />
+                        <Route path="/playlists/:id" element={<PlaylistDetailsPage />} />
                         <Route path="/admin/users" element={<AdminUsersPage />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>

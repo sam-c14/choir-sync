@@ -56,6 +56,7 @@ model User {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   refreshTokens  RefreshToken[]
+  playlists      Playlist[]
 
   @@index([role])
 }
@@ -96,7 +97,8 @@ model Song {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   parts       SongPart[]
-  links      SongLink[]
+  links       SongLink[]
+  playlistSongs PlaylistSong[]
 
   @@index([title])
   @@index([status])
@@ -125,4 +127,32 @@ model SongLink {
   createdAt DateTime     @default(now())
 
   @@index([songId])
+}
+
+model Playlist {
+  id          String         @id @default(uuid())
+  title       String         // e.g. "Sunday Service - Oct 12"
+  description String?
+  serviceDate DateTime?      // Ties directly to Sunday/Uniform dates
+  createdById String
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  songs       PlaylistSong[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([serviceDate])
+}
+
+model PlaylistSong {
+  id         String   @id @default(uuid())
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  songId     String
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  orderIndex Int      // Position in setlist
+  leadSinger String?  // Optional assigned soloist for this specific service
+  customKey  String?  // Overrides standard catalog key for this service
+
+  @@unique([playlistId, songId])
+  @@index([playlistId])
 }

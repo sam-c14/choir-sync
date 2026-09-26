@@ -8,7 +8,8 @@ import { Skeleton } from '../components/ui/skeleton';
 import { Loader2, Trash2, ArrowLeft } from 'lucide-react';
 import { LinksEditor } from '../components/songs/links-editor';
 import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
-import { LyricsKeyEditor } from '../components/songs/lyrics-key-editor';
+import { RehearsalReader } from '../components/songs/rehearsal-reader';
+import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
 import { cn } from '../lib/utils';
 
 const COMPLEXITY_COLORS: Record<string, string> = {
@@ -48,23 +49,8 @@ export default function SongDetailPage() {
             <Skeleton className="h-6 w-24 rounded-full" />
             <Skeleton className="h-6 w-32 rounded-full" />
           </div>
-          <div className="pt-6 border-t">
-            <div className="flex items-center justify-between mb-4">
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-9 w-28" />
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <Skeleton className="h-6 w-20 rounded-full" />
-              <Skeleton className="h-6 w-24 rounded-full" />
-              <Skeleton className="h-6 w-16 rounded-full" />
-            </div>
-          </div>
           <div className="pt-6 border-t space-y-4">
-            <div className="flex items-center justify-between mb-2">
-               <Skeleton className="h-5 w-24" />
-               <Skeleton className="h-9 w-20" />
-            </div>
-            <Skeleton className="h-32 w-full rounded-lg" />
+             <Skeleton className="h-64 w-full rounded-lg" />
           </div>
           <div className="pt-6 border-t space-y-4">
             <Skeleton className="h-5 w-32 mb-2" />
@@ -97,7 +83,10 @@ export default function SongDetailPage() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{song.title}</h1>
-            <p className="text-lg text-muted-foreground mt-1">{song.composer ?? 'Unknown Composer'}</p>
+            <p className="text-lg text-muted-foreground mt-1">
+              {song.composer ?? 'Unknown Composer'}
+              {song.originalKey && <span className="ml-2 font-mono text-sm bg-secondary px-2 py-0.5 rounded-md text-secondary-foreground">Key: {song.originalKey}</span>}
+            </p>
           </div>
         </div>
       </div>
@@ -122,28 +111,17 @@ export default function SongDetailPage() {
             </Button>
           )}
         </div>
+        
         <div className="pt-6 border-t">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Voice Parts</h3>
-            <Link
-              to={`/songs/${song.id}/parts`}
-              className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }))}
-            >
-              Manage Parts
-            </Link>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {song.parts?.map((p: any) => (
-              <Badge key={p.voicePart} variant="outline" className={COMPLEXITY_COLORS[song.complexity] || ''}>
-                {p.voicePart} {p.notes ? '(Has notes)' : ''}
-              </Badge>
-            ))}
-            {!song.parts?.length && <span className="text-sm text-muted-foreground italic">No parts added</span>}
-          </div>
+          <RehearsalReader 
+            songId={song.id} 
+            parts={song.parts || []} 
+            lyrics={song.lyrics} 
+            title={song.title} 
+            composer={song.composer} 
+          />
         </div>
-        <div className="pt-6 border-t">
-          <LyricsKeyEditor songId={song.id} initialLyrics={song.lyrics} initialKey={song.originalKey} title={song.title} composer={song.composer} />
-        </div>
+
         <div className="pt-6 border-t">
           <LinksEditor songId={song.id} links={song.links ?? []} songTitle={song.title} />
         </div>
