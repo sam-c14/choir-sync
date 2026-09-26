@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { Loader2, ArrowLeft, Trash2, Plus, Music } from 'lucide-react';
 import { format } from 'date-fns';
 import { Input } from '../components/ui/input';
+import { Skeleton } from '../components/ui/skeleton';
 
 export default function PlaylistDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,8 +24,28 @@ export default function PlaylistDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="container mx-auto p-4 max-w-4xl space-y-8">
+        <Skeleton className="h-9 w-40 mb-4" />
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-5 w-48" />
+          <div className="pt-2">
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <div className="grid md:grid-cols-[1fr_300px] gap-8 mt-8">
+          <div className="space-y-4">
+            <Skeleton className="h-7 w-32" />
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+            </div>
+          </div>
+          <div className="space-y-4">
+             <Skeleton className="h-7 w-32" />
+             <Skeleton className="h-10 w-full" />
+             <Skeleton className="h-64 w-full" />
+          </div>
+        </div>
       </div>
     );
   }

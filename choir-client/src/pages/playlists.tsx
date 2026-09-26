@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Loader2, Plus, ListMusic, Calendar, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { Skeleton } from '../components/ui/skeleton';
 
 export default function PlaylistsPage() {
   const { data: playlists, isLoading } = usePlaylists();
@@ -34,8 +35,23 @@ export default function PlaylistsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="container mx-auto p-4 max-w-4xl space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-5 w-64 mt-2" />
+          </div>
+          {isDirector && <Skeleton className="h-10 w-32" />}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-card border rounded-xl p-5 space-y-3">
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-24 mt-4" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
