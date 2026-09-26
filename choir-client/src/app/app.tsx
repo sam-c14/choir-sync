@@ -9,7 +9,6 @@ import { ScrollToTop } from '../components/scroll-to-top';
 import LoginPage from '../pages/login';
 import SongsPage from '../pages/songs';
 import SongDetailPage from '../pages/song-detail';
-import SongPartsPage from '../pages/song-parts';
 import SongFormPage from '../pages/song-form';
 import UniformsPage from '../pages/uniforms';
 import AdminUsersPage from '../pages/admin/users';

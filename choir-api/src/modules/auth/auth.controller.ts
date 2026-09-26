@@ -1,4 +1,3 @@
-import { logger } from '../../lib/logger';
 import { Request, Response } from 'express';
 import { LoginSchema, GoogleAuthSchema, RefreshTokenSchema } from '@choir-workspace/shared-validation';
 import { authService } from './auth.service';

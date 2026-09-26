@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: refreshToken }),
         });
-      } catch (error) {
+      } catch (_error) {
         // Ignore errors on logout
       }
     }

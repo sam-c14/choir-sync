@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAddSongLink, useDeleteSongLink, useSearchExternalMusic } from "../../hooks/use-songs";
 import { useAuth } from "../../auth/auth-context";
 import { usePlayer } from "../../contexts/player-context";
@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Label } from "../ui/label";
-import { Music, PlayCircle, Trash2, Link as LinkIcon, Search, Loader2, ExternalLink, X } from "lucide-react";
+import { Music, PlayCircle, Trash2, Link as LinkIcon, Search, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 const PLATFORM_ICONS: Record<string, React.ReactNode> = {

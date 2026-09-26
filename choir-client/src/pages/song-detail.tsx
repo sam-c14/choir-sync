@@ -1,16 +1,14 @@
 import React from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useSong, useDeleteSong } from '../hooks/use-songs';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useSong } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
-import { Button, buttonVariants } from '../components/ui/button';
+import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Skeleton } from '../components/ui/skeleton';
-import { Loader2, Trash2, ArrowLeft } from 'lucide-react';
+import { Trash2, ArrowLeft } from 'lucide-react';
 import { LinksEditor } from '../components/songs/links-editor';
 import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
 import { RehearsalReader } from '../components/songs/rehearsal-reader';
-import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
-import { cn } from '../lib/utils';
 
 const COMPLEXITY_COLORS: Record<string, string> = {
   EASY: 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900',

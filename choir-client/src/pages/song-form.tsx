@@ -131,7 +131,7 @@ export default function SongFormPage() {
       }
       setValue('lyrics', 'No Lyrics could be found for this song, Please input the lyrics manually', { shouldDirty: true });
       toast.error('No lyrics could be found for this song.');
-    } catch (e) {
+    } catch (_e) {
       setValue('lyrics', 'No Lyrics could be found for this song, Please input the lyrics manually', { shouldDirty: true });
       toast.error('No lyrics could be found for this song.');
     } finally {
@@ -172,7 +172,7 @@ export default function SongFormPage() {
           }
         }
       }
-    } catch (e) {
+    } catch (_e) {
       // Fall through
     }
 

@@ -281,3 +281,279 @@ Update the URL input for Youtube and Spotify Song selection on the Song details 
 
 Also, increase the debounce across all frontend instances of the debounce function usage and ensure the debounce function is working properly
 ```
+
+## Milestone 4 — Playlists, Quick-Add Bridge & Mobile Rehearsal Reader
+**Goal:** Enable playlist creation with auto-add fallbacks and transform the song part view into a responsive, mobile-first reader.
+**Do:**
+1. Add `Playlist` and `PlaylistSong` models to `choir-api/src/prisma/schema.prisma` and create migrations.
+2. Implement backend CRUD endpoints at `/api/v1/playlists`.
+3. In `choir-client/`, build the playlist management UI with quick-add song integration: if a search yields no results in the playlist builder, offer an inline "Create & Add to Setlist" modal.
+4. Replace the raw textboxes in the song view with a mobile-optimized Rehearsal Reader: swipeable S/A/T tabs, large formatted sol-fa blocks, and an edit mode toggle scoped to section leaders and directors.
+**Verify with:** `api-endpoint-scaffold`, `nx-workspace-verify`, and manual browser responsive testing.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. In the Post Release Milestones, Execute Milestone 4 — Playlists, Quick-Add Bridge & Mobile Rehearsal Reader.
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, `libs/shared/` (no `apps/`).
+
+Tasks:
+1. Backend (`choir-api/`):
+   - Add `Playlist` and `PlaylistSong` models to `schema.prisma`.
+   - Create and execute migration via `prisma-create-migration`.
+   - Implement playlist routes: `GET /api/v1/playlists`, `POST /api/v1/playlists`, `GET /api/v1/playlists/:id`, `PATCH /api/v1/playlists/:id`, `DELETE /api/v1/playlists/:id`.
+   - Allow adding/reordering songs in a playlist (`POST /api/v1/playlists/:id/songs`).
+
+2. Frontend (`choir-client/`):
+   - Build a Playlists page (`/playlists`) and Playlist Details view (`/playlists/[id]`).
+   - In the playlist song selector: if a song title search yields no results, display an inline "Add New Song to Repertoire & Playlist" option that triggers the Create Song modal, passing the current playlist ID to automatically link it upon save.
+   - Refactor Song Details View (`/songs/[id]`):
+     - Replace raw part textboxes with a dedicated "Rehearsal Reader Mode".
+     - Build mobile tab navigation for [Soprano | Alto | Tenor | Lyrics].
+     - Display tonic sol-fa in high-contrast, large monospaced font with distinct line breaks.
+     - Add an "Edit Mode" toggle visible ONLY to Directors and Section Leaders (scoped to their voice part).
+
+Verify with `nx-workspace-verify` and browser checks for mobile layout responsiveness.
+```
+
+---
+
+## Milestone 5 — Voice Part Audio Snippets (Supabase Storage)
+**Goal:** Allow choristers and leaders to record and attach quick audio references (max 60s) to voice parts.
+**Do:**
+1. Add `VoiceSnippet` model to Prisma schema.
+2. Set up a Supabase Storage bucket (`voice-snippets`) with authenticated upload policies.
+3. Build a client-side recording component in `choir-client/` using `MediaRecorder` with waveform/timer visualization and a 60-second auto-stop.
+4. Upload audio files directly from client to Supabase Storage, saving the public reference URL via `POST /api/v1/songs/:id/parts/:partId/snippets`.
+5. Render a lightweight audio playback bar on each voice part tab.
+**Verify with:** In-browser audio recording, upload persistence, and mobile playback testing.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. In Post Release Milestones, Execute Milestone 5 — Voice Part Audio Snippets (Supabase Storage).
+
+Tasks:
+1. Database & Storage:
+   - Add `VoiceSnippet` model to `choir-api/src/prisma/schema.prisma` linking to `SongPart` and `User`. Run migration.
+   - Backend endpoint: `POST /api/v1/song-parts/:partId/snippets` to record snippet metadata (`audioUrl`, `durationSec`, `title`).
+   - Backend endpoint: `DELETE /api/v1/snippets/:id` (Director or snippet owner only).
+
+2. Frontend Recorder (`choir-client/`):
+   - In each voice part tab on the Rehearsal Reader, add an "Add Audio Reference" drawer or sheet.
+   - Implement a recording widget using the browser `MediaRecorder` API:
+     - Hard limit: 60 seconds (with visual countdown progress bar).
+     - Audio format: `audio/webm;codecs=opus` (or standard fallback for iOS Safari).
+     - Action buttons: Record, Stop, Preview, Save.
+   - Client directly uploads the recorded blob to the Supabase Storage bucket `voice-snippets` with a unique path (`snippets/${partId}/${Date.now()}.webm`).
+   - On upload success, save snippet metadata to the backend API.
+   - Render a mini audio player (play/pause, progress scrubber, duration) on the part tab for saved snippets.
+
+Ensure all Supabase client keys use existing environment variables. Verify with `nx-workspace-verify`.
+```
+
+---
+
+## Milestone 6 — Sunday Roster, Confirmation Modal & In-App Notifications
+**Goal:** Implement service roster assignments, intentional confirmation modals, and zero-cost in-app notifications.
+**Do:**
+1. Add `ServiceRoster`, `RosterMember`, and `Notification` models to `schema.prisma`.
+2. Implement endpoints to manage rosters and query user notifications (`GET /api/v1/notifications`, `PATCH /api/v1/notifications/:id/read`).
+3. Build the Roster Assignment UI inside the Playlist view allowing Directors to assign vocalists to Soprano, Alto, Tenor, or Lead.
+4. Implement the intentional dispatch confirmation modal. Upon confirmation, batch-insert notification rows for all assigned users.
+5. Add a Notification Bell icon with an unread badge to the mobile navigation bar.
+**Verify with:** Role testing: assign users as Director, verify receipt of in-app notifications on assigned member accounts.
+
+## Followup Prompt
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. In Post Release Milestones, Execute Milestone 6 — Sunday Roster, Confirmation Modal & In-App Notifications.
+
+Tasks:
+1. Backend (`choir-api/`):
+   - Add `ServiceRoster`, `RosterMember`, and `Notification` models to `schema.prisma` and run migration.
+   - Implement roster assignment routes under playlists: `POST /api/v1/playlists/:id/roster`.
+   - Implement notification routes: `GET /api/v1/notifications`, `PATCH /api/v1/notifications/:id/read`, `PATCH /api/v1/notifications/read-all`.
+   - Implement a dispatch route: `POST /api/v1/playlists/:id/roster/dispatch`. This validates that the caller is a Director, marks roster members as `notified = true`, and batch-creates records in `Notification` table for all assigned choristers.
+
+2. Frontend (`choir-client/`):
+   - In Playlist Details, add a "Sunday Team Roster" panel allowing the Director to assign choir members to roles (`SOPRANO`, `ALTO`, `TENOR`, `LEAD`).
+   - Add a "Notify Team" trigger button.
+   - Clicking it MUST open an Intentional Confirmation Modal showing a summary: total singers, assigned roles, and service date.
+   - On confirmation, fire the dispatch endpoint and show a success toast.
+   - Add a Notification Bell to the top navbar with an active unread count badge and a popover listing recent notifications with deep links.
+
+Verify with `nx-workspace-verify` and test the notification flow between two user accounts.
+```
+---
+
+## Milestone 7 — AI Worship Curator & Song Discovery
+**Goal:** Integrate Gemini 2.0 Flash via Google AI Studio free tier to suggest setlists and recommend repertoire based on season, theme, or vibe.
+**Do:**
+1. Secure `GEMINI_API_KEY` in `choir-api/.env`.
+2. Add backend endpoint `POST /api/v1/ai/curate-setlist` and `POST /api/v1/ai/discover-songs`.
+3. In `choir-api/`, implement a service passing the current catalog metadata (titles, tempos, keys, tags) to Gemini using structured JSON output schemas (`responseSchema`).
+4. In `choir-client/`, build an "AI Curator" slide-over sheet in the Playlists section offering scenario buttons (Thanksgiving, Praise Night, Communion) and custom vibe inputs.
+5. Enable one-click conversion from AI suggestions into drafted playlists.
+**Verify with:** `api-endpoint-scaffold`, JSON schema conformance checks, and rate-limit error handling.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. In Post Release Milestones, Execute Milestone 7 — AI Worship Curator & Song Discovery.
+
+Note: Use the free Google Gemini API (`@google/genai` or standard `fetch` to Google AI Studio). Backend holds `GEMINI_API_KEY` in `choir-api/.env`.
+
+Tasks:
+1. Backend (`choir-api/`):
+   - Add endpoint `POST /api/v1/ai/curate-setlist` accepting `{ theme, serviceType, targetCount }`.
+   - Query existing songs from the database (`title`, `musicalKey`, `tempoBpm`, `tags`).
+   - Call Gemini (model: `gemini-2.5-flash` or `gemini-1.5-flash`) with structured output instructions: select a cohesive setlist from the existing library matching the theme and flow (e.g. Opening Praise -> Mid-Tempo -> Worship).
+   - If the catalog is small, allow Gemini to also suggest 1–2 external songs that fit the theme well.
+   - Return structured JSON: `{ setlistTitle, explanation, songs: [{ songId, title, reason, suggestedOrder }] }`.
+
+2. Frontend (`choir-client/`):
+   - On the Playlists page, add an "AI Setlist Assistant" modal or drawer.
+   - Include preset tags: [Thanksgiving, High Praise, Communion, Easter, Reflective Worship].
+   - Allow user custom prompts (e.g., "Fast tempo Nigerian praise medley opening").
+   - Display the AI recommendation as a reviewable checklist.
+   - Add a "Create Playlist from This" button that immediately initializes a new playlist with the selected songs in the suggested order.
+
+Verify with `nx-workspace-verify` and ensure graceful error handling if rate limits or network issues occur.
+```
+
+---
+
+## Milestone 8 — One-Click WhatsApp Broadcast Formatter
+**Goal:** Auto-generate complete Sunday morning summary texts with uniform schedules, setlists, and deep links.
+**Do:**
+1. Implement a client-side formatting engine combining `UniformSchedule`, `Playlist`, and `ServiceRoster` data for a selected date.
+2. Structure the formatted output: Date, Male/Female dress codes, ordered songs with rehearsal deep-links, and assigned vocal leads.
+3. Build the Broadcast Preview Card with "Copy to Clipboard" (with toast feedback) and "Send via WhatsApp" deep-link integration (`https://wa.me/?text=...`).
+**Verify with:** Copy-to-clipboard functionality across mobile and desktop browsers, ensuring correct URL encoding and layout rendering.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. In Post Release Milestones, Execute Milestone 8 — One-Click WhatsApp Broadcast Formatter.
+
+Tasks:
+1. Formatter Logic (`choir-client/src/lib/broadcast-formatter.ts`):
+   - Create a utility that accepts `serviceDate`, `UniformSchedule`, `Playlist` (with songs and custom keys), and `ServiceRoster`.
+   - Compile a clean, markdown-friendly text block:
+     ```text
+     *DGC WORSHIP TEAM BRIEFING — [Date]*
+     ----------------------------------------
+     👗 *UNIFORM:*
+     • Female: [Female Outfit]
+     • Male: [Male Outfit]
+     
+     🎶 *MINISTRATION SETLIST:*
+     1. [Song Title] (Key: [Key]) — Lead: [Lead Name]
+        🔗 [App Song Rehearsal Deep Link]
+     2. [Song Title] (Key: [Key]) — Lead: [Lead Name]
+        🔗 [App Song Rehearsal Deep Link]
+     
+     👥 *ROSTER ASSIGNMENTS:*
+     • Soprano: [Names]
+     • Alto: [Names]
+     • Tenor: [Names]
+     
+     Please review your parts on the choir portal before rehearsal!
+     ```
+
+2. UI Integration (`choir-client/`):
+   - On the Playlist details page, add a "Share / Broadcast" button.
+   - Open a modal displaying a live preview of the formatted broadcast message.
+   - Include a "Copy Text" button (using `navigator.clipboard.writeText` with toast confirmation).
+   - Include an "Open WhatsApp" button linking to `https://wa.me/?text=${encodeURIComponent(formattedText)}`.
+
+Verify with `nx-workspace-verify` and confirm mobile clipboard and WhatsApp link behavior.
+```
+
+## Database Schema Updates
+
+```js
+// 1. Playlists / Setlists
+model Playlist {
+  id          String         @id @default(uuid())
+  title       String         // e.g. "Sunday Service - Oct 12"
+  description String?
+  serviceDate DateTime?      // Ties directly to Sunday/Uniform dates
+  createdById String
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  songs       PlaylistSong[]
+  roster      ServiceRoster?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([serviceDate])
+}
+
+model PlaylistSong {
+  id         String   @id @default(uuid())
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  songId     String
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  orderIndex Int      // Position in setlist
+  leadSinger String?  // Optional assigned soloist for this specific service
+  customKey  String?  // Overrides standard catalog key for this service
+
+  @@unique([playlistId, songId])
+  @@index([playlistId])
+}
+
+// 2. Audio Snippets for Voice Parts
+model VoiceSnippet {
+  id          String        @id @default(uuid())
+  songPartId  String
+  songPart    SongPart      @relation(fields: [songPartId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  audioUrl    String        // Supabase Storage Public/Signed URL
+  durationSec Int           // Duration in seconds (max 60)
+  title       String?       // e.g., "Bridge Harmony Variation"
+  createdAt   DateTime      @default(now())
+
+  @@index([songPartId])
+}
+
+// 3. Service Roster & Backing Assignments
+model ServiceRoster {
+  id          String         @id @default(uuid())
+  playlistId  String         @unique
+  playlist    Playlist       @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  members     RosterMember[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model RosterMember {
+  id              String            @id @default(uuid())
+  rosterId        String
+  roster          ServiceRoster     @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  assignedRole    VoicePartTypeEnum // SOPRANO, ALTO, TENOR, or LEAD
+  notes           String?           // e.g. "Taking lead on Ife Alayilegbe"
+  notified        Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+
+  @@unique([rosterId, userId])
+}
+
+// 4. In-App Notifications
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  linkUrl   String?  // Deep link to song or playlist
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+```

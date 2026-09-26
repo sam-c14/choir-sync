@@ -4,7 +4,6 @@ import { useUpdatePart, useUpdateLyrics } from '../../hooks/use-songs';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
-import { VoicePartTypeEnum } from '@choir-workspace/shared-validation';
 import { Pencil, Check, X, Wand2, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -77,7 +76,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
         toast.success(`${activeTab} notes updated`);
       }
       setIsEditing(false);
-    } catch (e) {
+    } catch (_e) {
       toast.error('Failed to save changes');
     }
   };
@@ -97,7 +96,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
         }
       }
       toast.error('No lyrics could be found for this song.');
-    } catch (e) {
+    } catch (_e) {
       toast.error('No lyrics could be found for this song.');
     } finally {
       setIsGenerating(false);

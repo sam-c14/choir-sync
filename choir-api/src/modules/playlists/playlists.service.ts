@@ -1,4 +1,4 @@
-import prisma from '../../prisma/client';
+import { prisma } from '../../lib/prisma';
 import { CreatePlaylistDto, UpdatePlaylistDto, CreatePlaylistSongDto } from '@choir-workspace/shared-validation';
 
 export const playlistsService = {

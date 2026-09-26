@@ -45,7 +45,7 @@ apiClient.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${res.data.token}`;
             return apiClient(originalRequest);
           }
-        } catch (refreshError) {
+        } catch (_refreshError) {
           // Refresh failed
         }
       }

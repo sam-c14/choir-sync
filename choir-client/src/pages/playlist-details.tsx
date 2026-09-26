@@ -4,7 +4,7 @@ import { usePlaylist, useSetPlaylistSongs } from '../hooks/use-playlists';
 import { useSongs } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
 import { Button } from '../components/ui/button';
-import { Loader2, ArrowLeft, GripVertical, Trash2, Plus, Music } from 'lucide-react';
+import { Loader2, ArrowLeft, Trash2, Plus, Music } from 'lucide-react';
 import { format } from 'date-fns';
 import { Input } from '../components/ui/input';
 
