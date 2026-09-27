@@ -179,8 +179,8 @@ export function AudioRecorder({ onSave, onCancel }: AudioRecorderProps) {
           />
           
           <div className="flex gap-2">
-            <Button variant="ghost" className="flex-1" onClick={onCancel} disabled={isSaving}>Cancel</Button>
-            <Button className="flex-1" onClick={handleSave} disabled={isSaving}>
+            <Button type="button" variant="ghost" className="flex-1" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+            <Button type="button" className="flex-1" onClick={handleSave} disabled={isSaving}>
               {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Save
             </Button>

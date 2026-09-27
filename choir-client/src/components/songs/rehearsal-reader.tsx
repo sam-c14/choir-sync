@@ -92,7 +92,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
         await updatePart.mutateAsync({
           songId,
           part: activeTab,
-          data: { notes: partNotes.trim() || null }
+          data: { notes: partNotes.trim() || undefined }
         });
         toast.success(`${activeTab} notes updated`);
       }
@@ -144,7 +144,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
         partId: activePartData.id,
         data: {
           audioUrl: publicUrl,
-          durationSec,
+          durationSec: Math.max(1, durationSec),
           title: snippetTitle || 'Voice Snippet'
         }
       });
@@ -201,7 +201,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
           <div className="flex items-center gap-2">
             {activeTab !== 'LYRICS' && (
               <Dialog open={isRecordOpen} onOpenChange={setIsRecordOpen}>
-                <DialogTrigger asChild>
+                <DialogTrigger>
                   <Button variant="secondary" size="sm" className="h-7 px-2">
                     <Mic className="w-3.5 h-3.5 mr-1" /> Record
                   </Button>
