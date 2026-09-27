@@ -62,7 +62,7 @@ export default function UniformsPage() {
           <p className="text-muted-foreground mt-1">See what to wear for upcoming services.</p>
         </div>
         {isDirector && (
-          <Button onClick={handleAdd} className="w-full sm:w-auto">Schedule Uniform</Button>
+          <Button onClick={handleAdd} className="w-full sm:w-auto min-h-9">Schedule Uniform</Button>
         )}
       </div>
 

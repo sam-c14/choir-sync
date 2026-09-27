@@ -62,8 +62,8 @@ export default function PlaylistsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Playlists</h1>
         {isDirector && (
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button>
+            <DialogTrigger>
+              <Button className="min-h-9 pb-0.5">
                 <Plus className="w-4 h-4 mr-2" /> New Playlist
               </Button>
             </DialogTrigger>
@@ -71,9 +71,9 @@ export default function PlaylistsPage() {
               <DialogHeader>
                 <DialogTitle>Create Playlist</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Title</label>
+              <form onSubmit={handleCreate} className="space-y-8 pt-4">
+                <div className="space-y-4">
+                  <label className="text-sm font-medium inline-block mb-2">Title</label>
                   <Input 
                     required 
                     value={title} 
@@ -81,15 +81,15 @@ export default function PlaylistsPage() {
                     placeholder="e.g. Sunday Service - Oct 12" 
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Description (Optional)</label>
+                <div className="space-y-4">
+                  <label className="text-sm font-medium inline-block mb-2">Description (Optional)</label>
                   <Input 
                     value={description} 
                     onChange={e => setDescription(e.target.value)} 
                     placeholder="Theme or notes for the setlist" 
                   />
                 </div>
-                <Button type="submit" disabled={createPlaylist.isPending} className="w-full">
+                <Button type="submit" disabled={createPlaylist.isPending} className="w-full min-h-10">
                   {createPlaylist.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Create
                 </Button>
