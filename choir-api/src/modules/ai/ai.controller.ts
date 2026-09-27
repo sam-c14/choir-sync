@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { CurateSetlistSchema } from '@choir-workspace/shared-validation';
 
 // Initialize the GenAI client
@@ -42,19 +42,19 @@ ${JSON.stringify(songs, null, 2)}
       `;
 
       const responseSchema = {
-        type: 'OBJECT',
+        type: Type.OBJECT,
         properties: {
-          setlistTitle: { type: 'STRING', description: 'A creative title for this setlist' },
-          explanation: { type: 'STRING', description: 'Brief explanation of why these songs were chosen and how they flow together.' },
+          setlistTitle: { type: Type.STRING, description: 'A creative title for this setlist' },
+          explanation: { type: Type.STRING, description: 'Brief explanation of why these songs were chosen and how they flow together.' },
           songs: {
-            type: 'ARRAY',
+            type: Type.ARRAY,
             items: {
-              type: 'OBJECT',
+              type: Type.OBJECT,
               properties: {
-                songId: { type: 'STRING', description: 'The UUID from the repertoire, or omit/null if suggesting an external song not in the list.', nullable: true },
-                title: { type: 'STRING', description: 'Title of the song' },
-                reason: { type: 'STRING', description: 'Why this song is placed here in the setlist.' },
-                suggestedOrder: { type: 'INTEGER' }
+                songId: { type: Type.STRING, description: 'The UUID from the repertoire, or omit/null if suggesting an external song not in the list.', nullable: true },
+                title: { type: Type.STRING, description: 'Title of the song' },
+                reason: { type: Type.STRING, description: 'Why this song is placed here in the setlist.' },
+                suggestedOrder: { type: Type.INTEGER }
               },
               required: ['title', 'reason', 'suggestedOrder']
             }
@@ -85,7 +85,7 @@ ${JSON.stringify(songs, null, 2)}
         return res.status(400).json({ error: 'Validation failed', details: error.issues });
       }
       console.error('AI Error:', error);
-      res.status(500).json({ error: 'Failed to curate setlist from AI' });
+      res.status(500).json({ error: 'Failed to curate setlist from AI', details: error.message || 'Unknown error' });
     }
   }
 }

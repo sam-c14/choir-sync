@@ -33,7 +33,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
       setSuggestion(res);
       toast.success('Setlist curated successfully!');
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to curate setlist');
+      toast.error(error.response?.data?.details || error.response?.data?.error || 'Failed to curate setlist');
     }
   };
 
@@ -109,7 +109,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <Label>Service Type</Label>
                 <Input 
