@@ -158,7 +158,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
         partId,
         data: {
           audioUrl: publicUrl,
-          durationSec: Math.max(1, durationSec),
+          durationSec: Math.min(60, Math.max(1, durationSec)),
           title: snippetTitle || 'Voice Snippet'
         }
       });
@@ -262,7 +262,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
                 </div>
               )}
               <Textarea
-                className="flex-1 font-mono text-base resize-none min-h-[250px]"
+                className="flex-1 font-mono text-base resize-none min-h-72"
                 placeholder={`Enter ${activeTab.toLowerCase()} content here...`}
                 value={activeTab === 'LYRICS' ? lyricsContent : partNotes}
                 onChange={e => activeTab === 'LYRICS' ? setLyricsContent(e.target.value) : setPartNotes(e.target.value)}
