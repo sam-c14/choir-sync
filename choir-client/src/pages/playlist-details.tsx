@@ -4,10 +4,11 @@ import { usePlaylist, useSetPlaylistSongs } from '../hooks/use-playlists';
 import { useSongs } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
 import { Button } from '../components/ui/button';
-import { Loader2, ArrowLeft, Trash2, Plus, Music } from 'lucide-react';
+import { ArrowLeft, Trash2, Plus, Music } from 'lucide-react';
 import { format } from 'date-fns';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 
 export default function PlaylistDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ export default function PlaylistDetailsPage() {
   const setPlaylistSongs = useSetPlaylistSongs();
 
   const [search, setSearch] = useState('');
+  const [songToRemove, setSongToRemove] = useState<string | null>(null);
   
   const isDirector = user?.role === 'DIRECTOR';
 
@@ -93,7 +95,7 @@ export default function PlaylistDetailsPage() {
     });
   };
 
-  const filteredSongs = allSongs?.filter((s: any) => 
+  const filteredSongs = allSongs?.data?.filter((s: any) => 
     s.title.toLowerCase().includes(search.toLowerCase()) || 
     s.composer?.toLowerCase().includes(search.toLowerCase())
   ) || [];
@@ -143,7 +145,7 @@ export default function PlaylistDetailsPage() {
                       variant="ghost"
                       size="icon"
                       className="text-muted-foreground hover:text-destructive"
-                      onClick={() => handleRemoveSong(ps.songId)}
+                      onClick={() => setSongToRemove(ps.songId)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -202,6 +204,31 @@ export default function PlaylistDetailsPage() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!songToRemove} onOpenChange={(open) => !open && setSongToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from Playlist?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this song from the playlist? This will not delete the song from your library.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (songToRemove) {
+                  handleRemoveSong(songToRemove);
+                  setSongToRemove(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
