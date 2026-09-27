@@ -5,7 +5,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { CreateSongSchema, UpdateSongSchema, SongComplexityEnum, SongStatusEnum, type CreateSongDto, type UpdateSongDto } from '@choir-workspace/shared-validation';
 import { useCreateSong, useUpdateSong, useSearchExternalMusic, useSong } from '../hooks/use-songs';
 import { useDebounce } from '../hooks/use-debounce';
-import { useSetPlaylistSongs, usePlaylist } from '../hooks/use-playlists';
+import { useSetPlaylistSongs, usePlaylist, usePlaylists } from '../hooks/use-playlists';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -28,7 +28,9 @@ export default function SongFormPage() {
   const playlistId = searchParams.get('playlistId');
 
   const { data: song, isLoading: isSongLoading, isError: isSongError } = useSong(id || '');
-  const { data: playlist } = usePlaylist(playlistId || '');
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>(playlistId || 'none');
+  const { data: selectedPlaylistData } = usePlaylist(selectedPlaylistId !== 'none' ? selectedPlaylistId : '');
+  const { data: allPlaylists } = usePlaylists();
   const createSong = useCreateSong();
   const updateSong = useUpdateSong();
   const setPlaylistSongs = useSetPlaylistSongs();
@@ -78,15 +80,35 @@ export default function SongFormPage() {
       if (isEditing && id) {
         await updateSong.mutateAsync({ id, data: data as UpdateSongDto });
         toast.success('Changes saved.');
+        
+        if (selectedPlaylistId && selectedPlaylistId !== 'none' && selectedPlaylistData) {
+          const currentSongs = selectedPlaylistData.songs || [];
+          if (!currentSongs.find((s: any) => s.songId === id)) {
+            await setPlaylistSongs.mutateAsync({
+              id: selectedPlaylistId,
+              songs: [
+                ...currentSongs.map((s: any) => ({
+                  songId: s.songId,
+                  orderIndex: s.orderIndex,
+                  leadSinger: s.leadSinger,
+                  customKey: s.customKey
+                })),
+                { songId: id, orderIndex: currentSongs.length }
+              ]
+            });
+            toast.success('Added to playlist.');
+          }
+        }
+        
         navigate(`/songs/${id}`);
       } else {
         const result = await createSong.mutateAsync(data as CreateSongDto);
         toast.success('Song added!');
         
-        if (playlistId && playlist) {
-          const currentSongs = playlist.songs || [];
+        if (selectedPlaylistId && selectedPlaylistId !== 'none' && selectedPlaylistData) {
+          const currentSongs = selectedPlaylistData.songs || [];
           await setPlaylistSongs.mutateAsync({
-            id: playlistId,
+            id: selectedPlaylistId,
             songs: [
               ...currentSongs.map((s: any) => ({
                 songId: s.songId,
@@ -98,7 +120,7 @@ export default function SongFormPage() {
             ]
           });
           toast.success('Added to playlist.');
-          navigate(`/playlists/${playlistId}`);
+          navigate(`/playlists/${selectedPlaylistId}`);
         } else {
           navigate(`/songs/${result.id}`);
         }
@@ -328,6 +350,28 @@ export default function SongFormPage() {
               <Label htmlFor="tempoBpm">Tempo (BPM)</Label>
               <Input id="tempoBpm" type="number" placeholder="e.g. 120" {...register('tempoBpm', { setValueAs: (v) => v === "" || Number.isNaN(Number(v)) ? null : Number(v) })} />
             </div>
+          </div>
+          
+          <div className="space-y-3">
+            <Label>Add to Playlist (Optional)</Label>
+            <Select value={selectedPlaylistId} onValueChange={(value) => setSelectedPlaylistId(value as string)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a playlist to add this song to">
+                  {selectedPlaylistId === 'none' 
+                    ? 'None' 
+                    : allPlaylists?.find((p: any) => p.id === selectedPlaylistId)?.title || (selectedPlaylistId && selectedPlaylistId !== 'none' ? 'Loading...' : 'None')}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {allPlaylists?.map((p: any) => (
+                  <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedPlaylistId !== 'none' && isEditing && (
+              <p className="text-xs text-muted-foreground">Note: If the song is already in this playlist, it will not be duplicated.</p>
+            )}
           </div>
           
           <div className="space-y-3">
