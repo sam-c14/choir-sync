@@ -58,6 +58,8 @@ model User {
   refreshTokens  RefreshToken[]
   playlists      Playlist[]
   voiceSnippets  VoiceSnippet[]
+  rosterMembers  RosterMember[]
+  notifications  Notification[]
 
   @@index([role])
 }
@@ -140,6 +142,7 @@ model Playlist {
   createdById String
   createdBy   User           @relation(fields: [createdById], references: [id])
   songs       PlaylistSong[]
+  roster      ServiceRoster?
   
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -174,4 +177,49 @@ model VoiceSnippet {
   createdAt   DateTime      @default(now())
 
   @@index([songPartId])
+}
+
+enum VoicePartRosterRole {
+  SOPRANO
+  ALTO
+  TENOR
+  LEAD
+}
+
+// 3. Service Roster & Backing Assignments
+model ServiceRoster {
+  id          String         @id @default(uuid())
+  playlistId  String         @unique
+  playlist    Playlist       @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  members     RosterMember[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model RosterMember {
+  id              String              @id @default(uuid())
+  rosterId        String
+  roster          ServiceRoster       @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User                @relation(fields: [userId], references: [id])
+  assignedRole    VoicePartRosterRole
+  notes           String?
+  notified        Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+
+  @@unique([rosterId, userId])
+}
+
+// 4. In-App Notifications
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  linkUrl   String?  // Deep link to song or playlist
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
 }

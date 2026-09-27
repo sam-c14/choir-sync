@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
+import { RosterPanel } from '../components/playlists/roster-panel';
 
 export default function PlaylistDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -114,6 +115,10 @@ export default function PlaylistDetailsPage() {
         <div className="text-sm text-muted-foreground pt-2">
           Created {format(new Date(playlist.createdAt), 'MMMM d, yyyy')}
         </div>
+      </div>
+
+      <div className="mb-8">
+        <RosterPanel playlistId={playlist.id} serviceDate={playlist.serviceDate} />
       </div>
 
       <div className="grid md:grid-cols-[1fr_300px] gap-8">

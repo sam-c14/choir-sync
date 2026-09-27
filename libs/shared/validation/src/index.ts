@@ -119,3 +119,19 @@ export const CreateVoiceSnippetSchema = z.object({
 });
 
 export type CreateVoiceSnippetDto = z.infer<typeof CreateVoiceSnippetSchema>;
+
+// Roster and Notification DTOs
+export const VoicePartRosterRoleEnum = z.enum(["SOPRANO", "ALTO", "TENOR", "LEAD"]);
+
+export const RosterMemberSchema = z.object({
+  userId: z.string().uuid(),
+  assignedRole: VoicePartRosterRoleEnum,
+  notes: z.string().max(500).optional().nullable()
+});
+
+export const CreateRosterSchema = z.object({
+  members: z.array(RosterMemberSchema)
+});
+
+export type RosterMemberDto = z.infer<typeof RosterMemberSchema>;
+export type CreateRosterDto = z.infer<typeof CreateRosterSchema>;

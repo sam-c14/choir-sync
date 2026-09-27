@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuGroup } from '../ui/dropdown-menu';
 import { Menu, Moon, Sun, Laptop, LogOut } from 'lucide-react';
 import { useTheme } from '../theme-provider';
+import { NotificationsPopover } from './notifications-popover';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -61,6 +62,7 @@ export function Navbar() {
         <div className="flex items-center gap-2 sm:gap-4 ml-4 flex-shrink-0">
           {/* Desktop Actions */}
           <div className="hidden sm:flex items-center gap-4">
+            <NotificationsPopover />
             <span className="text-sm font-medium text-foreground max-w-[160px] truncate" title={user.email}>
               {user.email?.length > 15 ? `${user.email.slice(0, 15)}...` : user.email}
             </span>
@@ -69,7 +71,8 @@ export function Navbar() {
           </div>
 
           {/* Mobile Actions Dropdown */}
-          <div className="sm:hidden">
+          <div className="sm:hidden flex items-center gap-1">
+            <NotificationsPopover />
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={

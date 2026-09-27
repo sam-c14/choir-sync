@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { playlistsService } from './playlists.service';
-import { CreatePlaylistSchema, UpdatePlaylistSchema, CreatePlaylistSongSchema } from '@choir-workspace/shared-validation';
+import { CreatePlaylistSchema, UpdatePlaylistSchema, CreatePlaylistSongSchema, CreateRosterSchema } from '@choir-workspace/shared-validation';
 import { z } from 'zod';
 
 export const playlistsController = {
@@ -80,6 +80,113 @@ export const playlistsController = {
       }
       console.error(error);
       res.status(500).json({ error: 'Failed to update playlist songs' });
+    }
+  }
+,
+
+  async getRoster(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const roster = await prisma.serviceRoster.findUnique({
+        where: { playlistId: id },
+        include: {
+          members: {
+            include: { user: { select: { id: true, email: true, role: true } } }
+          }
+        }
+      });
+      res.json(roster || { members: [] });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Failed to fetch roster' });
+    }
+  },
+
+  async saveRoster(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const parsed = CreateRosterSchema.parse(req.body);
+
+      const playlist = await prisma.playlist.findUnique({ where: { id } });
+      if (!playlist) return res.status(404).json({ error: 'Playlist not found' });
+
+      const result = await prisma.$transaction(async (tx) => {
+        const roster = await tx.serviceRoster.upsert({
+          where: { playlistId: id },
+          create: { playlistId: id },
+          update: {},
+        });
+
+        await tx.rosterMember.deleteMany({
+          where: { rosterId: roster.id }
+        });
+
+        if (parsed.members.length > 0) {
+          await tx.rosterMember.createMany({
+            data: parsed.members.map(m => ({
+              rosterId: roster.id,
+              userId: m.userId,
+              assignedRole: m.assignedRole,
+              notes: m.notes,
+              notified: false
+            }))
+          });
+        }
+
+        return tx.serviceRoster.findUnique({
+          where: { id: roster.id },
+          include: { members: { include: { user: { select: { id: true, email: true, role: true } } } } }
+        });
+      });
+
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Validation failed', details: error.issues });
+      }
+      console.error(error);
+      res.status(500).json({ error: 'Failed to save roster' });
+    }
+  },
+
+  async dispatchRoster(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      
+      const roster = await prisma.serviceRoster.findUnique({
+        where: { playlistId: id },
+        include: { members: true, playlist: true }
+      });
+
+      if (!roster) return res.status(404).json({ error: 'Roster not found' });
+      if (roster.members.length === 0) return res.status(400).json({ error: 'Roster is empty' });
+
+      const unnotifiedMembers = roster.members.filter(m => !m.notified);
+      
+      if (unnotifiedMembers.length === 0) {
+        return res.json({ message: 'All members already notified', count: 0 });
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.rosterMember.updateMany({
+          where: { rosterId: roster.id, notified: false },
+          data: { notified: true }
+        });
+
+        await tx.notification.createMany({
+          data: unnotifiedMembers.map(m => ({
+            userId: m.userId,
+            title: 'New Service Assignment',
+            message: `You have been assigned as ${m.assignedRole} for "${roster.playlist.title}".`,
+            linkUrl: `/playlists/${id}`
+          }))
+        });
+      });
+
+      res.json({ message: 'Roster dispatched successfully', count: unnotifiedMembers.length });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Failed to dispatch roster' });
     }
   }
 };

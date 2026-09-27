@@ -17,4 +17,10 @@ router.post('/:id/songs', requireRole('DIRECTOR'), playlistsController.setPlayli
 router.get('/', playlistsController.getPlaylists.bind(playlistsController));
 router.get('/:id', playlistsController.getPlaylistById.bind(playlistsController));
 
+
+// Roster Routes
+router.get('/:id/roster', playlistsController.getRoster.bind(playlistsController));
+router.post('/:id/roster', requireRole('DIRECTOR'), playlistsController.saveRoster.bind(playlistsController));
+router.post('/:id/roster/dispatch', requireRole('DIRECTOR'), playlistsController.dispatchRoster.bind(playlistsController));
+
 export default router;
