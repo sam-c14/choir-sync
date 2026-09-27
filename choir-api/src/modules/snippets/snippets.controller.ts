@@ -4,6 +4,8 @@ import { prisma } from '../../lib/prisma';
 import { supabaseAdmin } from '../../lib/supabase';
 import { CreateVoiceSnippetSchema } from '@choir-workspace/shared-validation';
 
+const BUCKET_NAME = process.env.SUPABASE_BUCKET_STORAGE_NAME || 'choir-tracker-dev-bucket';
+
 class SnippetsController {
   async getUploadUrl(req: Request, res: Response) {
     try {
@@ -18,7 +20,7 @@ class SnippetsController {
       const filePath = `snippets/${partId}/${Date.now()}-${userId}.webm`;
       
       const { data, error } = await supabaseAdmin.storage
-        .from('choir-tracker-dev-bucket')
+        .from(BUCKET_NAME)
         .createSignedUploadUrl(filePath);
 
       if (error || !data) {
@@ -27,7 +29,7 @@ class SnippetsController {
       }
 
       const { data: publicUrlData } = supabaseAdmin.storage
-        .from('choir-tracker-dev-bucket')
+        .from(BUCKET_NAME)
         .getPublicUrl(filePath);
 
       res.json({
@@ -92,10 +94,10 @@ class SnippetsController {
       // Delete from Supabase Storage
       try {
         const urlObj = new URL(snippet.audioUrl);
-        const pathParts = urlObj.pathname.split('/choir-tracker-dev-bucket/');
+        const pathParts = urlObj.pathname.split(`/${BUCKET_NAME}/`);
         if (pathParts.length > 1) {
           const filePath = pathParts[1];
-          await supabaseAdmin.storage.from('choir-tracker-dev-bucket').remove([filePath]);
+          await supabaseAdmin.storage.from(BUCKET_NAME).remove([filePath]);
         }
       } catch (err) {
         console.error('Failed to remove from storage:', err);
