@@ -6,6 +6,7 @@ import { Navbar } from '../components/layout/navbar';
 import { PlayerProvider } from '../contexts/player-context';
 import { GlobalPlayer } from '../components/global-player';
 import { ScrollToTop } from '../components/scroll-to-top';
+import { BackToTopButton } from '../components/back-to-top-button';
 import LoginPage from '../pages/login';
 import SongsPage from '../pages/songs';
 import SongDetailPage from '../pages/song-detail';
@@ -46,6 +47,7 @@ export function App() {
                     </main>
                     <GlobalPlayer />
                     <Toaster />
+                    <BackToTopButton />
                   </div>
                 </RequireAuth>
               }
