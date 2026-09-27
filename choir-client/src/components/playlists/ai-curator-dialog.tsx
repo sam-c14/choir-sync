@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCurateSetlist, SetlistSuggestion } from '../../hooks/use-ai';
 import { useCreatePlaylist, useSetPlaylistSongs } from '../../hooks/use-playlists';
+import { useCreateSong } from '../../hooks/use-songs';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -20,6 +21,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
 
   const curate = useCurateSetlist();
   const createPlaylist = useCreatePlaylist();
+  const createSong = useCreateSong();
   const setSongs = useSetPlaylistSongs();
   const navigate = useNavigate();
 
@@ -46,13 +48,21 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
         description: `AI Generated: ${suggestion.explanation}`
       });
 
-      // 2. Add matched songs
-      const songsToAdd = suggestion.songs
-        .filter(s => s.songId !== null)
-        .map((s, idx) => ({
-          songId: s.songId!,
-          orderIndex: idx
-        }));
+      // 2. Resolve external songs
+      const songsToAdd = [];
+      for (const [idx, s] of suggestion.songs.entries()) {
+        if (s.songId) {
+          songsToAdd.push({ songId: s.songId, orderIndex: idx });
+        } else {
+          // Create draft for external song
+          const newSong = await createSong.mutateAsync({
+            title: `[AI Draft] ${s.title}`,
+            status: 'REHEARSAL',
+            tags: ['AI Draft']
+          });
+          songsToAdd.push({ songId: newSong.id, orderIndex: idx });
+        }
+      }
 
       if (songsToAdd.length > 0) {
         await setSongs.mutateAsync({ id: playlist.id, songs: songsToAdd });
