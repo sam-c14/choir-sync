@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { Loader2, Plus, ListMusic, Calendar, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Skeleton } from '../components/ui/skeleton';
@@ -19,6 +20,7 @@ export default function PlaylistsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
 
   const isDirector = user?.role === 'DIRECTOR';
 
@@ -135,9 +137,7 @@ export default function PlaylistsPage() {
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (confirm('Delete this playlist?')) {
-                      deletePlaylist.mutate(playlist.id);
-                    }
+                    setPlaylistToDelete(playlist.id);
                   }}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -147,6 +147,31 @@ export default function PlaylistsPage() {
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!playlistToDelete} onOpenChange={(open) => !open && setPlaylistToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Playlist?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this playlist? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (playlistToDelete) {
+                  deletePlaylist.mutate(playlistToDelete);
+                  setPlaylistToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
