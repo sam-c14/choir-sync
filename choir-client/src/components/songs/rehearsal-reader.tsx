@@ -126,9 +126,23 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
 
   // Tab change
   const handleSaveSnippet = async (blob: Blob, durationSec: number, snippetTitle?: string) => {
-    if (!activePartData?.id) return;
     try {
-      const { signedUrl, publicUrl } = await getUploadUrl.mutateAsync(activePartData.id);
+      let partId = activePartData?.id;
+      if (!partId) {
+        if (!canEditCurrentTab()) {
+          toast.error('A Director must initialize this part before snippets can be recorded.');
+          return;
+        }
+        const newPart = await updatePart.mutateAsync({
+          songId,
+          part: activeTab,
+          data: {}
+        });
+        partId = newPart.id;
+      }
+      if (!partId) throw new Error('Missing part ID');
+
+      const { signedUrl, publicUrl } = await getUploadUrl.mutateAsync(partId);
       
       const uploadRes = await fetch(signedUrl, {
         method: 'PUT',
@@ -141,7 +155,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
       if (!uploadRes.ok) throw new Error('Upload failed');
       
       await createSnippet.mutateAsync({
-        partId: activePartData.id,
+        partId,
         data: {
           audioUrl: publicUrl,
           durationSec: Math.max(1, durationSec),
