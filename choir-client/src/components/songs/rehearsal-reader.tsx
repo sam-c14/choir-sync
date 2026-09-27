@@ -6,10 +6,25 @@ import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
 import { Pencil, Check, X, Wand2, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { AudioRecorder } from './audio-recorder';
+import { AudioPlayer } from './audio-player';
+import { useSnippetUploadUrl, useCreateSnippet, useDeleteSnippet } from '../../hooks/use-snippets';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Mic } from 'lucide-react';
+interface VoiceSnippet {
+  id: string;
+  audioUrl: string;
+  durationSec: number;
+  title?: string | null;
+  createdAt: string;
+  user: { id: string; email: string };
+}
 
 interface SongPart {
+  id: string;
   voicePart: string;
   notes?: string | null;
+  voiceSnippets?: VoiceSnippet[];
 }
 
 interface RehearsalReaderProps {
@@ -37,6 +52,12 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
 
   const updatePart = useUpdatePart();
   const updateLyrics = useUpdateLyrics();
+
+  const getUploadUrl = useSnippetUploadUrl();
+  const createSnippet = useCreateSnippet();
+  const deleteSnippet = useDeleteSnippet();
+  
+  const [isRecordOpen, setIsRecordOpen] = useState(false);
 
   const isDirector = user?.role === 'DIRECTOR';
   const isSectionLeader = user?.role === 'SECTION_LEADER';
@@ -131,7 +152,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
       toast.success('Audio snippet saved!');
       setIsRecordOpen(false);
     } catch (_err) {
-      console.error(err);
+      console.error(_err);
       toast.error('Failed to save audio snippet');
     }
   };
