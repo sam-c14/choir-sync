@@ -9,6 +9,8 @@ import uniformsRoutes from './modules/uniforms/uniforms.routes';
 import usersRoutes from './modules/users/users.routes';
 import externalMusicRoutes from './modules/external-music/external-music.routes';
 import playlistsRoutes from './modules/playlists/playlists.routes';
+import songPartsRoutes from './modules/snippets/song-parts.routes';
+import snippetsRoutes from './modules/snippets/snippets.routes';
 
 const app = express();
 
@@ -32,6 +34,8 @@ app.use('/api/v1/uniforms', uniformsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/external-music', externalMusicRoutes);
 app.use('/api/v1/playlists', playlistsRoutes);
+app.use('/api/v1/song-parts', songPartsRoutes);
+app.use('/api/v1/snippets', snippetsRoutes);
 
 app.get('/api', (req, res) => {
   res.send({ message: 'Welcome to choir-api!' });

@@ -57,7 +57,7 @@ export class SongsService {
     const [data, total] = await Promise.all([
       prisma.song.findMany({
         where,
-        include: { parts: true, links: true },
+        include: { parts: { include: { voiceSnippets: { include: { user: { select: { id: true, email: true, role: true, leadsVoicePart: true } } } } } }, links: true },
         orderBy,
         skip,
         take: limit,
@@ -77,7 +77,7 @@ export class SongsService {
     const song = await prisma.song.findUnique({
       where: { id },
       include: {
-        parts: true,
+        parts: { include: { voiceSnippets: { include: { user: { select: { id: true, email: true, role: true, leadsVoicePart: true } } } } } },
         links: true,
       },
     });
@@ -104,7 +104,7 @@ export class SongsService {
           create: dto.links,
         },
       },
-      include: { parts: true, links: true },
+      include: { parts: { include: { voiceSnippets: { include: { user: { select: { id: true, email: true, role: true, leadsVoicePart: true } } } } } }, links: true },
     });
   }
 
@@ -114,7 +114,7 @@ export class SongsService {
       data: {
         ...dto,
       },
-      include: { parts: true, links: true },
+      include: { parts: { include: { voiceSnippets: { include: { user: { select: { id: true, email: true, role: true, leadsVoicePart: true } } } } } }, links: true },
     });
   }
 

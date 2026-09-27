@@ -57,6 +57,7 @@ model User {
   updatedAt      DateTime       @updatedAt
   refreshTokens  RefreshToken[]
   playlists      Playlist[]
+  voiceSnippets  VoiceSnippet[]
 
   @@index([role])
 }
@@ -112,6 +113,8 @@ model SongPart {
   song      Song          @relation(fields: [songId], references: [id], onDelete: Cascade)
   voicePart VoicePartType
   notes     String?
+  voiceSnippets VoiceSnippet[]
+  
   updatedAt DateTime      @updatedAt
 
   @@unique([songId, voicePart])
@@ -137,6 +140,7 @@ model Playlist {
   createdById String
   createdBy   User           @relation(fields: [createdById], references: [id])
   songs       PlaylistSong[]
+  
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -155,4 +159,19 @@ model PlaylistSong {
 
   @@unique([playlistId, songId])
   @@index([playlistId])
+}
+
+// 2. Audio Snippets for Voice Parts
+model VoiceSnippet {
+  id          String        @id @default(uuid())
+  songPartId  String
+  songPart    SongPart      @relation(fields: [songPartId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  audioUrl    String
+  durationSec Int
+  title       String?
+  createdAt   DateTime      @default(now())
+
+  @@index([songPartId])
 }

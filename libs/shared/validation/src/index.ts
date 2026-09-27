@@ -110,3 +110,12 @@ export type CreatePlaylistDto = z.infer<typeof CreatePlaylistSchema>;
 export type UpdatePlaylistDto = z.infer<typeof UpdatePlaylistSchema>;
 export type CreatePlaylistSongDto = z.infer<typeof CreatePlaylistSongSchema>;
 export type UpdatePlaylistSongDto = z.infer<typeof UpdatePlaylistSongSchema>;
+
+// Voice Snippet DTOs
+export const CreateVoiceSnippetSchema = z.object({
+  audioUrl: z.string().url('Must be a valid URL'),
+  durationSec: z.number().min(1).max(60),
+  title: z.string().optional()
+});
+
+export type CreateVoiceSnippetDto = z.infer<typeof CreateVoiceSnippetSchema>;

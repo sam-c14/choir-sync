@@ -319,38 +319,61 @@ Verify with `nx-workspace-verify` and browser checks for mobile layout responsiv
 
 ---
 
-## Milestone 5 — Voice Part Audio Snippets (Supabase Storage)
-**Goal:** Allow choristers and leaders to record and attach quick audio references (max 60s) to voice parts.
+## Milestone 5 — Voice Part Audio Snippets (Supabase Signed Upload URLs)
+**Goal:** Allow choristers and leaders to record and attach quick audio references (max 60s) to voice parts using secure, backend-minted Supabase Signed Upload URLs.
 **Do:**
-1. Add `VoiceSnippet` model to Prisma schema.
-2. Set up a Supabase Storage bucket (`voice-snippets`) with authenticated upload policies.
-3. Build a client-side recording component in `choir-client/` using `MediaRecorder` with waveform/timer visualization and a 60-second auto-stop.
-4. Upload audio files directly from client to Supabase Storage, saving the public reference URL via `POST /api/v1/songs/:id/parts/:partId/snippets`.
-5. Render a lightweight audio playback bar on each voice part tab.
-**Verify with:** In-browser audio recording, upload persistence, and mobile playback testing.
+1. Add `VoiceSnippet` model to Prisma schema and run migrations.
+2. Ensure `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_URL` exist in `choir-api/.env`.
+3. In `choir-api/`, create an endpoint `POST /api/v1/song-parts/:partId/snippets/upload-url`:
+   - Validates user session.
+   - Calls `supabaseAdmin.storage.from('choir-tracker-dev-bucket').createSignedUploadUrl(filePath)`.
+   - Returns `{ signedUrl, path, token }`.
+4. In `choir-api/`, create `POST /api/v1/song-parts/:partId/snippets` to record metadata (`audioUrl`, `durationSec`, `title`) once upload succeeds.
+5. In `choir-client/`, build the 60-second `MediaRecorder` UI. After recording:
+   - Request signed URL from backend.
+   - `PUT` the audio blob directly to the signed URL.
+   - Post metadata to save the snippet to database.
+   - Render inline audio player on the voice part tab.
+**Verify with:** Browser recording test, zero RLS errors, verify file lands in Supabase bucket and DB record is created.
 
 ## Followup Prompt
 
 ```bash
-Read PRD.md, RULES.md, and EXECUTION.md. In Post Release Milestones, Execute Milestone 5 — Voice Part Audio Snippets (Supabase Storage).
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 9 — Voice Part Audio Snippets (Supabase Signed Upload URLs).
 
-Tasks:
-1. Database & Storage:
-   - Add `VoiceSnippet` model to `choir-api/src/prisma/schema.prisma` linking to `SongPart` and `User`. Run migration.
-   - Backend endpoint: `POST /api/v1/song-parts/:partId/snippets` to record snippet metadata (`audioUrl`, `durationSec`, `title`).
-   - Backend endpoint: `DELETE /api/v1/snippets/:id` (Director or snippet owner only).
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, `libs/shared/` (no `apps/`).
 
-2. Frontend Recorder (`choir-client/`):
-   - In each voice part tab on the Rehearsal Reader, add an "Add Audio Reference" drawer or sheet.
-   - Implement a recording widget using the browser `MediaRecorder` API:
-     - Hard limit: 60 seconds (with visual countdown progress bar).
-     - Audio format: `audio/webm;codecs=opus` (or standard fallback for iOS Safari).
-     - Action buttons: Record, Stop, Preview, Save.
-   - Client directly uploads the recorded blob to the Supabase Storage bucket `voice-snippets` with a unique path (`snippets/${partId}/${Date.now()}.webm`).
-   - On upload success, save snippet metadata to the backend API.
-   - Render a mini audio player (play/pause, progress scrubber, duration) on the part tab for saved snippets.
+We are using Supabase Signed Upload URLs. This keeps storage uploads strictly controlled by our Express backend auth, avoids writing manual Supabase RLS policies, and streams the upload directly from client to Supabase to keep Render RAM usage at zero.
 
-Ensure all Supabase client keys use existing environment variables. Verify with `nx-workspace-verify`.
+Backend Tasks (`choir-api/`):
+1. Add `VoiceSnippet` model to `schema.prisma`:
+   - Fields: `id`, `songPartId` (relation to SongPart, onDelete: Cascade), `userId` (relation to User), `audioUrl`, `durationSec`, `title`, `createdAt`.
+   - Run migration via `prisma-create-migration`.
+2. Initialize Supabase Admin client in `choir-api/src/lib/supabase.ts` using `process.env.SUPABASE_URL` and `process.env.SUPABASE_SERVICE_ROLE_KEY`.
+3. Create endpoint `POST /api/v1/song-parts/:partId/snippets/upload-url`:
+   - Authenticated users only.
+   - Generate unique path: `snippets/${partId}/${Date.now()}-${req.user.id}.webm`.
+   - Call `supabaseAdmin.storage.from('choir-tracker-dev-bucket').createSignedUploadUrl(filePath)`.
+   - Return `{ signedUrl: data.signedUrl, path: data.path, publicUrl: ... }`.
+4. Create endpoint `POST /api/v1/song-parts/:partId/snippets`:
+   - Saves snippet record (`audioUrl`, `durationSec`, `title`, `userId`, `songPartId`) to PostgreSQL.
+5. Create endpoint `DELETE /api/v1/snippets/:id`:
+   - Only the creator or a Director can delete. Deletes from DB and removes the file from Supabase storage via `supabaseAdmin.storage.from('choir-tracker-dev-bucket').remove([path])`.
+
+Frontend Tasks (`choir-client/`):
+1. In the Rehearsal Reader (`/songs/[id]`), add an "Add Audio Reference" trigger button to each voice part tab.
+2. Build an audio recorder widget:
+   - Uses browser `navigator.mediaDevices.getUserMedia({ audio: true })`.
+   - 60-second limit with visible countdown timer.
+   - Preview, Re-record, and Save actions.
+3. Upload Flow on Save:
+   - Call backend `POST /api/v1/song-parts/:partId/snippets/upload-url` to get the signed URL.
+   - Upload the recorded blob directly to the signed URL via HTTP `PUT` (or `supabase.storage.from('choir-tracker-dev-bucket').uploadToSignedUrl(...)`).
+   - On success, call backend `POST /api/v1/song-parts/:partId/snippets` with `audioUrl` and duration.
+4. UI Playback:
+   - Render a mini audio player (play/pause toggle, progress bar, duration) for all existing snippets on that part.
+
+Verify with `nx-workspace-verify`.
 ```
 
 ---
