@@ -86,13 +86,13 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
 
   return (
     <div className="border rounded-xl bg-card overflow-hidden">
-      <div className="bg-muted/30 border-b px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-foreground font-semibold">
+      <div className="bg-muted/30 border-b px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-foreground font-semibold shrink-0">
           <Users className="w-4 h-4 text-primary" />
           Sunday Team Roster
         </div>
         {isDirector && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {!isEditing ? (
               <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                 Edit Roster

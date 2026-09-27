@@ -134,7 +134,7 @@ export default function PlaylistsPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                  className="absolute top-2 right-2 md:opacity-0 md:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                   onClick={(e) => {
                     e.preventDefault();
                     setPlaylistToDelete(playlist.id);
