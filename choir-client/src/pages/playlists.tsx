@@ -6,7 +6,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
-import { Loader2, Plus, ListMusic, Calendar, Trash2 } from 'lucide-react';
+import { Loader2, Plus, ListMusic, Calendar, Trash2, Sparkles } from 'lucide-react';
+import { AiCuratorDialog } from '../components/playlists/ai-curator-dialog';
 import { format } from 'date-fns';
 import { Skeleton } from '../components/ui/skeleton';
 
@@ -63,12 +64,20 @@ export default function PlaylistsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Playlists</h1>
         {isDirector && (
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger>
-              <Button className="min-h-9 pb-0.5">
-                <Plus className="w-4 h-4 mr-2" /> New Playlist
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <AiCuratorDialog 
+              trigger={
+                <Button variant="secondary" className="min-h-9 pb-0.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/30">
+                  <Sparkles className="w-4 h-4 mr-2" /> AI Curator
+                </Button>
+              } 
+            />
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button className="min-h-9 pb-0.5">
+                  <Plus className="w-4 h-4 mr-2" /> New Playlist
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create Playlist</DialogTitle>
@@ -98,6 +107,7 @@ export default function PlaylistsPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </div>
 

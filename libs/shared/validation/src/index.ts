@@ -135,3 +135,12 @@ export const CreateRosterSchema = z.object({
 
 export type RosterMemberDto = z.infer<typeof RosterMemberSchema>;
 export type CreateRosterDto = z.infer<typeof CreateRosterSchema>;
+
+// AI Curator DTOs
+export const CurateSetlistSchema = z.object({
+  theme: z.string().min(1).max(500),
+  serviceType: z.string().optional(),
+  targetCount: z.number().min(1).max(10).default(5)
+});
+
+export type CurateSetlistDto = z.infer<typeof CurateSetlistSchema>;
