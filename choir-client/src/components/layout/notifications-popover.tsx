@@ -86,7 +86,7 @@ export function NotificationsPopover() {
                   {notification.linkUrl && (
                     <div className="flex items-center text-xs text-primary mt-2 font-medium">
                       <ExternalLink className="w-3 h-3 mr-1" />
-                      View Details
+                      Open Playlist
                     </div>
                   )}
                 </div>
