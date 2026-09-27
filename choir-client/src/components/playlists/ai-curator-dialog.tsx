@@ -55,7 +55,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
         }));
 
       if (songsToAdd.length > 0) {
-        await setSongs.mutateAsync({ id: playlist.id, data: songsToAdd });
+        await setSongs.mutateAsync({ id: playlist.id, songs: songsToAdd });
       }
 
       setOpen(false);
@@ -73,7 +73,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[92vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Sparkles className="w-5 h-5 text-indigo-500" />

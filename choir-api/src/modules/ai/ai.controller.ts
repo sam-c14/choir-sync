@@ -64,11 +64,11 @@ ${JSON.stringify(songs, null, 2)}
       };
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
-          // Note: responseSchema is supported natively in gemini-2.5-flash
+          // Note: responseSchema is supported natively in gemini-3.8-flash
           responseSchema: responseSchema as any
         }
       });

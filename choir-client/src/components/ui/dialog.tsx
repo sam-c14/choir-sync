@@ -11,9 +11,7 @@ function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
 
-function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
-}
+const DialogTrigger = DialogPrimitive.Trigger as React.ForwardRefExoticComponent<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Trigger> & React.RefAttributes<React.ElementRef<typeof DialogPrimitive.Trigger>> & { asChild?: boolean }>;
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
