@@ -15,7 +15,7 @@ class AiController {
       
       // Fetch catalog
       const songs = await prisma.song.findMany({
-        where: { status: 'ACTIVE_SUNDAY' },
+        
         select: {
           id: true,
           title: true,
@@ -26,7 +26,7 @@ class AiController {
       });
 
       if (songs.length === 0) {
-        return res.status(400).json({ error: 'No active songs in the catalog to curate from.' });
+        return res.status(400).json({ error: 'No songs in the catalog to curate from.' });
       }
 
       const prompt = `
