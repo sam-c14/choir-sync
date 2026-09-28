@@ -1,4 +1,5 @@
 import swaggerJsdoc from 'swagger-jsdoc';
+import { swaggerPaths } from './swagger-paths';
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -23,8 +24,18 @@ const options: swaggerJsdoc.Options = {
     },
     security: [{ bearerAuth: [] }],
     tags: [
-      { name: 'System', description: 'Health check and monitoring' }
-    ]
+      { name: 'System', description: 'Health check and monitoring' },
+      { name: 'Auth', description: 'Authentication and session management' },
+      { name: 'Songs', description: 'Core library and part assignments' },
+      { name: 'Voice Snippets', description: 'Audio rehearsals and uploads' },
+      { name: 'Playlists', description: 'Sunday lineups and arrangements' },
+      { name: 'Roster & Notifications', description: 'Scheduling and alerts' },
+      { name: 'Uniforms', description: 'Dress code configurations' },
+      { name: 'AI Curator', description: 'Gemini-powered setlist suggestions' },
+      { name: 'Users', description: 'Member management' },
+      { name: 'External Music', description: 'External song discovery' }
+    ],
+    paths: swaggerPaths,
   },
   apis: ['./src/modules/**/*.ts', './src/main.ts'],
 };
