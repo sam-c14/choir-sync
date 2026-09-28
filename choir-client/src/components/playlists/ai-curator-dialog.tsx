@@ -8,7 +8,11 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Sparkles, Loader2, Wand2, Music, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Loader2, Wand2, Music, CheckCircle2, Calendar as CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Calendar } from '../ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 
 export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
@@ -16,7 +20,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
   const [theme, setTheme] = useState('');
   const [serviceType, setServiceType] = useState('Sunday Morning Service');
   const [targetCount, setTargetCount] = useState(4);
-  const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [serviceDate, setServiceDate] = useState<Date | undefined>(new Date());
   
   const [suggestion, setSuggestion] = useState<SetlistSuggestion | null>(null);
 
@@ -49,7 +53,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
         description: `AI Generated: ${suggestion.explanation}`
       };
       if (serviceDate) {
-        payload.serviceDate = new Date(serviceDate);
+        payload.serviceDate = serviceDate;
       }
       const playlist = await createPlaylist.mutateAsync(payload);
 
@@ -144,11 +148,28 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
             </div>
             <div className="space-y-3 mt-4">
               <Label>Service Date (Optional)</Label>
-              <Input 
-                type="date"
-                value={serviceDate} 
-                onChange={e => setServiceDate(e.target.value)} 
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !serviceDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {serviceDate ? format(serviceDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={serviceDate}
+                    onSelect={setServiceDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <Button 

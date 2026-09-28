@@ -21,7 +21,7 @@ export default function PlaylistsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [serviceDate, setServiceDate] = useState<Date | undefined>(new Date());
   const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
 
   const isDirector = user?.role === 'DIRECTOR';
@@ -31,7 +31,7 @@ export default function PlaylistsPage() {
     try {
       const payload: any = { title, description };
       if (serviceDate) {
-        payload.serviceDate = new Date(serviceDate);
+        payload.serviceDate = serviceDate;
       }
       const res = await createPlaylist.mutateAsync(payload);
       setIsCreateOpen(false);
@@ -107,11 +107,28 @@ export default function PlaylistsPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium inline-block mb-2">Service Date (Optional)</label>
-                  <Input 
-                    type="date"
-                    value={serviceDate} 
-                    onChange={e => setServiceDate(e.target.value)} 
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !serviceDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {serviceDate ? format(serviceDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={serviceDate}
+                        onSelect={setServiceDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <Button type="submit" disabled={createPlaylist.isPending} className="w-full min-h-10">
                   {createPlaylist.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
