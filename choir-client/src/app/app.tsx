@@ -17,10 +17,12 @@ import PlaylistsPage from '../pages/playlists';
 import PlaylistDetailsPage from '../pages/playlist-details';
 
 import { Toaster } from '../components/ui/sonner';
+import { AnalyticsTracker } from '../lib/analytics';
 
 export function App() {
   return (
     <BrowserRouter>
+      <AnalyticsTracker />
       <ScrollToTop />
       <AuthProvider>
         <PlayerProvider>

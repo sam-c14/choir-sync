@@ -727,3 +727,143 @@ Requirements (`choir-client/`):
 Verification:
 Run `nx-workspace-verify` to ensure there are no unused imports or TypeScript errors, and verify with `frontend-browser-verify` that both light and dark modes render cleanly on mobile and desktop viewports.
 ```
+
+## Milestone 11 — Backend OpenAPI / Swagger Documentation
+**Goal:** Expose interactive OpenAPI 3.0 documentation for `choir-api` so all endpoints, schemas, and role-protected routes can be inspected and tested in the browser.
+**Do:**
+1. Install `swagger-ui-express` and `swagger-jsdoc` (plus `@types/swagger-ui-express` and `@types/swagger-jsdoc`) in `choir-api/`.
+2. Create a centralized OpenAPI 3.0 configuration (`choir-api/src/config/swagger.ts`) defining API metadata, server URLs, reusable component schemas (`Song`, `SongPart`, `VoiceSnippet`, `Playlist`, `ServiceRoster`, `Notification`, `UniformSchedule`), and Bearer JWT security (`bearerAuth`).
+3. Document all route groups (`Auth`, `Songs`, `Voice Snippets`, `Playlists & Active Lineup`, `Roster & Notifications`, `Uniforms`, `AI Curator`, `External Search`) with request bodies, query params, and response codes.
+4. Mount the interactive Swagger UI at `GET /api/docs` and expose the raw OpenAPI JSON spec at `GET /api/docs.json`.
+**Verify with:** `nx-workspace-verify` and verifying in the browser that `/api/docs` renders cleanly with working JWT "Authorize" functionality.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 11 — Backend OpenAPI / Swagger Documentation.
+
+Before writing code, inspect all existing routers and controllers in `choir-api/src/` and the validation schemas in `libs/shared/`, then output a brief Implementation Plan.
+
+Paths reminder: Projects are located directly at `choir-api/`, `choir-client/`, and `libs/shared/` (not inside an `apps/` directory).
+
+Tasks (`choir-api/`):
+1. Install Dependencies:
+   - Install `swagger-ui-express` and `swagger-jsdoc` (and their `@types/*` devDependencies) at the workspace root.
+
+2. Create OpenAPI 3.0 Spec Configuration (`choir-api/src/config/swagger.ts`):
+   - Configure `swagger-jsdoc` with OpenAPI `3.0.0`.
+   - Set API title to `"CSync (ChoirSync) API"`, version `"1.0.0"`, and a clear description of the choir management backend.
+   - Configure `components.securitySchemes.bearerAuth` (`type: "http"`, `scheme: "bearer"`, `bearerFormat: "JWT"`).
+   - Define clean reusable `components.schemas` matching our Prisma models and DTOs:
+     - `User`, `Song`, `SongPart`, `VoiceSnippet`, `Playlist`, `PlaylistSong`, `ServiceRoster`, `RosterMember`, `Notification`, `UniformSchedule`, and `ErrorResponse`.
+   - Document all existing endpoints (either via clean JSDoc `@openapi` annotations on the route files or structured paths in `choir-api/src/config/swagger.ts`) organized by tags:
+     - `Auth` (`/auth/google`, `/auth/refresh`, `/auth/me`)
+     - `Songs` (CRUD, active Sunday toggles, external search auto-fill)
+     - `Voice Snippets` (Signed upload URL generation, snippet save, delete)
+     - `Playlists` (CRUD, add/remove/reorder songs, set active Sunday lineup)
+     - `Roster & Notifications` (Assign roster, dispatch notifications + emails, mark notifications read)
+     - `Uniforms` (Schedule CRUD & filtering)
+     - `AI Curator` (Gemini setlist curation & song discovery)
+
+3. Mount Routes in Express (`choir-api/src/main.ts` or `app.ts`):
+   - Mount `GET /api/docs` using `swaggerUi.serve` and `swaggerUi.setup(swaggerSpec, { customSiteTitle: "CSync API Docs", explorer: true })`.
+   - Mount `GET /api/docs.json` returning the raw `swaggerSpec` JSON with `Content-Type: application/json`.
+   - Ensure CORS or CSP middleware (like `helmet`, if installed) does not block Swagger UI inline scripts/styles on `/api/docs`.
+
+Verification:
+1. Run `nx-workspace-verify` to ensure TypeScript compilation and linting pass.
+2. Start or test the backend and verify that `GET /api/docs.json` returns valid OpenAPI 3.0 JSON and `GET /api/docs` renders the Swagger UI.
+```
+
+---
+
+## Milestone 12 — Product Analytics & Error Monitoring (Google Analytics 4)
+**Goal:** Integrate Google Analytics 4 (`react-ga4`) into `choir-client` to monitor SPA page navigation, feature adoption (rehearsal audio playback, recording, AI curation, roster notifications), and client/API exceptions.
+**Do:**
+1. Install `react-ga4` in `choir-client/` and configure `VITE_GA_MEASUREMENT_ID` in `.env`.
+2. Create a centralized analytics utility (`choir-client/src/lib/analytics.ts`) that safely no-ops in local development if the Measurement ID is absent.
+3. Build a `<RouteTracker />` listener hooked into `react-router-dom`'s `useLocation` to automatically record SPA pageviews across all routes.
+4. Instrument core choir workflows with typed custom events (`song_viewed`, `voice_snippet_played`, `voice_snippet_recorded`, `playlist_activated`, `ai_setlist_curated`, `roster_dispatched`, `whatsapp_broadcast_copied`).
+5. Hook an error/exception tracker into the Axios `apiClient` interceptor and global window error handler to monitor failed API calls (`5xx` / network timeouts) and UI crashes in GA4.
+**Verify with:** `nx-workspace-verify` and verifying network beacons (`google-analytics.com/g/collect`) in browser DevTools.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 12 — Product Analytics & Error Monitoring (Google Analytics 4).
+
+Before writing code, inspect `choir-client/src/` (routing setup, `api-client.ts`, and main feature components), then output a brief Implementation Plan.
+
+Paths reminder: Projects are located directly at `choir-api/`, `choir-client/`, and `libs/shared/` (not inside an `apps/` directory).
+
+Tasks (`choir-client/`):
+1. Install Dependency:
+   - Install `react-ga4` at the workspace root.
+
+2. Analytics & Monitoring Service (`choir-client/src/lib/analytics.ts`):
+   - Read the Measurement ID from `import.meta.env.VITE_GA_MEASUREMENT_ID` (with fallback support if `process.env` is used).
+   - Create `initAnalytics()`: initializes `ReactGA.initialize(measurementId)` only if the Measurement ID is present. If missing in local dev, fail silently without console errors.
+   - Create `trackPageView(path: string)`: sends a `pageview` hit to GA4.
+   - Create strongly typed helper `trackChoirEvent(action, params)` for key product actions:
+     - `login_success` (method: `'google'`)
+     - `song_viewed` (`songId`, `title`)
+     - `voice_snippet_played` (`partType`, `songId`)
+     - `voice_snippet_recorded` (`partType`, `durationSec`)
+     - `playlist_activated` (`playlistId`, `title`)
+     - `ai_setlist_curated` (`theme`, `songCount`)
+     - `roster_dispatched` (`playlistId`, `notifiedCount`)
+     - `whatsapp_broadcast_copied` (`playlistId`)
+   - Create `trackException(description: string, fatal = false)`: sends a GA4 `exception` event so we can monitor frontend errors and API failures in the GA4 dashboard.
+
+3. Automatic Route Tracking (`choir-client/`):
+   - Create a lightweight `<AnalyticsTracker />` component using `useLocation()` from `react-router-dom` that calls `initAnalytics()` on mount and `trackPageView(location.pathname + location.search)` on route changes.
+   - Mount `<AnalyticsTracker />` inside the router in `App.tsx` (or root layout).
+
+4. API & Runtime Error Monitoring (`choir-client/src/lib/api-client.ts`):
+   - In the Axios response error interceptor, if an API request fails with a `5xx` server error or network timeout (excluding normal `401` token refresh flows), call `trackException(\`API Error: \${error.config?.method?.toUpperCase()} \${error.config?.url} - \${error.response?.status ?? 'NETWORK_ERR'}\`, false)`.
+
+5. Instrument High-Value User Flows:
+   - Wire `trackChoirEvent` calls into:
+     - `LoginPage` (on successful Google login)
+     - Audio player / Snippet recorder (on play and on save)
+     - Playlist active lineup toggle, AI Curator, Roster "Notify Team", and WhatsApp broadcast copy button.
+
+Verification:
+Run `nx-workspace-verify` to confirm all TypeScript types, tests, and builds succeed across the monorepo.
+```
+
+## Milestone 12.5 — Health Check Endpoint & Cold-Start Prevention
+**Goal:** Expose a fast `/api/health` endpoint in `choir-api` (supporting both `GET` and `HEAD` requests) to keep the Render container and Supabase Prisma connection pool warm via UptimeRobot.
+**Do:**
+1. In `choir-api/`, create a `/api/health` route (mounted before auth middleware) that returns HTTP `200 OK` with `{ status: "ok", uptime, timestamp, db: "connected" }`.
+2. Execute a lightweight `prisma.$queryRaw\`SELECT 1\`` with a safe fallback so pings keep both the Express server and Supabase connection pool active.
+3. Add the `/api/health` endpoint to the OpenAPI/Swagger specification under a `System` tag.
+**Verify with:** `nx-workspace-verify` and verifying `GET /api/health` and `HEAD /api/health` return `200 OK`.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 12.5 — Health Check Endpoint & Cold-Start Prevention.
+
+Paths reminder: Projects are located directly at `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Tasks (`choir-api/`):
+1. Create Health Endpoint (`choir-api/src/routes/health.routes.ts` or directly in `main.ts` / `app.ts`):
+   - Mount publicly at `GET /api/health` (Express automatically maps `HEAD /api/health` to `app.get`, which UptimeRobot's free tier uses).
+   - Ensure no authentication middleware blocks this route, and set header `Cache-Control: no-store`.
+   - Perform a fast database ping (`await prisma.$queryRaw\`SELECT 1\``) inside a `try/catch` block:
+     - If the DB responds, return HTTP `200` with:
+       ```json
+       {
+         "status": "ok",
+         "db": "connected",
+         "uptime": 123.45,
+         "timestamp": "2026-09-28T..."
+       }
+       ```
+     - If the DB is temporarily unreachable, still return HTTP `200` (or `503` only if `?strict=true` is passed) with `"db": "disconnected"` so a brief database hiccup doesn't cause false container restarts.
+2. Swagger Documentation:
+   - Register `GET /api/health` under a `System` tag in the Swagger/OpenAPI spec (`choir-api/src/config/swagger.ts`).
+
+Verify with `nx-workspace-verify`.
+```

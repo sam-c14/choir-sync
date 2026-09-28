@@ -14,6 +14,7 @@ import { Calendar } from '../ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
+import { trackChoirEvent } from '../../lib/analytics';
 
 export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
   const [open, setOpen] = useState(false);

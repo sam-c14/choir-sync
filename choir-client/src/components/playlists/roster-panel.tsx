@@ -3,6 +3,7 @@ import { useAuth } from '../../auth/auth-context';
 import { useRoster, useSaveRoster, useDispatchRoster } from '../../hooks/use-rosters';
 import { useUsers } from '../../hooks/use-users';
 import { Button } from '../ui/button';
+import { trackChoirEvent } from '../../lib/analytics';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
 import { Users, Send, Loader2, Save } from 'lucide-react';

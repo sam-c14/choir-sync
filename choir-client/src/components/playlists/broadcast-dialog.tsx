@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { Copy, MessageCircle, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { trackChoirEvent } from '../../lib/analytics';
 import { formatBroadcastMessage, FormatterInputs } from '../../lib/broadcast-formatter';
 import { useUniforms } from '../../hooks/use-uniforms';
 

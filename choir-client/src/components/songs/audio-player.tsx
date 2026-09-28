@@ -67,6 +67,9 @@ export function AudioPlayer({ snippet, onDelete, canDelete, onEditTitle, canEdit
   };
 
   const togglePlay = () => {
+    if (!isPlaying) {
+      trackChoirEvent({ action: 'voice_snippet_played', params: { partType: partType, songId: snippet.songPartId } });
+    }
     if (!audioRef.current) {
       audioRef.current = new Audio(snippet.audioUrl);
       

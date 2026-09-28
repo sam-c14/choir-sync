@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RosterPanel } from '../components/playlists/roster-panel';
 import { BroadcastDialog } from '../components/playlists/broadcast-dialog';
 import { Send, CheckCircle2, X } from 'lucide-react';
+import { trackChoirEvent } from '../lib/analytics';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 
@@ -90,6 +91,7 @@ export default function PlaylistDetailsPage() {
     if (!playlist) return;
     try {
       await setActivePlaylist.mutateAsync({ id: playlist.id, isActive: true });
+      trackChoirEvent({ action: 'playlist_activated', params: { playlistId: playlist.id, title: playlist.title } });
     } catch (error) {
       console.error('Failed to set active lineup', error);
     }

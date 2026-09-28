@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { ModeToggle } from "@/components/mode-toggle";
+import { trackChoirEvent } from "../lib/analytics";
 import { Loader2, Music2, Headphones, ListMusic, CalendarCheck, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
@@ -94,6 +95,7 @@ export default function LoginPage() {
                         idToken: credentialResponse.credential,
                       });
                       login(res.data.token, res.data.refreshToken);
+                      trackChoirEvent({ action: "login_success", params: { method: "google" } });
                       navigate(from, { replace: true });
                     } catch (err: unknown) {
                       setIsGoogleLoading(false);

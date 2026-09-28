@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { trackException } from './analytics';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
@@ -26,6 +27,12 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+
+    if (error.response && error.response.status >= 500) {
+      trackException(`API Error: ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url} - ${error.response.status}`, false);
+    } else if (!error.response && error.message) {
+      trackException(`Network/Timeout: ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url} - ${error.message}`, false);
+    }
 
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

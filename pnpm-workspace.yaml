@@ -15,3 +15,4 @@ allowBuilds:
   puppeteer: true
   '@google/genai': true
   protobufjs: true
+  '@scarf/scarf': set this to true or false

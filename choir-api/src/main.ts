@@ -10,9 +10,12 @@ import notificationsRoutes from './modules/notifications/notifications.routes';
 import aiRoutes from './modules/ai/ai.routes';
 import usersRoutes from './modules/users/users.routes';
 import externalMusicRoutes from './modules/external-music/external-music.routes';
+import { prisma } from "./lib/prisma";
 import playlistsRoutes from './modules/playlists/playlists.routes';
 import songPartsRoutes from './modules/snippets/song-parts.routes';
 import snippetsRoutes from './modules/snippets/snippets.routes';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
 
 const app = express();
 
@@ -38,6 +41,47 @@ app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/external-music', externalMusicRoutes);
 app.use('/api/v1/playlists', playlistsRoutes);
+
+/**
+ * @openapi
+ * /api/health:
+ *   get:
+ *     tags:
+ *       - System
+ *     summary: Health check endpoint
+ *     description: Returns the health status of the API and database connection. Used by UptimeRobot.
+ *     responses:
+ *       200:
+ *         description: OK
+ *       503:
+ *         description: Service Unavailable (if strict mode is enabled and DB is down)
+ */
+app.get('/api/health', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({
+      status: 'ok',
+      db: 'connected',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    const isStrict = req.query.strict === 'true';
+    res.status(isStrict ? 503 : 200).json({
+      status: 'ok',
+      db: 'disconnected',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: "CSync API Docs", explorer: true }));
 app.use('/api/v1/song-parts', songPartsRoutes);
 app.use('/api/v1/snippets', snippetsRoutes);
 
