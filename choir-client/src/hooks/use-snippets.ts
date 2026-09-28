@@ -38,3 +38,17 @@ export function useDeleteSnippet() {
     }
   });
 }
+
+export function useUpdateSnippet() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, title }: { id: string, title: string }) => {
+      const res = await apiClient.patch(`/snippets/${id}`, { title });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['songs'] });
+    }
+  });
+}

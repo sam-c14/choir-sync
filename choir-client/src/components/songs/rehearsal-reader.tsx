@@ -8,7 +8,7 @@ import { Pencil, Check, X, Wand2, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { AudioRecorder } from './audio-recorder';
 import { AudioPlayer } from './audio-player';
-import { useSnippetUploadUrl, useCreateSnippet, useDeleteSnippet } from '../../hooks/use-snippets';
+import { useSnippetUploadUrl, useCreateSnippet, useDeleteSnippet, useUpdateSnippet } from '../../hooks/use-snippets';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Mic } from 'lucide-react';
 interface VoiceSnippet {
@@ -56,6 +56,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
   const getUploadUrl = useSnippetUploadUrl();
   const createSnippet = useCreateSnippet();
   const deleteSnippet = useDeleteSnippet();
+  const updateSnippet = useUpdateSnippet();
   
   const [isRecordOpen, setIsRecordOpen] = useState(false);
 
@@ -291,6 +292,8 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
                         snippet={snippet} 
                         onDelete={handleDeleteSnippet}
                         canDelete={isDirector || snippet.user.id === user?.id}
+                        onEditTitle={handleEditSnippetTitle}
+                        canEdit={isDirector || snippet.user.id === user?.id}
                       />
                     ))}
                   </div>

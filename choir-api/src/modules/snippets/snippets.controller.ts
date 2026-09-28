@@ -75,6 +75,40 @@ class SnippetsController {
     }
   }
 
+  
+  async updateSnippet(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.user!.id;
+      const userRole = req.user!.role;
+      const { title } = req.body;
+
+      if (!title || typeof title !== 'string') {
+        return res.status(400).json({ error: 'Valid title is required' });
+      }
+
+      const snippet = await prisma.voiceSnippet.findUnique({ where: { id } });
+      if (!snippet) {
+        return res.status(404).json({ error: 'Snippet not found' });
+      }
+
+      if (snippet.userId !== userId && userRole !== 'DIRECTOR') {
+        return res.status(403).json({ error: 'Not authorized to edit this snippet' });
+      }
+
+      const updated = await prisma.voiceSnippet.update({
+        where: { id },
+        data: { title },
+        include: { user: { select: { id: true, email: true, role: true } } }
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
   async deleteSnippet(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
