@@ -6,9 +6,12 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
-import { Loader2, Plus, ListMusic, Calendar, Trash2, Sparkles } from 'lucide-react';
+import { Loader2, Plus, ListMusic, Calendar as CalendarIcon, Trash2, Sparkles } from 'lucide-react';
 import { AiCuratorDialog } from '../components/playlists/ai-curator-dialog';
 import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
+import { Calendar } from '../components/ui/calendar';
+import { cn } from '../lib/utils';
 import { Skeleton } from '../components/ui/skeleton';
 
 export default function PlaylistsPage() {
@@ -105,10 +108,10 @@ export default function PlaylistsPage() {
                     placeholder="Theme or notes for the setlist" 
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 flex flex-col">
                   <label className="text-sm font-medium inline-block mb-2">Service Date (Optional)</label>
                   <Popover>
-                    <PopoverTrigger asChild>
+                    <PopoverTrigger>
                       <Button
                         variant={"outline"}
                         className={cn(
@@ -125,7 +128,7 @@ export default function PlaylistsPage() {
                         mode="single"
                         selected={serviceDate}
                         onSelect={setServiceDate}
-                        initialFocus
+                        
                       />
                     </PopoverContent>
                   </Popover>
@@ -165,7 +168,7 @@ export default function PlaylistsPage() {
               )}
               <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
                 <span className="flex items-center">
-                  <Calendar className="w-3.5 h-3.5 mr-1" />
+                  <CalendarIcon className="w-3.5 h-3.5 mr-1" />
                   {format(new Date(playlist.createdAt), 'MMM d, yyyy')}
                 </span>
               </div>
