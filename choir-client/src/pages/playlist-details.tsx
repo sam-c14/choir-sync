@@ -10,6 +10,8 @@ import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { RosterPanel } from '../components/playlists/roster-panel';
+import { BroadcastDialog } from '../components/playlists/broadcast-dialog';
+import { Send } from 'lucide-react';
 
 export default function PlaylistDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -107,14 +109,27 @@ export default function PlaylistDetailsPage() {
         <ArrowLeft className="w-4 h-4" /> Back to Playlists
       </Button>
 
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">{playlist.title}</h1>
-        {playlist.description && (
-          <p className="text-muted-foreground">{playlist.description}</p>
-        )}
-        <div className="text-sm text-muted-foreground pt-2">
-          Created {format(new Date(playlist.createdAt), 'MMMM d, yyyy')}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">{playlist.title}</h1>
+          {playlist.description && (
+            <p className="text-muted-foreground">{playlist.description}</p>
+          )}
+          <div className="text-sm text-muted-foreground pt-2">
+            Created {format(new Date(playlist.createdAt), 'MMMM d, yyyy')}
+          </div>
         </div>
+        
+        {isDirector && (
+          <BroadcastDialog 
+            playlist={playlist} 
+            trigger={
+              <Button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white">
+                <Send className="w-4 h-4 mr-2" /> Share / Broadcast
+              </Button>
+            } 
+          />
+        )}
       </div>
 
       <div className="mb-8">
