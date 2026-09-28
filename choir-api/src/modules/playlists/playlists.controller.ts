@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { playlistsService } from './playlists.service';
 import { CreatePlaylistSchema, UpdatePlaylistSchema, CreatePlaylistSongSchema, CreateRosterSchema } from '@choir-workspace/shared-validation';
 import { z } from 'zod';
+import { EmailService } from '../../lib/email.service';
+
 
 export const playlistsController = {
   async setActivePlaylist(req: Request, res: Response) {
@@ -166,16 +168,28 @@ export const playlistsController = {
       
       const roster = await prisma.serviceRoster.findUnique({
         where: { playlistId: id },
-        include: { members: true, playlist: true }
+        include: { 
+          members: {
+            include: { user: true }
+          }, 
+          playlist: {
+            include: {
+              songs: {
+                orderBy: { orderIndex: 'asc' },
+                include: { song: true }
+              }
+            }
+          } 
+        }
       });
 
       if (!roster) return res.status(404).json({ error: 'Roster not found' });
       if (roster.members.length === 0) return res.status(400).json({ error: 'Roster is empty' });
 
-      const unnotifiedMembers = roster.members.filter(m => !m.notified);
+      const unnotifiedMembers = roster.members.filter((m: any) => !m.notified);
       
       if (unnotifiedMembers.length === 0) {
-        return res.json({ message: 'All members already notified', count: 0 });
+        return res.json({ message: 'All members already notified', notifiedCount: 0, emailsSentCount: 0 });
       }
 
       await prisma.$transaction(async (tx) => {
@@ -185,7 +199,7 @@ export const playlistsController = {
         });
 
         await tx.notification.createMany({
-          data: unnotifiedMembers.map(m => ({
+          data: unnotifiedMembers.map((m: any) => ({
             userId: m.userId,
             title: 'New Service Assignment',
             message: `You have been assigned as ${m.assignedRole} for "${roster.playlist.title}".`,
@@ -194,7 +208,37 @@ export const playlistsController = {
         });
       });
 
-      res.json({ message: 'Roster dispatched successfully', count: unnotifiedMembers.length });
+      // Dispatch Emails Concurrently
+      const frontendUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:4200';
+      const emailPromises = unnotifiedMembers.map(async (m: any) => {
+        if (!m.user?.email) return { sent: false };
+        
+        return EmailService.sendRosterAssignmentEmail({
+          recipientEmail: m.user.email,
+          recipientName: m.user.name || '',
+          assignedRole: m.assignedRole,
+          notes: m.notes,
+          playlistTitle: roster.playlist.title,
+          serviceDate: roster.playlist.serviceDate,
+          playlistUrl: `${frontendUrl}/playlists/${id}`,
+          songs: roster.playlist.songs.map((ps: any) => ({
+            title: ps.song.title,
+            key: ps.customKey || ps.song.originalKey,
+            leadSinger: ps.leadSinger
+          }))
+        });
+      });
+
+      const emailResults = await Promise.allSettled(emailPromises);
+      const emailsSentCount = emailResults.filter(
+        r => r.status === 'fulfilled' && r.value && (r.value as any).sent
+      ).length;
+
+      res.json({ 
+        message: 'Roster dispatched successfully', 
+        notifiedCount: unnotifiedMembers.length,
+        emailsSentCount
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Failed to dispatch roster' });
