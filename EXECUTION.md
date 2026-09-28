@@ -693,3 +693,37 @@ model Notification {
   @@index([userId, isRead])
 }
 ```
+
+### Login Page Update Prompt
+
+```bash
+Read PRD.md, RULES.md, and inspect the current `LoginPage` component in `choir-client/`. I want to refactor the Login Page to exclusively use Google SSO and upgrade the UI into a modern, mobile-first, insightful welcome screen.
+
+Requirements (`choir-client/`):
+
+1. Remove Email/Password Authentication UI & Dependencies:
+   - Remove `react-hook-form`, `zodResolver`, `LoginSchema`, `Input`, `Label`, and the `POST /auth/login` handler from `LoginPage`.
+   - Manage error state using a simple local `const [error, setError] = useState<string | null>(null)` instead of form state.
+   - Keep `@react-oauth/google` (`GoogleLogin`), `useAuth`, `useNavigate`, `useLocation`, `apiClient`, and `ModeToggle`.
+
+2. Modern, Insightful UI & UX Design:
+   - Make the page mobile-first, clean, and immediately intuitive so a chorister opening the link from WhatsApp knows exactly what the app is and what to click.
+   - **Header**: Sticky minimalist top bar with the brand logo icon (`Music2` or `Mic2` from `lucide-react`), "CSync" title, a subtle "Choir Portal" badge, and `<ModeToggle />`.
+   - **Hero Card / Centerpiece**:
+     - Subtle decorative gradient accent bar or glow at the top of the card that looks great in both light and dark modes.
+     - Clear headline: "Welcome to CSync" and subtitle: "Your choir's rehearsal parts, Sunday setlists, and schedules in one place."
+   - **Primary CTA (Unmistakable Action)**:
+     - Place the `<GoogleLogin />` component prominently inside a well-spaced container with a helper caption above/below: "Sign in with your Google account to continue".
+     - Configure `<GoogleLogin />` with `size="large"`, `theme="outline"`, `shape="pill"`, and `text="continue_with"`.
+   - **Insightful Feature Preview (3 Compact Rows)**:
+     - Below a subtle divider inside the card (or directly beneath the CTA), display 3 scannable feature highlights using `lucide-react` icons (`Headphones`, `ListMusic`, `CalendarCheck`):
+       1. "Voice Part Rehearsals — Stream Soprano, Alto & Tenor audio notes and lyrics."
+       2. "Sunday Setlists & Keys — See active lineups, keys, and lead vocalists."
+       3. "Rosters & Uniforms — Check your service schedule and dress code."
+   - **Loading & Error States**:
+     - When `isGoogleLoading` is true, display the animated `Loader2` spinner with reassuring copy ("Signing you in..." and a secondary muted hint "This may take a few seconds if the server is waking up").
+     - If `error` is set, display a clean destructive alert banner (`AlertCircle` icon) with the error message and a "Try Again" dismissal or auto-reset when they click Google Login again.
+
+Verification:
+Run `nx-workspace-verify` to ensure there are no unused imports or TypeScript errors, and verify with `frontend-browser-verify` that both light and dark modes render cleanly on mobile and desktop viewports.
+```
