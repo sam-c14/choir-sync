@@ -10,7 +10,7 @@ const options: swaggerJsdoc.Options = {
       description: 'Choir management backend API for rosters, songs, and audio snippets.',
     },
     servers: [
-      { url: 'http://localhost:4200', description: 'Local Server' },
+      { url: 'http://localhost:3333', description: 'Local Server' },
       { url: 'https://choir-sync.onrender.com', description: 'Production Server' }
     ],
     components: {
