@@ -11,7 +11,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { RosterPanel } from '../components/playlists/roster-panel';
 import { BroadcastDialog } from '../components/playlists/broadcast-dialog';
-import { Send, CheckCircle2 } from 'lucide-react';
+import { Send, CheckCircle2, X } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 
@@ -150,7 +150,17 @@ export default function PlaylistDetailsPage() {
         
         {isDirector && (
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            {!playlist.isActive && (
+            {playlist.isActive ? (
+              <Button 
+                variant="ghost" 
+                onClick={handleDeactivate}
+                disabled={setActivePlaylist.isPending}
+                className="w-full sm:w-auto text-muted-foreground hover:text-destructive"
+              >
+                <X className="w-4 h-4 mr-2" /> 
+                {setActivePlaylist.isPending ? 'Removing...' : 'Remove Active Status'}
+              </Button>
+            ) : (
               <Button 
                 variant="outline" 
                 onClick={handleSetActive}

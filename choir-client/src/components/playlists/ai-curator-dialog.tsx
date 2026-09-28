@@ -176,15 +176,6 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
                 </PopoverContent>
               </Popover>
             </div>
-
-            <Button 
-              className="w-full h-12 text-lg bg-indigo-600 hover:bg-indigo-700 text-white"
-              onClick={handleCurate}
-              disabled={curate.isPending || !theme || !serviceDate}
-            >
-              {curate.isPending ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Wand2 className="w-5 h-5 mr-2" />}
-              Generate Setlist
-            </Button>
           </div>
         ) : (
           <div className="space-y-6 py-4">
@@ -218,8 +209,22 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
                 ))}
               </div>
             </div>
-
-            <div className="flex gap-3 pt-2">
+          </div>
+        )}
+        </div>
+        
+        <div className="p-4 sm:p-6 border-t bg-background shrink-0 mt-auto">
+          {!suggestion ? (
+            <Button 
+              className="w-full h-12 text-lg bg-indigo-600 hover:bg-indigo-700 text-white"
+              onClick={handleCurate}
+              disabled={curate.isPending || !theme || !serviceDate}
+            >
+              {curate.isPending ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Wand2 className="w-5 h-5 mr-2" />}
+              Generate Setlist
+            </Button>
+          ) : (
+            <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setSuggestion(null)}>
                 Start Over
               </Button>
@@ -233,11 +238,10 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
                 ) : (
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                 )}
-                Create Playlist from This
+                Create Playlist
               </Button>
             </div>
-          </div>
-        )}
+          )}
         </div>
       </DialogContent>
     </Dialog>
