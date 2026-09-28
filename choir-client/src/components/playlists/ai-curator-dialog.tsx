@@ -16,6 +16,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
   const [theme, setTheme] = useState('');
   const [serviceType, setServiceType] = useState('Sunday Morning Service');
   const [targetCount, setTargetCount] = useState(4);
+  const [serviceDate, setServiceDate] = useState('');
   
   const [suggestion, setSuggestion] = useState<SetlistSuggestion | null>(null);
 
@@ -43,10 +44,14 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
     if (!suggestion) return;
     try {
       // 1. Create Playlist
-      const playlist = await createPlaylist.mutateAsync({
+      const payload: any = {
         title: suggestion.setlistTitle,
         description: `AI Generated: ${suggestion.explanation}`
-      });
+      };
+      if (serviceDate) {
+        payload.serviceDate = new Date(serviceDate);
+      }
+      const playlist = await createPlaylist.mutateAsync(payload);
 
       // 2. Resolve external songs
       const songsToAdd = [];
@@ -137,11 +142,20 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
                 />
               </div>
             </div>
+            <div className="space-y-3 mt-4">
+              <Label>Service Date</Label>
+              <Input 
+                type="date"
+                required
+                value={serviceDate} 
+                onChange={e => setServiceDate(e.target.value)} 
+              />
+            </div>
 
             <Button 
               className="w-full h-12 text-lg bg-indigo-600 hover:bg-indigo-700 text-white"
               onClick={handleCurate}
-              disabled={curate.isPending || !theme}
+              disabled={curate.isPending || !theme || !serviceDate}
             >
               {curate.isPending ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Wand2 className="w-5 h-5 mr-2" />}
               Generate Setlist

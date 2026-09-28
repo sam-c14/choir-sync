@@ -21,6 +21,7 @@ export default function PlaylistsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [serviceDate, setServiceDate] = useState('');
   const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
 
   const isDirector = user?.role === 'DIRECTOR';
@@ -28,7 +29,11 @@ export default function PlaylistsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await createPlaylist.mutateAsync({ title, description });
+      const payload: any = { title, description };
+      if (serviceDate) {
+        payload.serviceDate = new Date(serviceDate);
+      }
+      const res = await createPlaylist.mutateAsync(payload);
       setIsCreateOpen(false);
       navigate(`/playlists/${res.id}`);
     } catch (err) {
@@ -92,12 +97,21 @@ export default function PlaylistsPage() {
                     placeholder="e.g. Sunday Service - Oct 12" 
                   />
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <label className="text-sm font-medium inline-block mb-2">Description (Optional)</label>
                   <Input 
                     value={description} 
                     onChange={e => setDescription(e.target.value)} 
                     placeholder="Theme or notes for the setlist" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium inline-block mb-2">Service Date</label>
+                  <Input 
+                    type="date"
+                    required
+                    value={serviceDate} 
+                    onChange={e => setServiceDate(e.target.value)} 
                   />
                 </div>
                 <Button type="submit" disabled={createPlaylist.isPending} className="w-full min-h-10">
