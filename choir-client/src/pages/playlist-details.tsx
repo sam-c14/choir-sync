@@ -132,13 +132,14 @@ export default function PlaylistDetailsPage() {
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">{playlist.title}</h1>
-            {playlist.isActive && (
-              <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+          {playlist.isActive && (
+              <Badge variant="default" className="bg-green-600 hover:bg-green-700 min-h-7 pt-1">
                 <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Active Lineup
               </Badge>
             )}
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{playlist.title}</h1>
+            
           </div>
           {playlist.description && (
             <p className="text-muted-foreground">{playlist.description}</p>
@@ -187,7 +188,7 @@ export default function PlaylistDetailsPage() {
         <RosterPanel playlistId={playlist.id} serviceDate={playlist.serviceDate} />
       </div>
 
-      <div className="grid md:grid-cols-[1fr_300px] gap-8">
+      <div className="grid md:grid-cols-[1fr_300px] grid-cols-1 gap-8">
         {/* Songs List */}
         <div className="space-y-4">
           <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -232,9 +233,10 @@ export default function PlaylistDetailsPage() {
           <div className="space-y-4">
             <div className="bg-card border rounded-xl p-4 sticky top-4">
               <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide">Add Songs</h3>
+              <p className="text-muted-foreground text-sm mb-3">Note: Only songs in the library can be added.</p>
               <div className="space-y-3 relative">
                 <Input 
-                  placeholder="Search repertoire..." 
+                  placeholder="Search library..." 
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
