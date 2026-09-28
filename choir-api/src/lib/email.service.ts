@@ -1,5 +1,5 @@
-import { format } from 'date-fns';
-import { logger } from './logger';
+import { format } from "date-fns";
+import { logger } from "./logger";
 
 export interface RosterEmailParams {
   recipientEmail: string;
@@ -13,24 +13,26 @@ export interface RosterEmailParams {
 }
 
 export class EmailService {
-  private static readonly API_URL = 'https://api.brevo.com/v3/smtp/email';
-  
+  private static readonly API_URL = "https://api.brevo.com/v3/smtp/email";
+
   private static get apiKey() {
     return process.env.BREVO_API_KEY;
   }
-  
+
   private static get senderEmail() {
-    return process.env.BREVO_SENDER_EMAIL || 'notifications@choirsync.app';
-  }
-  
-  private static get senderName() {
-    return process.env.BREVO_SENDER_NAME || 'ChoirSync';
+    return process.env.BREVO_SENDER_EMAIL || "notifications@choirsync.app";
   }
 
-  static async sendRosterAssignmentEmail(params: RosterEmailParams): Promise<{ sent: boolean; reason?: string }> {
+  private static get senderName() {
+    return process.env.BREVO_SENDER_NAME || "ChoirSync";
+  }
+
+  static async sendRosterAssignmentEmail(
+    params: RosterEmailParams,
+  ): Promise<{ sent: boolean; reason?: string }> {
     if (!this.apiKey) {
-      logger.warn('BREVO_API_KEY not set. Skipping email dispatch.');
-      return { sent: false, reason: 'missing_api_key' };
+      logger.warn("BREVO_API_KEY not set. Skipping email dispatch.");
+      return { sent: false, reason: "missing_api_key" };
     }
 
     const {
@@ -41,11 +43,13 @@ export class EmailService {
       playlistTitle,
       serviceDate,
       playlistUrl,
-      songs
+      songs,
     } = params;
 
-    const dateStr = serviceDate ? format(new Date(serviceDate), 'MMMM d, yyyy') : 'Upcoming Service';
-    const safeName = recipientName || recipientEmail.split('@')[0];
+    const dateStr = serviceDate
+      ? format(new Date(serviceDate), "MMMM d, yyyy")
+      : "Upcoming Service";
+    const safeName = recipientName || recipientEmail.split("@")[0];
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -86,19 +90,27 @@ export class EmailService {
           
           <div class="badge">Assigned Part: ${assignedRole.toUpperCase()}</div>
           
-          ${notes ? `<div class="notes"><strong>Director's Note:</strong> ${notes}</div>` : ''}
+          ${notes ? `<div class="notes"><strong>Director's Note:</strong> ${notes}</div>` : ""}
           
           <div class="songs">
             <h3>Setlist</h3>
-            ${songs.length > 0 ? songs.map((song, i) => `
+            ${
+              songs.length > 0
+                ? songs
+                    .map(
+                      (song, i) => `
               <div class="song-item">
                 <p class="song-title">${i + 1}. ${song.title}</p>
                 <p class="song-meta">
-                  ${song.key ? `Key: ${song.key}` : 'Key: TBD'} 
-                  ${song.leadSinger ? `&nbsp;|&nbsp; Lead: ${song.leadSinger}` : ''}
+                  ${song.key ? `Key: ${song.key}` : "Key: TBD"} 
+                  ${song.leadSinger ? `&nbsp;|&nbsp; Lead: ${song.leadSinger}` : ""}
                 </p>
               </div>
-            `).join('') : '<p style="color: #6b7280; font-style: italic;">No songs added yet.</p>'}
+            `,
+                    )
+                    .join("")
+                : '<p style="color: #6b7280; font-style: italic;">No songs added yet.</p>'
+            }
           </div>
           
           <div class="button-container">
@@ -111,30 +123,32 @@ export class EmailService {
 
     try {
       const response = await fetch(this.API_URL, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'accept': 'application/json',
-          'api-key': this.apiKey,
-          'content-type': 'application/json'
+          accept: "application/json",
+          "api-key": this.apiKey,
+          "content-type": "application/json",
         },
         body: JSON.stringify({
           sender: { name: this.senderName, email: this.senderEmail },
+          replyTo: { name: this.senderName, email: this.senderEmail },
           to: [{ email: recipientEmail, name: safeName }],
-          subject: `🎵 Choir Roster: You're scheduled for ${playlistTitle}`,
-          htmlContent
-        })
+          subject: `Sunday Service Roster - ${playlistTitle}`,
+          htmlContent,
+          textContent: `Hi ${recipientName},\n\nYou have been scheduled for ${playlistTitle} (${serviceDate}) on the ${assignedRole} part.\n\nView the setlist and rehearsal notes here: ${playlistUrl}`,
+        }),
       });
 
       if (!response.ok) {
         const err = await response.text();
         logger.error(`Brevo API error (${response.status}): ${err}`);
-        return { sent: false, reason: 'api_error' };
+        return { sent: false, reason: "api_error" };
       }
 
       return { sent: true };
     } catch (error: any) {
-      logger.error('Failed to dispatch email via Brevo', error);
-      return { sent: false, reason: 'network_error' };
+      logger.error("Failed to dispatch email via Brevo", error);
+      return { sent: false, reason: "network_error" };
     }
   }
 }
