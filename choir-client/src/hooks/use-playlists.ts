@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api-client';
+import { toast } from 'sonner';
 import { CreatePlaylistDto, UpdatePlaylistDto, CreatePlaylistSongDto } from '@choir-workspace/shared-validation';
 
 export function usePlaylists() {
@@ -79,14 +80,18 @@ export function useSetPlaylistSongs() {
 export function useSetActivePlaylist() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { data } = await apiClient.patch(`/playlists/${id}/active`);
+    mutationFn: async ({ id, isActive = true }: { id: string; isActive?: boolean }) => {
+      const { data } = await apiClient.patch(`/playlists/${id}/active`, { isActive });
       return data;
     },
-    onSuccess: (_, id) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
-      queryClient.invalidateQueries({ queryKey: ['playlists', id] });
+      queryClient.invalidateQueries({ queryKey: ['playlists', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['songs'] });
+      toast.success(variables.isActive === false ? 'Playlist deactivated' : 'Playlist set as active Sunday lineup');
+    },
+    onError: () => {
+      toast.error('Failed to update active playlist status');
     }
   });
 }
