@@ -41,7 +41,9 @@ export function useUpdateUserRole() {
       toast.success('Role updated successfully');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to update role');
+      const errData = error.response?.data?.error;
+      const msg = Array.isArray(errData) ? errData[0]?.message : errData;
+      toast.error(msg || 'Failed to update role');
     }
   });
 }

@@ -21,7 +21,11 @@ export default function AdminUsersPage() {
 
   const handleRoleChange = (userId: string, newRole: string | null) => {
     if (!newRole) return;
-    updateRoleMutation.mutate({ id: userId, data: { role: newRole as any } });
+    const data: any = { role: newRole };
+    if (newRole === 'SECTION_LEADER') {
+      data.leadsVoicePart = 'SOPRANO'; // Provide default so it passes Zod validation
+    }
+    updateRoleMutation.mutate({ id: userId, data });
   };
 
   const handleVoicePartChange = (userId: string, newPart: string | null) => {
