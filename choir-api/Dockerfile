@@ -11,7 +11,7 @@ COPY nx.json tsconfig.base.json ./
 COPY choir-api ./choir-api
 COPY libs ./libs
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 RUN pnpm exec prisma generate --schema=choir-api/src/prisma/schema.prisma
 RUN pnpm exec nx build choir-api --configuration=production
