@@ -6,7 +6,7 @@ RUN npm install -g pnpm@11
 RUN apk add --no-cache openssl
 
 # Copy workspace/lockfiles first for layer caching, then source
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc* ./
 COPY nx.json tsconfig.base.json ./
 COPY choir-api ./choir-api
 COPY libs ./libs
@@ -25,7 +25,7 @@ ENV PORT=3333
 
 RUN npm install -g pnpm@11
 RUN apk add --no-cache openssl
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc* ./
 RUN pnpm install --frozen-lockfile --prod
 
 # Copy just the schema (not the generated client — we regenerate it below,
