@@ -125,11 +125,10 @@ export const playlistsController = {
       if (!playlist) return res.status(404).json({ error: 'Playlist not found' });
 
       const result = await prisma.$transaction(async (tx) => {
-        const roster = await tx.serviceRoster.upsert({
-          where: { playlistId: id },
-          create: { playlistId: id },
-          update: {},
-        });
+        let roster = await tx.serviceRoster.findUnique({ where: { playlistId: id } });
+        if (!roster) {
+          roster = await tx.serviceRoster.create({ data: { playlistId: id } });
+        }
 
         await tx.rosterMember.deleteMany({
           where: { rosterId: roster.id }
@@ -158,6 +157,9 @@ export const playlistsController = {
           where: { id: roster.id },
           include: { members: { include: { user: { select: { id: true, email: true, role: true } } } } }
         });
+      }, {
+        maxWait: 5000,
+        timeout: 20000,
       });
 
       res.json(result);
@@ -166,7 +168,7 @@ export const playlistsController = {
         return res.status(400).json({ error: 'Validation failed', details: error.issues });
       }
       console.error(error);
-      res.status(500).json({ error: 'Failed to save roster' });
+      res.status(500).json({ error: 'Failed to save roster', details: error.message || String(error) });
     }
   },
 
@@ -249,7 +251,7 @@ export const playlistsController = {
       });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: 'Failed to dispatch roster' });
+      res.status(500).json({ error: 'Failed to dispatch roster', details: error.message || String(error) });
     }
   }
 };
