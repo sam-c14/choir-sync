@@ -11,12 +11,12 @@ export const playlistsController = {
     try {
       const id = req.params.id as string;
       // Default to true if not provided to support old clients
-      const isActive = req.body.isActive !== undefined ? req.body.isActive : true;
+      const isActive = req.body?.isActive !== undefined ? req.body.isActive : true;
       const playlist = await playlistsService.setActivePlaylist(id, isActive);
       res.json(playlist);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ error: 'Failed to set active playlist' });
+      res.status(500).json({ error: 'Failed to set active playlist', details: error.message || String(error) });
     }
   },
 
