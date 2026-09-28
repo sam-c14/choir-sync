@@ -9,6 +9,12 @@ import { Users, Send, Loader2, Save } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { cn } from '../../lib/utils';
 
+interface UserNode {
+  id: string;
+  email: string;
+  name?: string;
+}
+
 export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, serviceDate?: string | Date | null }) {
   const { user } = useAuth();
   const isDirector = user?.role === 'DIRECTOR';
@@ -27,7 +33,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
 
   useEffect(() => {
     if (roster?.members) {
-      setAssignments(roster.members.map((m: any) => ({
+      setAssignments(roster.members.map((m: { userId: string; assignedRole: string; notes?: string; notified: boolean }) => ({
         userId: m.userId,
         role: m.assignedRole,
         notes: m.notes || undefined,
@@ -86,7 +92,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
         data: {
           members: assignments.map(a => ({
             userId: a.userId,
-            assignedRole: a.role as any,
+            assignedRole: a.role as "SOPRANO" | "ALTO" | "TENOR" | "LEAD",
             notes: a.notes
           }))
         }
@@ -154,7 +160,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
               
               <div className="space-y-2">
                 {isEditing ? (
-                  users.map((u: any) => {
+                  users.map((u: UserNode) => {
                     const isSelected = assignedInRole.some(a => a.userId === u.id);
                     return (
                       <div 
@@ -176,7 +182,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
                     <div className="text-xs text-muted-foreground italic text-center py-2 border rounded-md border-dashed bg-muted/10">Unassigned</div>
                   ) : (
                     assignedInRole.map(a => {
-                      const user = users.find((u: any) => u.id === a.userId);
+                      const user = users.find((u: UserNode) => u.id === a.userId);
                       return (
                         <div key={a.userId} className="text-sm px-3 py-1.5 rounded-md bg-muted/40 border font-medium truncate flex justify-between items-center">
                           {user?.email?.split('@')[0] || 'Unknown'}
@@ -209,7 +215,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
           </DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-sm text-muted-foreground">
-              This will dispatch in-app notifications to all team members assigned to this service. Members who have already been notified will not receive duplicates.
+              This will send <strong>In-App Notifications</strong> and personalized <strong>Emails</strong> to any roster members who have not been notified yet, containing their assigned roles and the service setlist.
             </p>
             <div className="bg-muted/50 p-3 rounded-lg border space-y-2">
               <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Roster Summary</h5>
