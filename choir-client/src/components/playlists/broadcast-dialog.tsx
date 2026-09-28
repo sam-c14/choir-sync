@@ -100,16 +100,16 @@ export function BroadcastDialog({
         <div className="flex-1 overflow-y-auto py-4">
           <Textarea 
             readOnly
-            className="h-[300px] sm:h-[400px] font-mono text-sm resize-none"
+            className="h-80 sm:h-96 font-mono text-sm resize-none"
             value={formattedText}
           />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mt-2">
-          <Button variant="outline" className="flex-1" onClick={handleCopy}>
+          <Button variant="outline" className="flex-1 py-2" onClick={handleCopy}>
             <Copy className="w-4 h-4 mr-2" /> Copy Text
           </Button>
-          <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={handleWhatsApp}>
+          <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2" onClick={handleWhatsApp}>
             <MessageCircle className="w-4 h-4 mr-2" /> Send via WhatsApp
           </Button>
         </div>
