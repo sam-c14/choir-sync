@@ -12,6 +12,7 @@ router.post('/', requireRole('DIRECTOR'), playlistsController.createPlaylist.bin
 router.patch('/:id', requireRole('DIRECTOR'), playlistsController.updatePlaylist.bind(playlistsController));
 router.delete('/:id', requireRole('DIRECTOR'), playlistsController.deletePlaylist.bind(playlistsController));
 router.post('/:id/songs', requireRole('DIRECTOR'), playlistsController.setPlaylistSongs.bind(playlistsController));
+router.patch('/:id/active', requireRole('DIRECTOR'), playlistsController.setActivePlaylist.bind(playlistsController));
 
 // Any authenticated user
 router.get('/', playlistsController.getPlaylists.bind(playlistsController));

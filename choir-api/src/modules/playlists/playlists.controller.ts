@@ -4,6 +4,17 @@ import { CreatePlaylistSchema, UpdatePlaylistSchema, CreatePlaylistSongSchema, C
 import { z } from 'zod';
 
 export const playlistsController = {
+  async setActivePlaylist(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const playlist = await playlistsService.setActivePlaylist(id);
+      res.json(playlist);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Failed to set active playlist' });
+    }
+  },
+
   async getPlaylists(req: Request, res: Response) {
     try {
       const playlists = await playlistsService.getPlaylists();

@@ -75,3 +75,18 @@ export function useSetPlaylistSongs() {
     }
   });
 }
+
+export function useSetActivePlaylist() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.patch(`/playlists/${id}/active`);
+      return data;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      queryClient.invalidateQueries({ queryKey: ['playlists', id] });
+      queryClient.invalidateQueries({ queryKey: ['songs'] });
+    }
+  });
+}

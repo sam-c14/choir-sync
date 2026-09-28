@@ -13,6 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popove
 import { Calendar } from '../components/ui/calendar';
 import { cn } from '../lib/utils';
 import { Skeleton } from '../components/ui/skeleton';
+import { Badge } from '../components/ui/badge';
+import { CheckCircle2 } from 'lucide-react';
 
 export default function PlaylistsPage() {
   const { data: playlists, isLoading } = usePlaylists();
@@ -158,9 +160,16 @@ export default function PlaylistsPage() {
               to={`/playlists/${playlist.id}`}
               className="block group relative bg-card border rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary transition-all"
             >
-              <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-primary transition-colors">
-                {playlist.title}
-              </h3>
+              <div className="flex items-start justify-between gap-2 pr-8">
+                <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-primary transition-colors">
+                  {playlist.title}
+                </h3>
+              </div>
+              {playlist.isActive && (
+                <Badge variant="default" className="mt-1 bg-green-600 hover:bg-green-700">
+                  <CheckCircle2 className="w-3 h-3 mr-1" /> Active
+                </Badge>
+              )}
               {playlist.description && (
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                   {playlist.description}

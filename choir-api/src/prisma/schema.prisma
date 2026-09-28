@@ -143,6 +143,7 @@ model Playlist {
   createdBy   User           @relation(fields: [createdById], references: [id])
   songs       PlaylistSong[]
   roster      ServiceRoster?
+  isActive    Boolean        @default(false)
   
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt

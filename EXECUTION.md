@@ -494,6 +494,119 @@ Tasks:
 Verify with `nx-workspace-verify` and confirm mobile clipboard and WhatsApp link behavior.
 ```
 
+## Milestone 9 — Active Sunday Playlist Sync
+**Goal:** Reconcile Playlists with the "Active Sunday Songs" state on the Songs page so marking a playlist as the Active Lineup automatically synchronizes the active Sunday songs across the app.
+**Do:**
+1. Add `isActive Boolean @default(false)` to the `Playlist` model in `schema.prisma` and run migration.
+2. In `choir-api/`, create `PATCH /api/v1/playlists/:id/active` to toggle a playlist as the single active Sunday lineup inside a Prisma `$transaction`, automatically syncing the active Sunday boolean on the underlying `Song` records.
+3. Hook into the Playlist add-song and remove-song controllers: if the target playlist has `isActive: true`, automatically mark the added/removed song as active/inactive for Sunday.
+4. Hook into the Song active-status toggle controller: if a song is manually toggled on the Songs page and an active Playlist exists, automatically add or remove that song from the active Playlist.
+5. In `choir-client/`, add a prominent "Set as Active Sunday Lineup" toggle/badge in the Playlist Details header and an "Active Sunday Lineup" badge on the Playlists index card.
+**Verify with:** `nx-workspace-verify` and browser verification confirming that activating a playlist or modifying its songs immediately updates the Active Sunday Songs view on the `/songs` page.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 8.5 — Active Sunday Playlist Sync.
+
+Before writing code, inspect `choir-api/src/prisma/schema.prisma`, the Song controller/routes, and the Playlist controller/routes to see how "Active Sunday Songs" are currently stored and queried on the Songs page, then output a brief Implementation Plan.
+
+Paths reminder: Projects are located at `choir-api/`, `choir-client/`, and `libs/shared/` (not inside `apps/`).
+
+Tasks:
+1. Database (`choir-api/src/prisma/schema.prisma`):
+   - Add `isActive Boolean @default(false)` to the `Playlist` model.
+   - Run the Prisma migration (`prisma-create-migration`).
+
+2. Backend Synchronization (`choir-api/`):
+   - Create an endpoint `PATCH /api/v1/playlists/:id/active` (Director role only) accepting `{ isActive: boolean }`.
+   - Inside a single `prisma.$transaction`:
+     - If `isActive` is `true`:
+       1. Set `isActive = false` on all other `Playlist` records (`updateMany`).
+       2. Set `isActive = true` on the target `Playlist`.
+       3. Reset the Sunday active flag on all `Song` records to `false`, then set it to `true` for all `songId`s currently inside this playlist's `PlaylistSong` list.
+     - If `isActive` is `false`:
+       1. Set `isActive = false` on the target `Playlist`.
+       2. Reset the Sunday active flag on all `Song` records in this playlist to `false`.
+   - Live Mutation Sync:
+     - In the endpoint that adds a song to a playlist (`POST /api/v1/playlists/:id/songs`): check if the playlist has `isActive === true`. If so, also update that `Song` record's Sunday active flag to `true`.
+     - In the endpoint that removes a song from a playlist (`DELETE /api/v1/playlists/:id/songs/:songId`): if the playlist has `isActive === true`, also update that `Song` record's Sunday active flag to `false`.
+     - If there is an existing endpoint that toggles a single song's Sunday status directly from the Songs page: if an active Playlist currently exists (`isActive: true`), automatically add the song to (or remove it from) that active Playlist so both views stay strictly in sync.
+
+3. Frontend UI (`choir-client/`):
+   - On the Playlist Details page (`/playlists/[id]`):
+     - Add a clear, mobile-friendly toggle button in the header for Directors: "Set as Active Sunday Lineup" (when inactive) vs. a green active badge/button "Active Sunday Lineup ✓" (when active).
+   - On the Playlists list page (`/playlists`):
+     - Pin or highlight the currently active playlist at the top with a distinct "THIS SUNDAY'S LINEUP" badge.
+   - Ensure React Query / state caches for both `/playlists` and `/songs` are invalidated whenever the active playlist toggle or playlist songs are mutated.
+
+Verify with `nx-workspace-verify` and test the full flow between `/playlists` and `/songs`.
+```
+
+## Milestone 10 — Automated Roster Email Notifications (Brevo HTTP Integration)
+**Goal:** Dispatch personalized HTML assignment emails to rostered choristers when the Director confirms team notifications, using Brevo's HTTP API to bypass Render free-tier SMTP port blocks.
+**Do:**
+1. Configure `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, and `FRONTEND_URL` in `choir-api/.env`.
+2. In `choir-api/`, build an `EmailService` using native HTTP `fetch` against `https://api.brevo.com/v3/smtp/email`.
+3. Create a responsive HTML email template displaying the chorister's assigned voice part (`SOPRANO`, `ALTO`, `TENOR`, or `LEAD`), service date, playlist title, scheduled songs with custom keys/soloists, and a direct CTA button linking to the live playlist/rehearsal view.
+4. Hook the email dispatch into the existing Roster Notification endpoint (`POST /api/v1/playlists/:id/roster/dispatch` or equivalent) using `Promise.allSettled` so email delivery never blocks or crashes in-app notifications.
+5. Update the Frontend "Notify Team" confirmation modal in `choir-client/` to indicate that assigned members will receive both an In-App Notification and an Email alert, returning delivery counts in the success toast.
+**Verify with:** `nx-workspace-verify` and triggering a roster notification to verify receipt of the formatted HTML email in a real inbox.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 10 — Automated Roster Email Notifications (Brevo HTTP Integration).
+
+Before writing code, inspect how Sunday Roster assignments and the "Notify Team" dispatch endpoint are currently implemented in `choir-api/` and `choir-client/`, then output a brief Implementation Plan.
+
+Paths reminder: Projects are located directly at `choir-api/`, `choir-client/`, and `libs/shared/` (not inside an `apps/` directory).
+
+Important Infrastructure Constraint:
+We are deployed on Render's Free Web Service tier, which blocks outbound SMTP ports (25, 465, 587). Do NOT install or use `nodemailer` or SMTP. You MUST send emails using standard HTTPS (`fetch`) to Brevo's REST API (`https://api.brevo.com/v3/smtp/email`).
+
+Tasks:
+
+1. Backend Email Service (`choir-api/src/lib/email.service.ts` or equivalent module):
+   - Read environment variables:
+     - `BREVO_API_KEY`
+     - `BREVO_SENDER_EMAIL`
+     - `BREVO_SENDER_NAME` (default to `"ChoirSync"`)
+     - `FRONTEND_URL` (fallback to `process.env.CORS_ORIGIN` or `"http://localhost:3000"`)
+   - Implement a method `sendRosterAssignmentEmail(params)` that accepts:
+     - `recipientEmail`: string
+     - `recipientName`: string
+     - `assignedRole`: string (e.g., Soprano, Alto, Tenor, Lead)
+     - `notes`: optional string
+     - `playlistTitle`: string
+     - `serviceDate`: optional Date/string
+     - `playlistUrl`: string (`${FRONTEND_URL}/playlists/${playlistId}`)
+     - `songs`: array of `{ title: string, key?: string, leadSinger?: string }`
+   - Build a clean, mobile-responsive inline-CSS HTML email template:
+     - Header: ChoirSync branding + Service Playlist Title & formatted Date.
+     - Highlight badge showing their assigned role: e.g., "Assigned Part: ALTO" (plus any specific Director notes).
+     - Setlist breakdown listing each song in order, its active/custom key, and assigned lead vocalist.
+     - Primary Call-To-Action button ("Open Rehearsal Setlist") linking directly to `playlistUrl`.
+   - Send the request via `fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'accept': 'application/json', 'api-key': BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL }, to: [{ email: recipientEmail, name: recipientName }], subject: `🎵 Choir Roster: You're scheduled for ${playlistTitle}`, htmlContent }) })`.
+   - Resilient Error Handling:
+     - If `BREVO_API_KEY` is not set, log a warning and return `{ sent: false, reason: 'missing_api_key' }` without throwing.
+     - Wrap the HTTP call in a `try/catch` and log any non-2xx responses from Brevo without crashing the server.
+
+2. Hook into Roster Notification Dispatch (`choir-api/`):
+   - Locate the endpoint that handles "Notify Team" on a playlist roster.
+   - Ensure the database query includes each assigned user's `email` and `name`, as well as the playlist's ordered songs (with custom keys/leads).
+   - After creating the In-App `Notification` records in PostgreSQL, dispatch the personalized emails concurrently using `Promise.allSettled`.
+   - Return the summary in the API response: `{ notifiedCount, emailsSentCount }`.
+
+3. Frontend Confirmation Modal & Toast Update (`choir-client/`):
+   - In the Playlist Roster UI, ensure clicking "Notify Team" opens a clear confirmation modal (if not already present) stating how many choristers will be notified via **In-App Notification + Email** with their assigned voice parts and setlist links.
+   - Update the success toast after confirmation to display both in-app and email dispatch results (e.g., "Notified 8 choristers (8 emails sent)").
+
+Verification:
+1. Run `nx-workspace-verify` to ensure zero TypeScript or build errors across `choir-api` and `choir-client`.
+2. Verify the UI confirmation flow and backend response structure.
+```
+
 ## Database Schema Updates
 
 ```js

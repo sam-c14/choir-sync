@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { usePlaylist, useSetPlaylistSongs } from '../hooks/use-playlists';
+import { usePlaylist, useSetPlaylistSongs, useSetActivePlaylist } from '../hooks/use-playlists';
 import { useSongs } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
 import { Button } from '../components/ui/button';
@@ -11,7 +11,8 @@ import { Skeleton } from '../components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { RosterPanel } from '../components/playlists/roster-panel';
 import { BroadcastDialog } from '../components/playlists/broadcast-dialog';
-import { Send } from 'lucide-react';
+import { Send, CheckCircle2 } from 'lucide-react';
+import { Badge } from '../components/ui/badge';
 
 export default function PlaylistDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +22,7 @@ export default function PlaylistDetailsPage() {
   const { data: playlist, isLoading } = usePlaylist(id || '');
   const { data: allSongs } = useSongs();
   const setPlaylistSongs = useSetPlaylistSongs();
+  const setActivePlaylist = useSetActivePlaylist();
 
   const [search, setSearch] = useState('');
   const [songToRemove, setSongToRemove] = useState<string | null>(null);
@@ -83,6 +85,11 @@ export default function PlaylistDetailsPage() {
     setSearch('');
   };
 
+  const handleSetActive = async () => {
+    if (!playlist) return;
+    await setActivePlaylist.mutateAsync(playlist.id);
+  };
+
   const handleRemoveSong = async (songId: string) => {
     const currentSongs = playlist.songs || [];
     await setPlaylistSongs.mutateAsync({
@@ -111,7 +118,14 @@ export default function PlaylistDetailsPage() {
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">{playlist.title}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{playlist.title}</h1>
+            {playlist.isActive && (
+              <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Active Lineup
+              </Badge>
+            )}
+          </div>
           {playlist.description && (
             <p className="text-muted-foreground">{playlist.description}</p>
           )}
@@ -121,7 +135,19 @@ export default function PlaylistDetailsPage() {
         </div>
         
         {isDirector && (
-          <BroadcastDialog 
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            {!playlist.isActive && (
+              <Button 
+                variant="outline" 
+                onClick={handleSetActive}
+                disabled={setActivePlaylist.isPending}
+                className="w-full sm:w-auto"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" /> 
+                {setActivePlaylist.isPending ? 'Setting...' : 'Set as Active Lineup'}
+              </Button>
+            )}
+            <BroadcastDialog 
             playlist={playlist} 
             trigger={
               <Button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white">
@@ -129,6 +155,7 @@ export default function PlaylistDetailsPage() {
               </Button>
             } 
           />
+          </div>
         )}
       </div>
 
