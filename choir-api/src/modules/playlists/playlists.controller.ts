@@ -3,6 +3,7 @@ import { playlistsService } from './playlists.service';
 import { CreatePlaylistSchema, UpdatePlaylistSchema, CreatePlaylistSongSchema, CreateRosterSchema } from '@choir-workspace/shared-validation';
 import { z } from 'zod';
 import { EmailService } from '../../lib/email.service';
+import { prisma } from '../../lib/prisma';
 
 
 export const playlistsController = {
@@ -135,8 +136,15 @@ export const playlistsController = {
         });
 
         if (parsed.members.length > 0) {
+          // Ensure uniqueness by userId (take the last assigned role if there are duplicates)
+          const uniqueMembersMap = new Map();
+          for (const m of parsed.members) {
+            uniqueMembersMap.set(m.userId, m);
+          }
+          const uniqueMembers = Array.from(uniqueMembersMap.values());
+
           await tx.rosterMember.createMany({
-            data: parsed.members.map(m => ({
+            data: uniqueMembers.map(m => ({
               rosterId: roster.id,
               userId: m.userId,
               assignedRole: m.assignedRole,
