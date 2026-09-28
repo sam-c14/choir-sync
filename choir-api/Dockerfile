@@ -26,7 +26,7 @@ ENV PORT=3333
 RUN npm install -g pnpm@11
 RUN apk add --no-cache openssl
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc* ./
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Copy just the schema (not the generated client — we regenerate it below,
 # in-place, so it lands wherever pnpm's virtual store puts it for THIS
