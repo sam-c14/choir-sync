@@ -138,7 +138,17 @@ class SnippetsController {
         // Continue to delete from DB even if storage cleanup fails
       }
 
+      
       await prisma.voiceSnippet.delete({ where: { id } });
+
+      const parentPart = await prisma.songPart.findUnique({
+        where: { id: snippet.songPartId },
+        include: { voiceSnippets: true }
+      });
+      if (parentPart && parentPart.voiceSnippets.length === 0 && !parentPart.notes) {
+        await prisma.songPart.delete({ where: { id: parentPart.id } });
+      }
+
 
       res.json({ message: 'Snippet deleted' });
     } catch (error) {

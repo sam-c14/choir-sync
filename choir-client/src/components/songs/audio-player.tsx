@@ -139,7 +139,7 @@ export function AudioPlayer({ snippet, onDelete, canDelete, onEditTitle, canEdit
                 </Button>
               </div>
             ) : (
-              <p className="text-sm font-medium truncate pr-2">
+              <p className="text-sm font-medium truncate pr-2 flex-1 min-w-0">
                 {snippet.title || 'Audio Snippet'}
               </p>
             )}

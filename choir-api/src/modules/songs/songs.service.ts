@@ -139,6 +139,17 @@ export class SongsService {
 
   async updatePart(songId: string, part: string, dto: UpdateSongPartDto) {
     // VoicePart is part of the unique index [songId, voicePart]
+    if (!dto.notes || dto.notes.trim() === '') {
+      const existing = await prisma.songPart.findUnique({
+        where: { songId_voicePart: { songId, voicePart: part as VoicePartType } },
+        include: { voiceSnippets: true }
+      });
+      if (existing && existing.voiceSnippets.length === 0) {
+        await prisma.songPart.delete({ where: { id: existing.id } });
+        return { deleted: true };
+      }
+    }
+
     return prisma.songPart.upsert({
       where: {
         songId_voicePart: {
