@@ -2,16 +2,32 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api-client';
 import type { CreateRosterDto } from '@choir-workspace/shared-validation';
 
+
+export interface RosterMemberResponse {
+  id: string;
+  userId: string;
+  assignedRole: string;
+  notes?: string;
+  notified: boolean;
+}
+
+export interface RosterResponse {
+  id: string;
+  playlistId: string;
+  members: RosterMemberResponse[];
+}
+
 export const rosterKeys = {
   all: ['rosters'] as const,
   detail: (playlistId: string) => ['rosters', playlistId] as const,
 };
 
 export function useRoster(playlistId: string) {
-  return useQuery({
+  return useQuery<RosterResponse | null>({
+
     queryKey: rosterKeys.detail(playlistId),
     queryFn: async () => {
-      const res = await apiClient.get(`/playlists/${playlistId}/roster`);
+      const res = await apiClient.get<RosterResponse>(`/playlists/${playlistId}/roster`);
       return res.data;
     },
     enabled: !!playlistId,
