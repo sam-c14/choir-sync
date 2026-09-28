@@ -172,6 +172,16 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
     }
   };
 
+    const handleEditSnippetTitle = async (id: string, title: string) => {
+    try {
+      await updateSnippet.mutateAsync({ id, title });
+      toast.success('Audio label updated');
+    } catch (err) {
+      toast.error('Failed to update audio label');
+      throw err;
+    }
+  };
+
   const handleDeleteSnippet = async (snippetId: string) => {
     try {
       await deleteSnippet.mutateAsync(snippetId);
