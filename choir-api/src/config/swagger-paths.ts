@@ -1,4 +1,16 @@
 export const swaggerPaths = {
+  '/api/health': {
+    get: {
+      tags: ['System'],
+      summary: 'Health check endpoint',
+      description: 'Returns the health status of the API and database connection. Used by UptimeRobot.',
+      security: [], // This endpoint is completely public (overrides global Bearer auth)
+      responses: {
+        200: { description: 'OK' },
+        503: { description: 'Service Unavailable' }
+      }
+    }
+  },
   '/api/v1/auth/google': {
     post: {
       tags: ['Auth'],

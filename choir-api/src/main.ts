@@ -42,20 +42,6 @@ app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/external-music', externalMusicRoutes);
 app.use('/api/v1/playlists', playlistsRoutes);
 
-/**
- * @openapi
- * /api/health:
- *   get:
- *     tags:
- *       - System
- *     summary: Health check endpoint
- *     description: Returns the health status of the API and database connection. Used by UptimeRobot.
- *     responses:
- *       200:
- *         description: OK
- *       503:
- *         description: Service Unavailable (if strict mode is enabled and DB is down)
- */
 app.get('/api/health', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
