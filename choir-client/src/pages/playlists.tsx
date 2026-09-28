@@ -21,7 +21,7 @@ export default function PlaylistsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [serviceDate, setServiceDate] = useState('');
+  const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
 
   const isDirector = user?.role === 'DIRECTOR';
@@ -106,10 +106,9 @@ export default function PlaylistsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium inline-block mb-2">Service Date</label>
+                  <label className="text-sm font-medium inline-block mb-2">Service Date (Optional)</label>
                   <Input 
                     type="date"
-                    required
                     value={serviceDate} 
                     onChange={e => setServiceDate(e.target.value)} 
                   />

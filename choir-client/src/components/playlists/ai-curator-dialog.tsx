@@ -16,7 +16,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
   const [theme, setTheme] = useState('');
   const [serviceType, setServiceType] = useState('Sunday Morning Service');
   const [targetCount, setTargetCount] = useState(4);
-  const [serviceDate, setServiceDate] = useState('');
+  const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
   
   const [suggestion, setSuggestion] = useState<SetlistSuggestion | null>(null);
 
@@ -143,10 +143,9 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
               </div>
             </div>
             <div className="space-y-3 mt-4">
-              <Label>Service Date</Label>
+              <Label>Service Date (Optional)</Label>
               <Input 
                 type="date"
-                required
                 value={serviceDate} 
                 onChange={e => setServiceDate(e.target.value)} 
               />
