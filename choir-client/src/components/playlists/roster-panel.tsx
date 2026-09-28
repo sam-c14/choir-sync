@@ -74,13 +74,14 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
 
   const handleToggleMember = (userId: string, role: string) => {
     setAssignments(prev => {
-      const existing = prev.findIndex(a => a.userId === userId && a.role === role);
-      if (existing >= 0) {
+      const existingInThisRole = prev.findIndex(a => a.userId === userId && a.role === role);
+      if (existingInThisRole >= 0) {
         // Remove
-        return prev.filter((_, i) => i !== existing);
+        return prev.filter((_, i) => i !== existingInThisRole);
       } else {
-        // Add
-        return [...prev, { userId, role, notified: false }];
+        // Add, ensuring they only have ONE role to satisfy database constraints
+        const filtered = prev.filter(a => a.userId !== userId);
+        return [...filtered, { userId, role, notified: false }];
       }
     });
   };

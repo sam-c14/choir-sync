@@ -13,6 +13,7 @@ import { RosterPanel } from '../components/playlists/roster-panel';
 import { BroadcastDialog } from '../components/playlists/broadcast-dialog';
 import { Send, CheckCircle2 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
+import { toast } from 'sonner';
 
 export default function PlaylistDetailsPage() {
   const { id } = useParams<{ id: string }>();
