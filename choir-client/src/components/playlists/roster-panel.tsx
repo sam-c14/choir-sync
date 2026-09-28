@@ -101,7 +101,14 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
   const handleDispatch = async () => {
     try {
       const res = await dispatchRoster.mutateAsync(playlistId);
-      toast.success(res.message);
+      const emailCount = res.emailsSentCount !== undefined ? res.emailsSentCount : 0;
+      const totalCount = res.notifiedCount !== undefined ? res.notifiedCount : (res.count || 0);
+      
+      if (totalCount === 0) {
+        toast.info('All members have already been notified.');
+      } else {
+        toast.success(`Notified ${totalCount} choristers (${emailCount} emails sent!)`);
+      }
       setDispatchOpen(false);
     } catch (error) {
       toast.error('Failed to notify team');
