@@ -95,14 +95,15 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="w-[92vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-2 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Sparkles className="w-5 h-5 text-indigo-500" />
             AI Worship Curator
           </DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto p-6 pt-4 min-h-0">
         {!suggestion ? (
           <div className="space-y-6 py-4">
             <div className="space-y-3">
@@ -237,6 +238,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

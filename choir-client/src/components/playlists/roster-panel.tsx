@@ -37,7 +37,33 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
   }, [roster]);
 
   if (loadingRoster || loadingUsers) {
-    return <div className="p-4 border rounded-xl bg-card animate-pulse h-32" />;
+    return (
+      <div className="border rounded-xl bg-card overflow-hidden">
+        <div className="bg-muted/30 border-b px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-muted rounded-full animate-pulse" />
+            <div className="w-32 h-5 bg-muted rounded animate-pulse" />
+          </div>
+          {isDirector && (
+            <div className="flex gap-2">
+              <div className="w-20 h-8 bg-muted rounded animate-pulse" />
+              <div className="w-24 h-8 bg-muted rounded animate-pulse" />
+            </div>
+          )}
+        </div>
+        <div className="p-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="space-y-3">
+              <div className="w-20 h-5 bg-muted rounded animate-pulse" />
+              <div className="space-y-2">
+                <div className="w-full h-8 bg-muted rounded animate-pulse" />
+                <div className="w-full h-8 bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const handleToggleMember = (userId: string, role: string) => {
