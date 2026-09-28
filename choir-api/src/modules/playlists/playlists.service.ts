@@ -2,8 +2,26 @@ import { prisma } from '../../lib/prisma';
 import { CreatePlaylistDto, UpdatePlaylistDto, CreatePlaylistSongDto } from '@choir-workspace/shared-validation';
 
 export const playlistsService = {
-  async setActivePlaylist(id: string) {
+  async setActivePlaylist(id: string, isActive: boolean = true) {
     return prisma.$transaction(async (tx) => {
+      if (!isActive) {
+        // Deactivate playlist
+        const playlist = await tx.playlist.update({
+          where: { id },
+          data: { isActive: false },
+          include: { songs: { select: { songId: true } } }
+        });
+        const songIds = playlist.songs.map((ps: any) => ps.songId);
+        if (songIds.length > 0) {
+          await tx.song.updateMany({
+            where: { id: { in: songIds }, status: 'ACTIVE_SUNDAY' },
+            data: { status: 'ARCHIVED' }
+          });
+        }
+        return playlist;
+      }
+
+      // Activate playlist
       // 1. Mark all playlists as inactive
       await tx.playlist.updateMany({
         where: { isActive: true },

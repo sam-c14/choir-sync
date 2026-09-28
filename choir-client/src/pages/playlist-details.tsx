@@ -89,10 +89,18 @@ export default function PlaylistDetailsPage() {
   const handleSetActive = async () => {
     if (!playlist) return;
     try {
-      await setActivePlaylist.mutateAsync(playlist.id);
-      toast.success('Playlist set as Active Sunday Lineup!');
+      await setActivePlaylist.mutateAsync({ id: playlist.id, isActive: true });
     } catch (error) {
-      toast.error('Failed to set active lineup');
+      console.error('Failed to set active lineup', error);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!playlist) return;
+    try {
+      await setActivePlaylist.mutateAsync({ id: playlist.id, isActive: false });
+    } catch (error) {
+      console.error('Failed to deactivate lineup', error);
     }
   };
 

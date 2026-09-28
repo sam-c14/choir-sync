@@ -10,7 +10,9 @@ export const playlistsController = {
   async setActivePlaylist(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
-      const playlist = await playlistsService.setActivePlaylist(id);
+      // Default to true if not provided to support old clients
+      const isActive = req.body.isActive !== undefined ? req.body.isActive : true;
+      const playlist = await playlistsService.setActivePlaylist(id, isActive);
       res.json(playlist);
     } catch (error) {
       console.error(error);
