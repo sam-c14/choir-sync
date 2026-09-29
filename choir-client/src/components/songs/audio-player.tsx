@@ -4,6 +4,7 @@ import { Play, Pause, Trash2, Pencil, Check, X, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { format } from 'date-fns';
+import { trackChoirEvent } from '../../lib/analytics';
 
 interface AudioPlayerProps {
   snippet: {
@@ -68,7 +69,9 @@ export function AudioPlayer({ snippet, onDelete, canDelete, onEditTitle, canEdit
 
   const togglePlay = () => {
     if (!isPlaying) {
-      trackChoirEvent({ action: 'voice_snippet_played', params: { partType: partType, songId: snippet.songPartId } });
+      try {
+        trackChoirEvent({ action: 'voice_snippet_played', params: { partType: 'unknown', songId: snippet.id } });
+      } catch (e) {}
     }
     if (!audioRef.current) {
       audioRef.current = new Audio(snippet.audioUrl);
@@ -142,7 +145,7 @@ export function AudioPlayer({ snippet, onDelete, canDelete, onEditTitle, canEdit
                 </Button>
               </div>
             ) : (
-              <p className="text-sm font-medium truncate pr-2 flex-1 min-w-0">
+              <p className="text-sm font-medium pr-2 flex-1 break-words">
                 {snippet.title || 'Audio Snippet'}
               </p>
             )}
