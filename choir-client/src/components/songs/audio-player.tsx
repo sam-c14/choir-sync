@@ -117,7 +117,7 @@ export function AudioPlayer({ snippet, onDelete, canDelete, onEditTitle, canEdit
         <Button 
           variant={isPlaying ? "default" : "outline"} 
           size="icon" 
-          className="h-10 w-10 shrink-0 rounded-full"
+          className="h-10 w-10 shrink-0 rounded-full transition-transform active:scale-[0.92] hover:scale-105"
           onClick={togglePlay}
         >
           {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ml-0.5" />}
