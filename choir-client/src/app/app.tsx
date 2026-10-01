@@ -15,6 +15,7 @@ import UniformsPage from '../pages/uniforms';
 import AdminUsersPage from '../pages/admin/users';
 import PlaylistsPage from '../pages/playlists';
 import PlaylistDetailsPage from '../pages/playlist-details';
+import { ProfilePage } from '../pages/profile';
 
 import { Toaster } from '../components/ui/sonner';
 import { AnalyticsTracker } from '../lib/analytics';
@@ -44,6 +45,7 @@ export function App() {
                         <Route path="/playlists" element={<PlaylistsPage />} />
                         <Route path="/playlists/:id" element={<PlaylistDetailsPage />} />
                         <Route path="/admin/users" element={<AdminUsersPage />} />
+                        <Route path="/profile" element={<ProfilePage />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
                     </main>

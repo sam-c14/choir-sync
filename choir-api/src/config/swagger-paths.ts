@@ -92,6 +92,10 @@ export const swaggerPaths = {
   '/api/v1/ai/curate': {
     post: { tags: ['AI Curator'], summary: 'Generate setlist with Gemini AI', requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { theme: { type: 'string' }, count: { type: 'number' } } } } } }, responses: { 200: { description: 'Success' } } }
   },
+  '/api/v1/users/me': {
+    get: { tags: ['Users'], summary: 'Get current user profile', responses: { 200: { description: 'Success' } } },
+    patch: { tags: ['Users'], summary: 'Update current user profile', requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string' }, comfortableKey: { type: 'string' } } } } } }, responses: { 200: { description: 'Success' } } }
+  },
   '/api/v1/users': {
     get: { tags: ['Users'], summary: 'List users', responses: { 200: { description: 'Success' } } }
   },

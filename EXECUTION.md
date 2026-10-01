@@ -867,3 +867,56 @@ Tasks (`choir-api/`):
 
 Verify with `nx-workspace-verify`.
 ```
+
+## Milestone 13 — User Profiles & Roster Display Names
+**Goal:** Allow users to set a preferred display name and their comfortable vocal key, and ensure the app uses this name globally (especially in the Sunday Roster UI).
+**Do:**
+1. Update the `User` model in `schema.prisma` to include `name String?` and `comfortableKey String?` (if not already present), and run a migration.
+2. In `choir-api/`, create a `PATCH /api/v1/users/me` endpoint to allow users to update these fields.
+3. In `choir-client/`, build a mobile-first `/profile` page with a form to edit Name and Comfortable Key (using a select dropdown for standard musical keys).
+4. Update the Navbar: add a "Profile" or Avatar link to the desktop right-hand nav, and to the mobile hamburger menu/popover.
+5. Update the Roster Assignment UI and any other list views to render `user.name || user.email` (or Google fallback) so the customized name takes priority.
+**Verify with:** `nx-workspace-verify` and manual browser testing ensuring the name updates immediately in the navbar and roster selection dropdowns.
+
+## Followup Prompt
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 13 — User Profiles & Roster Display Names.
+
+Paths reminder: Projects are located directly at `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Tasks:
+
+1. Database & Backend (`choir-api/`):
+   - Inspect `choir-api/src/prisma/schema.prisma`. Ensure the `User` model has:
+     ```prisma
+     name           String?
+     comfortableKey String?
+     ```
+   - Run `prisma-create-migration` if the schema was updated.
+   - Add a `PATCH /api/v1/users/me` (or similar endpoint under your user/auth routes) that accepts `{ name?: string, comfortableKey?: string }`.
+   - Validate the input and update the authenticated user's record in the database.
+   - Ensure the updated fields are returned in `GET /api/v1/users/me` (or `/auth/me`).
+
+2. Shared Validation (`libs/shared/`):
+   - Create or update the Zod schema for the Profile Update DTO (e.g., `ProfileUpdateSchema`) allowing `name` (string, optional/nullable) and `comfortableKey` (string, optional/nullable).
+
+3. Frontend Profile Page (`choir-client/`):
+   - Create a new route/page at `/profile` (or `/settings`).
+   - Build a clean, Card-based form using `react-hook-form`.
+   - **Name Field**: Standard text input.
+   - **Comfortable Key Field**: A Select/Dropdown component with standard musical keys (C, Db, D, Eb, E, F, F#, G, Ab, A, Bb, B).
+   - On successful save, show a success toast and update the local user context/state.
+
+4. Navbar Navigation (`choir-client/`):
+   - **Desktop**: Add a User Avatar (showing initials if `name` exists) or a "Profile" button to the right-hand side of the desktop navbar next to the Mode Toggle.
+   - **Mobile**: Add a "Profile" link with a `User` icon inside the existing mobile hamburger menu (Sheet or Popover).
+
+5. Global Display Logic (`choir-client/`):
+   - Search the codebase for places where choristers are listed—specifically the **Playlist Roster Assignment** dropdowns and cards.
+   - Update the rendering logic to strictly prioritize the user's explicit name:
+     `const displayName = user.name || user.email; // (or fallback to Google SSO name if available)`
+   - If they have a `comfortableKey` set, display it as a subtle badge next to their name in the Roster Assignment UI so the Director knows their vocal range when assigning leads.
+
+Verification:
+Run `nx-workspace-verify` to ensure zero TypeScript errors.
+```

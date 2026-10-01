@@ -13,7 +13,8 @@ import { cn } from '../../lib/utils';
 interface UserNode {
   id: string;
   email: string;
-  name?: string;
+  name?: string | null;
+  comfortableKey?: string | null;
 }
 
 export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, serviceDate?: string | Date | null }) {
@@ -175,7 +176,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
                             : "bg-background hover:bg-muted/50 border-border text-muted-foreground"
                         )}
                       >
-                        {u.email.split('@')[0]}
+                        {u.name || u.email.split('@')[0]} {u.comfortableKey && <Badge variant="secondary" className="ml-1 text-[8px] px-1 h-3 leading-none opacity-70">{u.comfortableKey}</Badge>}
                       </div>
                     );
                   })
@@ -187,7 +188,10 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
                       const user = users.find((u: UserNode) => u.id === a.userId);
                       return (
                         <div key={a.userId} className="text-sm px-3 py-1.5 rounded-md bg-muted/40 border font-medium truncate flex justify-between items-center">
-                          {user?.email?.split('@')[0] || 'Unknown'}
+                          <div className="flex items-center gap-1">
+                            <span className="truncate">{user?.name || user?.email?.split('@')[0] || 'Unknown'}</span>
+                            {user?.comfortableKey && <Badge variant="secondary" className="text-[9px] px-1 h-[14px] leading-none opacity-60 font-medium">{user.comfortableKey}</Badge>}
+                          </div>
                           {a.notified && <Check className="w-3 h-3 text-green-500" />}
                         </div>
                       );

@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { UpdateUserRoleDto } from '@choir-workspace/shared-validation';
+import { UpdateUserRoleDto, UpdateProfileDto } from '@choir-workspace/shared-validation';
 
 export class UsersService {
   async getUsers(page: number = 1, limit: number = 20) {
@@ -12,6 +12,8 @@ export class UsersService {
         select: {
           id: true,
           email: true,
+          name: true,
+          comfortableKey: true,
           role: true,
           leadsVoicePart: true,
           provider: true,
@@ -54,6 +56,8 @@ export class UsersService {
       select: {
         id: true,
         email: true,
+        name: true,
+        comfortableKey: true,
         role: true,
         leadsVoicePart: true,
         provider: true,
@@ -72,6 +76,44 @@ export class UsersService {
     }
     
     await prisma.user.delete({ where: { id } });
+  }
+
+  async updateProfile(id: string, dto: UpdateProfileDto) {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        comfortableKey: dto.comfortableKey,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        comfortableKey: true,
+        role: true,
+        leadsVoicePart: true,
+        provider: true,
+        createdAt: true,
+      }
+    });
+  }
+
+  async getProfile(id: string) {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        comfortableKey: true,
+        role: true,
+        leadsVoicePart: true,
+        provider: true,
+        createdAt: true,
+      }
+    });
+    if (!user) throw { code: 'NOT_FOUND', message: 'User not found' };
+    return user;
   }
 }
 export const usersService = new UsersService();

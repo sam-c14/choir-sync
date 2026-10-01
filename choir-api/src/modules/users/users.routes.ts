@@ -5,7 +5,13 @@ import { requireRole } from '../../middleware/requireRole';
 
 const router = Router();
 router.use(requireAuth);
-router.use(requireRole('DIRECTOR')); // Everything in this route requires Director
+
+// Accessible by all authenticated users
+router.get('/me', usersController.getProfile.bind(usersController));
+router.patch('/me', usersController.updateProfile.bind(usersController));
+
+// Director only routes
+router.use(requireRole('DIRECTOR'));
 
 router.get('/', usersController.getUsers.bind(usersController));
 router.patch('/:id/role', usersController.updateUserRole.bind(usersController));

@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 export interface User {
   id: string;
   email: string;
+  name?: string | null;
+  comfortableKey?: string | null;
   role: 'DIRECTOR' | 'SECTION_LEADER' | 'CHORISTER';
   leadsVoicePart: 'SOPRANO' | 'ALTO' | 'TENOR' | null;
   provider: 'LOCAL' | 'GOOGLE';

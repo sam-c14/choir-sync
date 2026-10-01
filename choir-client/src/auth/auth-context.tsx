@@ -8,12 +8,15 @@ export interface JwtPayload {
   email: string;
   role: z.infer<typeof UserRoleEnum>;
   leadsVoicePart: z.infer<typeof VoicePartTypeEnum> | null;
+  name?: string | null;
+  comfortableKey?: string | null;
 }
 
 interface AuthContextType {
   user: JwtPayload | null;
   login: (token: string, refreshToken: string) => void;
   logout: () => void;
+  updateLocalUser: (updates: Partial<JwtPayload>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -37,6 +40,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(decoded);
   };
 
+  const updateLocalUser = (updates: Partial<JwtPayload>) => {
+    setUser(prev => prev ? { ...prev, ...updates } : null);
+  };
+
   const logout = async () => {
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken) {
@@ -56,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, updateLocalUser }}>
       {children}
     </AuthContext.Provider>
   );

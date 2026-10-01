@@ -6,7 +6,7 @@ import { Badge } from '../ui/badge';
 import { ModeToggle } from '../mode-toggle';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuGroup } from '../ui/dropdown-menu';
-import { Menu, Moon, Sun, Laptop, LogOut } from 'lucide-react';
+import { Menu, Moon, Sun, Laptop, LogOut, User } from 'lucide-react';
 import { useTheme } from '../theme-provider';
 import { NotificationsPopover } from './notifications-popover';
 
@@ -63,9 +63,11 @@ export function Navbar() {
           {/* Desktop Actions */}
           <div className="hidden sm:flex items-center gap-4">
             <NotificationsPopover />
-            <span className="text-sm font-medium text-foreground max-w-[160px] truncate" title={user.email}>
-              {user.email?.length > 15 ? `${user.email.slice(0, 15)}...` : user.email}
-            </span>
+            <Link to="/profile">
+              <span className="text-sm font-medium text-foreground hover:text-primary max-w-[160px] truncate" title={user.name || user.email}>
+                {user.name || (user.email?.length > 15 ? `${user.email.slice(0, 15)}...` : user.email)}
+              </span>
+            </Link>
             <ModeToggle />
             <Button variant="outline" size="sm" onClick={() => setLogoutOpen(true)}>Log out</Button>
           </div>
@@ -86,12 +88,21 @@ export function Navbar() {
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none truncate" title={user.email}>
-                        {user.email?.length > 15 ? `${user.email.slice(0, 15)}...` : user.email}
+                      <p className="text-sm font-medium leading-none truncate" title={user.name || user.email}>
+                        {user.name || (user.email?.length > 15 ? `${user.email.slice(0, 15)}...` : user.email)}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground capitalize">{user.role.toLowerCase().replace('_', ' ')}</p>
                     </div>
                   </DropdownMenuLabel>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <Link to="/profile">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </DropdownMenuItem>
+                  </Link>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
