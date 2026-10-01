@@ -9,13 +9,14 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useAuth } from '../auth/auth-context';
 import { toast } from 'sonner';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api-client';
 
 const MUSICAL_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 export function ProfilePage() {
   const { user, updateLocalUser } = useAuth();
+  const queryClient = useQueryClient();
   
   const form = useForm<UpdateProfileDto>({
     resolver: zodResolver(UpdateProfileSchema),
@@ -55,6 +56,11 @@ export function ProfilePage() {
     onSuccess: (data) => {
       toast.success('Profile updated successfully');
       updateLocalUser({ name: data.name, comfortableKey: data.comfortableKey });
+      
+      // Explicitly refetch the profile and any user lists
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['playlist-roster'] });
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || 'Failed to update profile');
@@ -77,7 +83,7 @@ export function ProfilePage() {
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label htmlFor="name">Full Name</Label>
               <Input 
                 id="name"
@@ -89,14 +95,14 @@ export function ProfilePage() {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label htmlFor="comfortableKey">Comfortable Key</Label>
               <Controller
                 control={form.control}
                 name="comfortableKey"
                 render={({ field }) => (
                   <Select onValueChange={(val) => field.onChange(val === 'none' ? null : val)} value={field.value || 'none'}>
-                    <SelectTrigger id="comfortableKey">
+                    <SelectTrigger id="comfortableKey" className="w-full">
                       <SelectValue placeholder="Select a key (optional)" />
                     </SelectTrigger>
                     <SelectContent>
@@ -117,7 +123,7 @@ export function ProfilePage() {
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full py-4" 
               disabled={updateProfileMutation.isPending}
             >
               {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
