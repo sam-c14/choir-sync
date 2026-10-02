@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { Music } from 'lucide-react';
 import { VirtualPitchKeyboard } from '../virtual-pitch-keyboard';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -45,8 +46,9 @@ export function KeyPickerDialog({ playlist, isDirector }: { playlist: any, isDir
   if (!isDirector) {
     if (!playlist.key) return null;
     return (
-      <Badge variant="secondary" className="text-sm font-medium px-3 py-1 bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-900">
-        Key: {playlist.key}
+      <Badge variant="default" className="text-sm font-bold px-3 py-1.5 h-9 bg-amber-500 text-white shadow-sm flex items-center gap-1.5 hover:bg-amber-600">
+        <Music className="w-4 h-4" />
+        Master Key: {playlist.key}
       </Badge>
     );
   }
@@ -54,8 +56,9 @@ export function KeyPickerDialog({ playlist, isDirector }: { playlist: any, isDir
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-1 border-amber-200 hover:border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-900 dark:text-amber-200">
-          {playlist.key ? `Key: ${playlist.key}` : 'Set Master Key'}
+        <Button size="sm" className="h-9 gap-2 bg-amber-500 hover:bg-amber-600 text-white shadow-md border-0 px-4 transition-transform active:scale-95 font-bold tracking-wide">
+          <Music className="w-4 h-4" />
+          {playlist.key ? `Master Key: ${playlist.key}` : 'Set Master Key'}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md w-[95vw] p-4 sm:p-6 overflow-hidden max-h-[90vh]">
