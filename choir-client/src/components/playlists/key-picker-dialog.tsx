@@ -20,7 +20,8 @@ export function KeyPickerDialog({ playlist, isDirector }: { playlist: any, isDir
     },
     onSuccess: () => {
       toast.success('Playlist master key updated');
-      queryClient.invalidateQueries({ queryKey: ['playlist', playlist.id] });
+      queryClient.invalidateQueries({ queryKey: ['playlists', playlist.id] });
+      queryClient.invalidateQueries({ queryKey: ['playlists'] });
       setOpen(false);
     },
     onError: () => {
