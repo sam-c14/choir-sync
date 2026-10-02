@@ -19,6 +19,7 @@ import { ProfilePage } from '../pages/profile';
 
 import { Toaster } from '../components/ui/sonner';
 import { AnalyticsTracker } from '../lib/analytics';
+import { FloatingChatTab } from '../components/chat/FloatingChatTab';
 
 export function App() {
   return (

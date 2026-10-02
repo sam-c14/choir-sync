@@ -3,12 +3,39 @@ import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
 import { GoogleGenAI, Type } from '@google/genai';
 import { CurateSetlistSchema } from '@choir-workspace/shared-validation';
+import { aiService } from './ai.service';
+import { logger } from '../../lib/logger';
+
+const ChatRequestSchema = z.object({
+  messages: z.array(z.object({
+    role: z.enum(['user', 'model']),
+    content: z.string(),
+  })).default([]),
+  newMessage: z.string().min(1),
+});
 
 // Initialize the GenAI client
 // It automatically picks up GEMINI_API_KEY from process.env
 const ai = new GoogleGenAI();
 
 class AiController {
+  async chat(req: Request, res: Response) {
+    try {
+      const { messages, newMessage } = ChatRequestSchema.parse(req.body);
+      const userName = req.user?.name || req.user?.email || 'Chorister';
+
+      const responseText = await aiService.generateChatResponse(messages, newMessage, userName);
+
+      res.status(200).json({ reply: responseText });
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      logger.error('AI Chat Error:', error);
+      res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+  }
+
   async curateSetlist(req: Request, res: Response) {
     try {
       const data = CurateSetlistSchema.parse(req.body);

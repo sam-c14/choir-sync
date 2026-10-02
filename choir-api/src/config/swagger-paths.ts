@@ -1,4 +1,51 @@
 export const swaggerPaths = {
+  '/ai/chat': {
+    post: {
+      tags: ['AI'],
+      summary: 'Chat with ChoirSync Copilot',
+      description: 'Interact with the built-in AI assistant for vocal tips and music theory.',
+      security: [{ bearerAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                messages: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      role: { type: 'string', enum: ['user', 'model'] },
+                      content: { type: 'string' }
+                    }
+                  }
+                },
+                newMessage: { type: 'string' }
+              },
+              required: ['newMessage']
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'AI response',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  reply: { type: 'string' }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   '/api/health': {
     get: {
       tags: ['System'],

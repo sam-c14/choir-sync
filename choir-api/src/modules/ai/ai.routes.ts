@@ -7,5 +7,6 @@ const router = Router();
 router.use(requireAuth);
 // AI tools require DIRECTOR role for now to prevent spam/abuse from choristers
 router.post('/curate-setlist', requireRole('DIRECTOR'), aiController.curateSetlist.bind(aiController));
+router.post('/chat', aiController.chat.bind(aiController));
 
 export default router;
