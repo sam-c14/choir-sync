@@ -26,14 +26,13 @@ let audioCtx: AudioContext | null = null;
 let unlocked = false;
 
 function initAudioContext() {
-  if (!audioCtx) {
+  // Recreate if it was closed or garbage collected by mobile OS
+  if (!audioCtx || audioCtx.state === 'closed') {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (AudioContextClass) {
       audioCtx = new AudioContextClass();
+      unlocked = false; // Need to unlock the new context
     }
-  }
-  if (audioCtx?.state === 'suspended') {
-    audioCtx.resume();
   }
   return audioCtx;
 }
@@ -42,6 +41,10 @@ export function unlockAudio() {
   if (unlocked) return;
   const ctx = initAudioContext();
   if (!ctx) return;
+  
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
   
   // Play silent buffer to unlock iOS Safari audio engine
   const buffer = ctx.createBuffer(1, 1, 22050);
@@ -53,9 +56,16 @@ export function unlockAudio() {
   unlocked = true;
 }
 
-export function playPitch(noteName: string, duration: number = 1.2) {
+export async function playPitch(noteName: string, duration: number = 1.2) {
   const ctx = initAudioContext();
   if (!ctx) return;
+
+  // Crucial for mobile Chrome/Safari when returning from background:
+  // We must explicitly await the resume before scheduling nodes, 
+  // otherwise the time scheduling gets botched.
+  if (ctx.state === 'suspended') {
+    await ctx.resume();
+  }
 
   // Resolve note, defaulting to 4th octave if no octave specified
   let lookupName = noteName;
@@ -98,4 +108,16 @@ export function playPitch(noteName: string, duration: number = 1.2) {
   
   osc.stop(t + duration);
   subOsc.stop(t + duration);
+}
+
+
+// Handle mobile browser backgrounding/foregrounding
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && audioCtx?.state === 'suspended') {
+      // We don't await this because we aren't in a direct user gesture,
+      // but it hints the browser to wake up the engine if possible.
+      audioCtx.resume().catch(() => {});
+    }
+  });
 }
