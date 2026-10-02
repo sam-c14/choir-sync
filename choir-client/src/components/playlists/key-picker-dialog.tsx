@@ -46,9 +46,9 @@ export function KeyPickerDialog({ playlist, isDirector }: { playlist: any, isDir
   if (!isDirector) {
     if (!playlist.key) return null;
     return (
-      <Badge variant="default" className="text-sm font-bold px-3 py-1.5 h-9 bg-amber-500 text-white shadow-sm flex items-center gap-1.5 hover:bg-amber-600">
+      <Badge variant="default" className="text-sm font-bold px-3 py-1.5 h-9 shadow-sm flex items-center gap-1.5">
         <Music className="w-4 h-4" />
-        Master Key: {playlist.key}
+        Playlist Key: {playlist.key}
       </Badge>
     );
   }
@@ -56,9 +56,9 @@ export function KeyPickerDialog({ playlist, isDirector }: { playlist: any, isDir
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="h-9 gap-2 bg-amber-500 hover:bg-amber-600 text-white shadow-md border-0 px-4 transition-transform active:scale-95 font-bold tracking-wide">
+        <Button size="sm" variant="default" className="h-9 gap-2 shadow-md px-4 transition-transform active:scale-95 font-bold tracking-wide">
           <Music className="w-4 h-4" />
-          {playlist.key ? `Master Key: ${playlist.key}` : 'Set Master Key'}
+          {playlist.key ? `Change Playlist Key: ${playlist.key}` : 'Set Playlist Key'}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md w-[95vw] p-4 sm:p-6 overflow-hidden max-h-[90vh]">
@@ -81,9 +81,11 @@ export function KeyPickerDialog({ playlist, isDirector }: { playlist: any, isDir
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+          {playlist.key && (
           <Button variant="ghost" onClick={handleClear} disabled={updateKeyMutation.isPending} className="sm:mr-auto text-destructive hover:bg-destructive/10">
             Clear Key
           </Button>
+        )}
           <Button variant="outline" onClick={() => setOpen(false)} disabled={updateKeyMutation.isPending}>
             Cancel
           </Button>
