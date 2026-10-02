@@ -53,13 +53,13 @@ export function FloatingChatTab() {
   return (
     <>
       {/* Edge anchored trigger button */}
-      <div className="fixed right-0 top-1/2 -translate-y-1/2 z-40">
+      <div className="fixed -right-2 top-1/2 -translate-y-1/2 z-40">
         <Button 
           onClick={() => setIsOpen(true)}
-          className="rounded-l-xl rounded-r-none h-14 pl-4 pr-3 shadow-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all"
+          className="rounded-l-full rounded-r-none pb-0.5 h-9 pl-3 pr-3 shadow-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all"
         >
-          <MessageCircle className="w-5 h-5 mr-2" />
-          <span className="font-semibold tracking-wide">Copilot</span>
+          <MessageCircle className="w-10 h-10 mr-0" />
+          {/* <span className="font-semibold tracking-wide">Copilot</span> */}
         </Button>
       </div>
 

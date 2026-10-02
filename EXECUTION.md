@@ -978,3 +978,109 @@ Verification:
 1. Run `nx-workspace-verify` to ensure clean TypeScript compilation across all monorepo packages.
 2. Test on mobile viewports: ensure touching piano keys generates sound and saving the playlist key preserves individual song keys in the playlist.
 ```
+
+## Milestone 15 — Clear Active Sunday Lineup (Atomic Batch Reset)
+**Goal:** Allow Directors to clear all active Sunday songs and deactivate any connected active playlist in a single atomic database transaction.
+**Do:**
+1. In `choir-api/`, create an endpoint `POST /api/v1/songs/clear-active` (restricted to Directors).
+2. Execute the reset inside a single atomic `prisma.$transaction`:
+   - Set the Sunday active flag to `false` for all songs currently marked active (`prisma.song.updateMany`).
+   - Set `isActive: false` on any `Playlist` currently marked active (`prisma.playlist.updateMany`).
+3. In `choir-client/`, add an intentional "Clear Active Lineup" action in the "Active Sunday Songs" section header on the Songs page (`/songs`).
+4. Implement a confirmation dialog summarizing the action: "This will remove all songs from this Sunday's lineup and deactivate the connected playlist."
+5. On confirmation, invoke the reset endpoint, invalidate both the `songs` and `playlists` React Query caches, and display a confirmation toast.
+**Verify with:** `nx-workspace-verify` and browser testing confirming that clicking clear updates both the Songs page and the Playlists page simultaneously with zero partial states.
+
+## Followup Prompt
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 15 — Clear Active Sunday Lineup (Atomic Batch Reset).
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/` (no `apps/`).
+
+Core Requirement:
+Provide a one-click reset for Directors to wipe the current active Sunday lineup. When triggered, all songs marked active for Sunday must be marked inactive, and any Playlist currently marked active (`isActive === true`) must be set to `isActive = false`. Both operations MUST run in a single atomic database transaction to prevent state drift.
+
+Tasks:
+
+1. Backend Atomic Reset Endpoint (`choir-api/`):
+   - Inspect `choir-api/src/prisma/schema.prisma` and existing song/playlist routes to identify the exact field used for active Sunday songs (e.g., `isActiveSunday` or similar boolean on `Song`) and `isActive` on `Playlist`.
+   - Create an endpoint `POST /api/v1/songs/clear-active` (or `POST /api/v1/playlists/clear-active`):
+     - Restrict access to authenticated Directors.
+     - Wrap mutations in `prisma.$transaction([ ... ])`:
+       1. `prisma.song.updateMany({ where: { [activeSundayField]: true }, data: { [activeSundayField]: false } })`
+       2. `prisma.playlist.updateMany({ where: { isActive: true }, data: { isActive: false } })`
+     - Return `{ success: true, clearedSongsCount: result[0].count, deactivatedPlaylistsCount: result[1].count }`.
+   - Register this endpoint in `choir-api/src/config/swagger.ts` under the `Songs` or `Playlists` tag.
+
+2. Frontend Confirmation UI (`choir-client/`):
+   - In the Songs page (`/songs`):
+     - In the header of the "Active Sunday Songs" section (next to the section title or count badge), render a subtle "Clear Lineup" button (e.g., outline/ghost destructive button with a `RotateCcw` or `Trash2` icon) visible only to Directors when active songs exist.
+     - Clicking it opens an `AlertDialog` confirmation modal:
+       - Title: "Clear Sunday's Lineup?"
+       - Description: "This will remove all songs currently set for this Sunday and deactivate any linked Sunday playlist. You can assign a new lineup at any time."
+       - Action buttons: "Cancel" and "Clear Lineup" (destructive variant).
+   - Mutation Handling:
+     - On confirmation, call the new backend endpoint.
+     - On success:
+       - Invalidate and refetch queries for both songs and playlists so the UI reflects the change immediately.
+       - Display a toast: "Sunday lineup cleared (X songs removed)".
+
+Verification:
+1. Run `nx-workspace-verify` to ensure zero TypeScript compilation errors.
+2. Verify via browser test:
+   - Activate a playlist with 3 songs.
+   - Confirm the 3 songs show under "Active Sunday Songs" on `/songs` and the playlist shows the "Active Sunday Lineup" badge on `/playlists`.
+   - Click "Clear Lineup", confirm the modal, and verify that both the songs list and the playlist badge update to inactive immediately.
+```
+
+## Milestone 16 — In-App AI Assistant (ChoirSync Copilot)
+**Goal:** Implement a floating, edge-anchored chat button that opens a conversational AI interface (powered by Gemini), allowing choristers to ask for vocal tips, harmony guidance, or music theory help directly within the app.
+**Do:**
+1. In `choir-api/`, create a `POST /api/v1/ai/chat` endpoint utilizing the Gemini 2.0 Flash SDK. Configure a system prompt instructing the model to act as a helpful, encouraging ChoirSync vocal and music theory assistant.
+2. Ensure the endpoint accepts a chat history array so the model maintains conversational context.
+3. In `choir-client/`, build a `FloatingChatButton` component anchored to the right edge of the screen (poking out slightly) and render it globally in the root layout.
+4. Build a `ChatSheet` UI (using a right-side sliding drawer/sheet) containing a scrollable message history, distinct User vs. AI chat bubbles, and a sticky input field with a loading state.
+5. Connect the chat UI to the backend endpoint, handling loading states and automatic scroll-to-bottom behavior as new messages arrive.
+**Verify with:** `nx-workspace-verify`, verifying the side-tab renders correctly on mobile/desktop, and testing a multi-turn conversation with the AI.
+
+## Followup Prompt
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 16 — In-App AI Assistant (ChoirSync Copilot).
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Tasks:
+
+1. Backend Chat Endpoint (`choir-api/`):
+   - Ensure the Google Gemini SDK (e.g., `@google/genai` or `@google/generative-ai`) is installed.
+   - Create a new endpoint `POST /api/v1/ai/chat` (authenticated users only).
+   - Expect a JSON body: `{ messages: { role: 'user' | 'model', content: string }[], newMessage: string }`.
+   - Initialize the Gemini 2.0 Flash model. Apply a System Instruction/Prompt: 
+     "You are the ChoirSync Copilot, a friendly, encouraging AI assistant built into a choir management app. Your job is to help choristers and directors with music theory, vocal warmups, harmonizing tips, and general choir advice. Keep answers concise, mobile-friendly, and formatted nicely. The user you are talking to is named [Inject req.user.name or req.user.email]."
+   - Pass the existing `messages` array as history, send the `newMessage`, and return the AI's text response.
+
+2. Global Floating Edge Button (`choir-client/`):
+   - Create `choir-client/src/components/chat/FloatingChatTab.tsx`.
+   - It should be a fixed button positioned on the middle-right edge of the screen (`fixed right-0 top-1/2 -translate-y-1/2 z-50`).
+   - Styling: It should "poke out" slightly (e.g., a rounded-l-xl pill shape, brightly colored or primary gradient, with a `Sparkles` or `MessageCircle` icon).
+   - Clicking it should open the Chat Interface. Add this globally to the main app layout so it's accessible from any page.
+
+3. Chat Interface Drawer (`choir-client/`):
+   - Use the `Sheet` component (from shadcn/ui) configured with `side="right"` to act as the chat container.
+   - **Header**: "ChoirSync Copilot" with a subtle subtitle ("Ask about vocal tips, harmonies, or music theory").
+   - **Message Area**: A flex column with overflow-y-auto. 
+     - AI messages: Aligned left, gray/muted bubble background.
+     - User messages: Aligned right, primary color bubble background.
+     - Implement a `useRef` to automatically scroll to the bottom whenever a new message is added.
+   - **Input Area**: A sticky footer at the bottom of the Sheet with a text input, and a send button (disabled when empty or loading).
+   - **Loading State**: When waiting for the AI response, show a subtle typing indicator (e.g., 3 bouncing dots or a `Loader2` spinner) in the AI's side of the chat.
+
+4. Integration:
+   - Manage the conversation state (an array of message objects) locally in the component.
+   - On submit: immediately append the user's message to the UI, set loading to true, call the API, append the AI's response, and set loading to false.
+   - Handle API errors gracefully (show a red error text bubble: "Sorry, I'm having trouble connecting right now.").
+
+Verification:
+1. Run `nx-workspace-verify` to ensure clean TypeScript compilation.
+2. Start the dev servers, click the side tab, and verify that the layout does not break the mobile viewport and that multi-turn chat works successfully.
+```
