@@ -37,6 +37,9 @@ function initAudioContext() {
   return audioCtx;
 }
 
+// A microscopic silent WAV file as a base64 data URI
+const SILENT_WAV_B64 = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+
 export function unlockAudio() {
   if (unlocked) return;
   const ctx = initAudioContext();
@@ -44,6 +47,17 @@ export function unlockAudio() {
   
   if (ctx.state === 'suspended') {
     ctx.resume().catch(() => {});
+  }
+
+  // HACK: iOS Safari routes Web Audio API to the "Ambient" channel by default (which obeys the mute switch).
+  // By playing an HTML5 <audio> element, we force iOS to promote the tab to the "Playback" channel,
+  // which entirely bypasses the physical mute switch!
+  try {
+    const audioEl = new Audio(SILENT_WAV_B64);
+    audioEl.loop = true;
+    audioEl.play().catch(() => {});
+  } catch (e) {
+    console.error("Failed to play silent audio element for mute bypass", e);
   }
   
   // Play silent buffer to unlock iOS Safari audio engine
