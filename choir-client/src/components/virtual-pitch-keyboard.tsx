@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { playPitch } from '../lib/pitch-synth';
+import { playPitch, unlockAudio } from '../lib/pitch-synth';
 import { cn } from '../lib/utils';
 
 export interface VirtualPitchKeyboardProps {
@@ -38,6 +38,7 @@ export function VirtualPitchKeyboard({ selectedKey, onSelectKey, className }: Vi
   const [activeNote, setActiveNote] = useState<string | null>(null);
 
   const handlePress = (keyId: string) => {
+    unlockAudio();
     setActiveNote(keyId);
     playPitch(keyId);
     if (onSelectKey) {
@@ -62,7 +63,8 @@ export function VirtualPitchKeyboard({ selectedKey, onSelectKey, className }: Vi
               {/* White Key */}
               <button
                 type="button"
-                onPointerDown={(e) => { e.preventDefault(); handlePress(wk.id); }}
+                onTouchStart={(e) => { e.preventDefault(); handlePress(wk.id); }}
+                onMouseDown={(e) => { e.preventDefault(); handlePress(wk.id); }}
                 className={cn(
                   "absolute top-0 w-[96%] h-full rounded-b-md border shadow-sm transition-all flex flex-col justify-end pb-3 active:bg-gray-100 select-none",
                   isSelected ? "bg-primary text-primary-foreground border-primary shadow-[inset_0_-4px_0_rgba(0,0,0,0.2)] z-10 scale-[1.02]" : "bg-white border-gray-300",
@@ -81,7 +83,8 @@ export function VirtualPitchKeyboard({ selectedKey, onSelectKey, className }: Vi
               {wk.hasBlackAfter && BLACK_KEYS_MAP[wk.id] && (
                 <button
                   type="button"
-                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handlePress(BLACK_KEYS_MAP[wk.id].id); }}
+                  onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); handlePress(BLACK_KEYS_MAP[wk.id].id); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handlePress(BLACK_KEYS_MAP[wk.id].id); }}
                   className={cn(
                     "absolute top-0 -right-[25%] w-[50%] h-[60%] rounded-b-sm bg-gray-900 shadow-md z-20 flex flex-col justify-end pb-2 active:bg-gray-700 select-none transition-all",
                     normalizedSelected === BLACK_KEYS_MAP[wk.id].id ? "bg-primary border-white border-2 shadow-[0_0_15px_rgba(var(--primary),0.6)] z-30 scale-105" : "",

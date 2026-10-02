@@ -23,6 +23,8 @@ const FREQUENCIES: Record<string, number> = {
 
 let audioCtx: AudioContext | null = null;
 
+let unlocked = false;
+
 function initAudioContext() {
   if (!audioCtx) {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -34,6 +36,21 @@ function initAudioContext() {
     audioCtx.resume();
   }
   return audioCtx;
+}
+
+export function unlockAudio() {
+  if (unlocked) return;
+  const ctx = initAudioContext();
+  if (!ctx) return;
+  
+  // Play silent buffer to unlock iOS Safari audio engine
+  const buffer = ctx.createBuffer(1, 1, 22050);
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+  source.start(0);
+  
+  unlocked = true;
 }
 
 export function playPitch(noteName: string, duration: number = 1.2) {
