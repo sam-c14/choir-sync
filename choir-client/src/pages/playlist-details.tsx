@@ -11,6 +11,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { RosterPanel } from '../components/playlists/roster-panel';
 import { BroadcastDialog } from '../components/playlists/broadcast-dialog';
+import { KeyPickerDialog } from '../components/playlists/key-picker-dialog';
 import { Send, CheckCircle2, X } from 'lucide-react';
 import { trackChoirEvent } from '../lib/analytics';
 import { Badge } from '../components/ui/badge';
@@ -139,9 +140,9 @@ export default function PlaylistDetailsPage() {
                 <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Active Lineup
               </Badge>
             )}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-bold tracking-tight">{playlist.title}</h1>
-            
+            <KeyPickerDialog playlist={playlist} isDirector={isDirector} />
           </div>
           {playlist.description && (
             <p className="text-muted-foreground">{playlist.description}</p>

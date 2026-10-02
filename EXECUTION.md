@@ -920,3 +920,61 @@ Tasks:
 Verification:
 Run `nx-workspace-verify` to ensure zero TypeScript errors.
 ```
+
+## Milestone 14 — Playlist Master Key & Interactive Pitch Keyboard (Web Audio API)
+**Goal:** Enable setting an overarching key for a Playlist with an interactive, labeled virtual pitch keyboard using the browser's native Web Audio API, keeping individual song keys strictly independent.
+**Do:**
+1. Add `key String?` to the `Playlist` model in `schema.prisma` and run migration.
+2. Update playlist DTOs in `libs/shared/` and the playlist update endpoints in `choir-api/` to accept and persist `key`. Ensure this mutation strictly updates the playlist record and does NOT modify `PlaylistSong.customKey` or `Song.key`.
+3. Create a zero-dependency Web Audio synthesizer utility (`choir-client/src/lib/pitch-synth.ts`) that plays accurate note frequencies (A4 = 440 Hz) using an `AudioContext` oscillator with smooth gain attack/decay.
+4. Build a mobile-optimized, labeled virtual keyboard component (`VirtualPitchKeyboard`) with standard white and black piano keys displaying note names (e.g., C, C#, D, Eb, E, F, F#, G, Ab, A, Bb, B).
+5. Integrate the keyboard into a Key Picker dialog/drawer on the Playlist Details page, allowing the Director to test pitches before confirming the playlist's master key.
+**Verify with:** `nx-workspace-verify`, playing pitch notes on mobile touch devices, saving a playlist key, and verifying that existing song keys in the playlist remain unchanged.
+
+## Followup Prompt
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 14 — Playlist Master Key & Interactive Pitch Keyboard (Web Audio API).
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/` (no `apps/`).
+
+Core Requirement:
+Directors should be able to set an overarching key on a Playlist (e.g., for medleys, opening modulation reference, or overall service pitch). When the Director selects or updates a key for the playlist, it MUST NOT update or overwrite the individual `customKey` or default `key` of the songs contained inside that playlist.
+
+Tasks:
+
+1. Database & Shared Validation (`choir-api/` & `libs/shared/`):
+   - In `choir-api/src/prisma/schema.prisma`, add `key String?` to the `Playlist` model.
+   - Run `prisma-create-migration`.
+   - In `libs/shared/`, update the Playlist validation schemas (e.g., `UpdatePlaylistSchema`) to accept `key: z.string().nullable().optional()`.
+   - In `choir-api/`, ensure `PATCH /api/v1/playlists/:id` updates the playlist's `key` field. Verify that the query touches ONLY the `Playlist` record and does NOT execute any cascade updates on `PlaylistSong` or `Song`.
+
+2. Web Audio Pitch Synthesizer (`choir-client/src/lib/pitch-synth.ts`):
+   - Build a lightweight audio synthesis module using the browser's native `window.AudioContext || window.webkitAudioContext`.
+   - Calculate or map standard 12-TET frequencies for an octave (e.g., C4 = 261.63 Hz, C#4 = 277.18 Hz ... B4 = 493.88 Hz, C5 = 523.25 Hz).
+   - Implement `playPitch(noteName: string, duration = 1.2)`:
+     - Lazily initialize or resume the `AudioContext` on user interaction (to handle mobile autoplay restrictions).
+     - Use a blend of triangle/sine oscillators or a warm envelope with quick attack (0.02s) and smooth exponential decay release to sound like a clean pitch pipe / keyboard tone without clicking.
+
+3. Interactive Labeled Keyboard UI (`choir-client/src/components/`):
+   - Build a `VirtualPitchKeyboard` component:
+     - Displays a standard piano octave (C4 through B4 or C5).
+     - **White Keys**: Clean vertical pill/rounded-bottom cards labeled with root notes (`C`, `D`, `E`, `F`, `G`, `A`, `B`).
+     - **Black Keys**: Positioned properly between white keys with negative margins/absolute positioning and contrasting dark styling, dual-labeled (`C#/Db`, `D#/Eb`, `F#/Gb`, `G#/Ab`, `A#/Bb`).
+     - Touch & Click handling: Tapping any key immediately plays its audio tone via `playPitch()` and highlights the key active state.
+     - Supports a `selectedKey` prop to show the currently selected key with an active badge/border.
+     - Include mobile horizontal scroll or auto-scaling so all keys fit comfortably on 360px+ phone screens.
+
+4. Playlist Header Key Picker Dialog (`choir-client/`):
+   - On the Playlist Details page (`/playlists/[id]`):
+     - In the playlist meta/header bar next to the title and service date, show a "Service Key" badge (e.g., "Key: G Major" or "Set Master Key" button for Directors).
+     - Clicking it opens a Dialog (or bottom Sheet on mobile) titled "Select Playlist Key".
+     - Header text: "Test pitch tones on the keyboard below, then select the overarching key for this service setlist."
+     - Render `<VirtualPitchKeyboard />` inside the dialog.
+     - Below the keyboard, render quick select buttons or confirm button to lock in the chosen key.
+     - Add a subtle reminder note: "Note: Setting a playlist key does not modify individual song keys."
+     - On save, call `PATCH /api/v1/playlists/:id` with `{ key: selectedKey }`, invalidate the playlist query, and show a success toast.
+
+Verification:
+1. Run `nx-workspace-verify` to ensure clean TypeScript compilation across all monorepo packages.
+2. Test on mobile viewports: ensure touching piano keys generates sound and saving the playlist key preserves individual song keys in the playlist.
+```

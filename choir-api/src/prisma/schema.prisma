@@ -139,6 +139,7 @@ model SongLink {
 model Playlist {
   id          String         @id @default(uuid())
   title       String         // e.g. "Sunday Service - Oct 12"
+  key         String?
   description String?
   serviceDate DateTime?      // Ties directly to Sunday/Uniform dates
   createdById String

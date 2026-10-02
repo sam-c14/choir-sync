@@ -1,0 +1,94 @@
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { VirtualPitchKeyboard } from '../virtual-pitch-keyboard';
+import { toast } from 'sonner';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '../../lib/api-client';
+
+export function KeyPickerDialog({ playlist, isDirector }: { playlist: any, isDirector: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [selectedKey, setSelectedKey] = useState<string | null>(playlist.key || null);
+  const queryClient = useQueryClient();
+
+  const updateKeyMutation = useMutation({
+    mutationFn: async (keyToSave: string | null) => {
+      const res = await apiClient.patch(`/playlists/${playlist.id}`, { key: keyToSave });
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success('Playlist master key updated');
+      queryClient.invalidateQueries({ queryKey: ['playlist', playlist.id] });
+      setOpen(false);
+    },
+    onError: () => {
+      toast.error('Failed to update key');
+    }
+  });
+
+  const handleSave = () => {
+    updateKeyMutation.mutate(selectedKey);
+  };
+
+  const handleClear = () => {
+    updateKeyMutation.mutate(null);
+  };
+
+  // Ensure local state syncs when opened
+  React.useEffect(() => {
+    if (open) {
+      setSelectedKey(playlist.key || null);
+    }
+  }, [open, playlist.key]);
+
+  if (!isDirector) {
+    if (!playlist.key) return null;
+    return (
+      <Badge variant="secondary" className="text-sm font-medium px-3 py-1 bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-900">
+        Key: {playlist.key}
+      </Badge>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8 gap-1 border-amber-200 hover:border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-900 dark:text-amber-200">
+          {playlist.key ? `Key: ${playlist.key}` : 'Set Master Key'}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md w-[95vw] p-4 sm:p-6 overflow-hidden max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle>Select Playlist Key</DialogTitle>
+          <p className="text-sm text-muted-foreground mt-2">
+            Test pitch tones on the keyboard below, then select the overarching key for this service setlist.
+          </p>
+        </DialogHeader>
+
+        <div className="py-4">
+          <VirtualPitchKeyboard 
+            selectedKey={selectedKey} 
+            onSelectKey={(k) => setSelectedKey(k)} 
+          />
+        </div>
+
+        <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground italic text-center mb-4">
+          Note: Setting a playlist key does not modify individual song keys.
+        </div>
+
+        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+          <Button variant="ghost" onClick={handleClear} disabled={updateKeyMutation.isPending} className="sm:mr-auto text-destructive hover:bg-destructive/10">
+            Clear Key
+          </Button>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={updateKeyMutation.isPending}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={updateKeyMutation.isPending}>
+            {updateKeyMutation.isPending ? 'Saving...' : 'Save Key'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

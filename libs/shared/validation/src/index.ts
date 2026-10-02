@@ -95,6 +95,7 @@ export const CreatePlaylistSchema = z.object({
   title: z.string().min(1, "Title is required").max(150),
   description: z.string().max(1000).optional().nullable(),
   serviceDate: z.coerce.date().optional().nullable(),
+  key: z.string().max(20).optional().nullable(),
 });
 export const UpdatePlaylistSchema = CreatePlaylistSchema.partial();
 

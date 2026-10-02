@@ -60,11 +60,11 @@ export const swaggerPaths = {
   },
   '/api/v1/playlists': {
     get: { tags: ['Playlists'], summary: 'List playlists', responses: { 200: { description: 'Success' } } },
-    post: { tags: ['Playlists'], summary: 'Create playlist', requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { title: { type: 'string' }, serviceDate: { type: 'string' } } } } } }, responses: { 201: { description: 'Created' } } }
+    post: { tags: ['Playlists'], summary: 'Create playlist', requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { title: { type: 'string' }, serviceDate: { type: 'string' }, key: { type: 'string' } } } } } }, responses: { 201: { description: 'Created' } } }
   },
   '/api/v1/playlists/{id}': {
     get: { tags: ['Playlists'], summary: 'Get playlist details', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Success' } } },
-    patch: { tags: ['Playlists'], summary: 'Update playlist', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { title: { type: 'string' }, serviceDate: { type: 'string' } } } } } }, responses: { 200: { description: 'Success' } } },
+    patch: { tags: ['Playlists'], summary: 'Update playlist', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { title: { type: 'string' }, serviceDate: { type: 'string' }, key: { type: 'string' } } } } } }, responses: { 200: { description: 'Success' } } },
     delete: { tags: ['Playlists'], summary: 'Delete playlist', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 204: { description: 'No Content' } } }
   },
   '/api/v1/playlists/{id}/active': {
