@@ -51,6 +51,7 @@ export function App() {
                       </Routes>
                     </main>
                     <GlobalPlayer />
+                    <FloatingChatTab />
                     <Toaster />
                     <BackToTopButton />
                   </div>

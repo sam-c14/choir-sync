@@ -22,7 +22,14 @@ class AiController {
   async chat(req: Request, res: Response) {
     try {
       const { messages, newMessage } = ChatRequestSchema.parse(req.body);
-      const userName = req.user?.name || req.user?.email || 'Chorister';
+      
+      let userName = 'Chorister';
+      if (req.user?.id) {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (user) {
+          userName = user.name || user.email || 'Chorister';
+        }
+      }
 
       const responseText = await aiService.generateChatResponse(messages, newMessage, userName);
 
