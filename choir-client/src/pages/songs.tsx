@@ -14,7 +14,21 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from '../components/ui/dropdown-menu';
-import { Plus, Search, ChevronDown, Pencil, Trash2, Music, SearchX } from 'lucide-react';
+import { Plus, Search, ChevronDown, Pencil, Trash2, Music, SearchX, RotateCcw } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../components/ui/alert-dialog";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '../lib/api-client';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 type SortKey = 'title' | 'createdAt' | 'complexity';
@@ -42,6 +56,62 @@ interface Song {
   createdAt: string;
   parts: { voicePart: string; notes?: string | null }[];
   links: { id: string; platform: string; url: string }[];
+}
+
+
+function ClearLineupButton() {
+  const queryClient = useQueryClient();
+  
+  const [open, setOpen] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.post('/songs/clear-active');
+      return res.data;
+    },
+    onSuccess: (data) => {
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['songs'] });
+      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      toast.success(`Sunday lineup cleared (${data.clearedSongsCount} songs removed)`);
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || 'Failed to clear lineup';
+      toast.error(msg);
+    }
+  });
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger 
+        render={<Button variant="outline" size="sm" className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground" />}
+      >
+        <RotateCcw className="w-4 h-4 mr-2" />
+        Clear Lineup
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear Sunday's Lineup?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will remove all songs currently set for this Sunday and deactivate any linked Sunday playlist. You can assign a new lineup at any time.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={mutation.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={(e) => {
+              e.preventDefault();
+              mutation.mutate();
+            }}
+            disabled={mutation.isPending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {mutation.isPending ? 'Clearing...' : 'Clear Lineup'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
 
 export default function SongsPage() {
@@ -73,6 +143,7 @@ export default function SongsPage() {
         onEditSong={(song) => navigate(`/songs/${song.id}/edit`)}
         onDeleteSong={setDeletingSong}
         isDirector={isDirector}
+        headerAction={isDirector ? <ClearLineupButton /> : null}
       />
 
       <SongSection
@@ -101,6 +172,7 @@ function SongSection({
   onEditSong,
   onDeleteSong,
   isDirector,
+  headerAction,
 }: {
   title: string;
   status: string;
@@ -108,6 +180,7 @@ function SongSection({
   onEditSong: (song: Song) => void;
   onDeleteSong: (song: Song) => void;
   isDirector: boolean;
+  headerAction?: React.ReactNode;
 }) {
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 600);

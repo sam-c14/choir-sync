@@ -8,6 +8,7 @@ const router = Router();
 // Middleware: all routes require auth
 router.use(requireAuth);
 
+router.post('/clear-active', requireRole('DIRECTOR'), songsController.clearActiveLineup.bind(songsController));
 router.post('/', requireRole('DIRECTOR'), songsController.createSong.bind(songsController));
 router.patch('/:id', requireRole('DIRECTOR'), songsController.updateSong.bind(songsController));
 router.patch('/:id/lyrics', songsController.updateLyrics.bind(songsController));

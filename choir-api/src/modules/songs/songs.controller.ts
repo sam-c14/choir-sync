@@ -11,6 +11,15 @@ import {
 import { songsService } from './songs.service';
 
 export class SongsController {
+  async clearActiveLineup(req: Request, res: Response) {
+    try {
+      const result = await songsService.clearActiveLineup();
+      res.status(200).json(result);
+    } catch (error: any) {
+      logger.error(error);
+      res.status(500).json({ error: error.message });
+    }
+  }
   async getSongs(req: Request, res: Response) {
     try {
       const options = {

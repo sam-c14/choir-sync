@@ -9,6 +9,23 @@ import {
 import { VoicePartType } from '@prisma/client';
 
 export class SongsService {
+  async clearActiveLineup() {
+    const result = await prisma.$transaction([
+      prisma.song.updateMany({
+        where: { status: 'ACTIVE_SUNDAY' },
+        data: { status: 'REHEARSAL' }
+      }),
+      prisma.playlist.updateMany({
+        where: { isActive: true },
+        data: { isActive: false }
+      })
+    ]);
+    return {
+      success: true,
+      clearedSongsCount: result[0].count,
+      deactivatedPlaylistsCount: result[1].count
+    };
+  }
   async getSongs(options: {
     page?: number;
     limit?: number;
