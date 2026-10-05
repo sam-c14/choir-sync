@@ -67,10 +67,14 @@ export class UniformsService {
       if (existing && existing.imageUrls.length > 0) {
         const removedUrls = existing.imageUrls.filter(url => !dto.imageUrls?.includes(url));
         if (removedUrls.length > 0) {
-          const paths = removedUrls.map(url => url.split('uniform-inspos/')[1]).filter(Boolean);
+          const paths = removedUrls.map(url => {
+            const p = url.split('uniform-inspos/')[1];
+            return p ? decodeURIComponent(p) : null;
+          }).filter(Boolean) as string[];
           if (paths.length > 0) {
             try {
-              await supabaseAdmin.storage.from('uniform-inspos').remove(paths);
+              const { error } = await supabaseAdmin.storage.from('uniform-inspos').remove(paths);
+              if (error) throw error;
             } catch (err) {
               logger.error('Failed to remove orphaned images from storage during update', err);
             }
@@ -88,10 +92,14 @@ export class UniformsService {
   async deleteUniform(id: string) {
     const existing = await prisma.uniformSchedule.findUnique({ where: { id } });
     if (existing && existing.imageUrls.length > 0) {
-      const paths = existing.imageUrls.map(url => url.split('uniform-inspos/')[1]).filter(Boolean);
+      const paths = existing.imageUrls.map(url => {
+        const p = url.split('uniform-inspos/')[1];
+        return p ? decodeURIComponent(p) : null;
+      }).filter(Boolean) as string[];
       if (paths.length > 0) {
         try {
-          await supabaseAdmin.storage.from('uniform-inspos').remove(paths);
+          const { error } = await supabaseAdmin.storage.from('uniform-inspos').remove(paths);
+              if (error) throw error;
         } catch (err) {
           logger.error('Failed to remove orphaned images from storage during delete', err);
         }
