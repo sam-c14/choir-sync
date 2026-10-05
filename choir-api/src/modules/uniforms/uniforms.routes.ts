@@ -9,6 +9,7 @@ router.use(requireAuth);
 
 router.get('/', uniformsController.getUniforms.bind(uniformsController));
 
+router.post('/upload-url', requireRole('DIRECTOR'), uniformsController.getUploadUrl.bind(uniformsController));
 router.post('/', requireRole('DIRECTOR'), uniformsController.createUniform.bind(uniformsController));
 router.patch('/:id', requireRole('DIRECTOR'), uniformsController.updateUniform.bind(uniformsController));
 router.delete('/:id', requireRole('DIRECTOR'), uniformsController.deleteUniform.bind(uniformsController));

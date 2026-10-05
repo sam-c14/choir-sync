@@ -8,6 +8,7 @@ interface UniformSchedule {
   femaleOutfit: string;
   maleOutfit: string;
   notes: string | null;
+  imageUrls: string[];
 }
 
 export interface PaginatedUniforms {

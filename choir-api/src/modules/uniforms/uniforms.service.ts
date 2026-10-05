@@ -1,5 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { CreateUniformDto, UpdateUniformDto } from '@choir-workspace/shared-validation';
+import { supabaseAdmin } from '../../lib/supabase';
+import { logger } from '../../lib/logger';
 import { startOfDay } from 'date-fns';
 
 export class UniformsService {
@@ -54,11 +56,29 @@ export class UniformsService {
         femaleOutfit: dto.femaleOutfit,
         maleOutfit: dto.maleOutfit,
         notes: dto.notes,
+        imageUrls: dto.imageUrls || [],
       },
     });
   }
 
   async updateUniform(id: string, dto: UpdateUniformDto) {
+    if (dto.imageUrls) {
+      const existing = await prisma.uniformSchedule.findUnique({ where: { id } });
+      if (existing && existing.imageUrls.length > 0) {
+        const removedUrls = existing.imageUrls.filter(url => !dto.imageUrls?.includes(url));
+        if (removedUrls.length > 0) {
+          const paths = removedUrls.map(url => url.split('uniform-inspos/')[1]).filter(Boolean);
+          if (paths.length > 0) {
+            try {
+              await supabaseAdmin.storage.from('uniform-inspos').remove(paths);
+            } catch (err) {
+              logger.error('Failed to remove orphaned images from storage during update', err);
+            }
+          }
+        }
+      }
+    }
+
     return prisma.uniformSchedule.update({
       where: { id },
       data: dto,
@@ -66,6 +86,18 @@ export class UniformsService {
   }
 
   async deleteUniform(id: string) {
+    const existing = await prisma.uniformSchedule.findUnique({ where: { id } });
+    if (existing && existing.imageUrls.length > 0) {
+      const paths = existing.imageUrls.map(url => url.split('uniform-inspos/')[1]).filter(Boolean);
+      if (paths.length > 0) {
+        try {
+          await supabaseAdmin.storage.from('uniform-inspos').remove(paths);
+        } catch (err) {
+          logger.error('Failed to remove orphaned images from storage during delete', err);
+        }
+      }
+    }
+
     return prisma.uniformSchedule.delete({
       where: { id },
     });

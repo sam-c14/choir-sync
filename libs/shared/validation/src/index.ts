@@ -73,6 +73,7 @@ export const CreateUniformSchema = z.object({
   femaleOutfit: z.string().min(1, "Female outfit description is required").max(1000),
   maleOutfit: z.string().min(1, "Male outfit description is required").max(1000),
   notes: z.string().max(2000).optional().nullable(),
+  imageUrls: z.array(z.string().url()).max(4).optional(),
 });
 
 export const UpdateUniformSchema = CreateUniformSchema.partial();

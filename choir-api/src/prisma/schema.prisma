@@ -83,6 +83,7 @@ model UniformSchedule {
   femaleOutfit String
   maleOutfit   String
   notes        String?
+  imageUrls    String[] @default([])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

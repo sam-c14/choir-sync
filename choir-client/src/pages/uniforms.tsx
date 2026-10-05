@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { UniformDialog } from '../components/uniforms/uniform-dialog';
 import { DeleteUniformDialog } from '../components/uniforms/delete-uniform-dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { Skeleton } from '../components/ui/skeleton';
 import { Label } from '../components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
@@ -33,6 +34,9 @@ export default function UniformsPage() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingUniformId, setDeletingUniformId] = useState<string | null>(null);
+
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState('');
 
   const isDirector = user?.role === 'DIRECTOR';
 
@@ -238,10 +242,39 @@ export default function UniformsPage() {
                       <p className="text-sm italic">{u.notes}</p>
                     </div>
                   )}
+                  {u.imageUrls && u.imageUrls.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-2">Inspiration</h4>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {u.imageUrls.map((url: string, i: number) => (
+                          <div 
+                            key={url} 
+                            className="aspect-square rounded-md overflow-hidden cursor-pointer border hover:opacity-90 transition-opacity"
+                            onClick={() => {
+                              setLightboxUrl(url);
+                              setLightboxOpen(true);
+                            }}
+                          >
+                            <img src={url} alt="Inspiration" className="object-cover w-full h-full" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
           </div>
+          
+          <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+            <DialogContent className="max-w-4xl p-1 bg-transparent border-none shadow-none">
+              <DialogTitle className="sr-only">Image Preview</DialogTitle>
+              <DialogDescription className="sr-only">Full size view of the uniform inspiration image</DialogDescription>
+              <div className="relative flex justify-center items-center h-full w-full max-h-[90vh]">
+                <img src={lightboxUrl} alt="Preview" className="max-h-[90vh] max-w-full object-contain rounded-md" />
+              </div>
+            </DialogContent>
+          </Dialog>
           
           {filter === 'past' && totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
