@@ -1143,3 +1143,31 @@ Verification:
 1. Run `nx-workspace-verify` to ensure clean TypeScript compilation.
 2. Verify frontend upload orchestration handles failures cleanly without saving a broken state to the database.
 ```
+
+## Followup Prompt 2
+```bash
+Read PRD.md and the current implementation of the Uniform Schedule image upload in `choir-client/`.
+
+Requirement: We must implement client-side image compression before uploading files to Supabase Signed URLs to protect our 500MB free tier storage limit and ensure fast mobile uploads.
+
+Tasks (`choir-client/`):
+1. Install the `browser-image-compression` package.
+2. In the component or hook that handles the Uniform image upload (where `fetch(signedUrl, { method: 'PUT', body: file })` occurs):
+   - Import `imageCompression` from `browser-image-compression`.
+   - Before requesting the signed URL, pass the raw `File` through the compressor:
+     ```typescript
+     const options = {
+       maxSizeMB: 0.5, // Target max 500KB
+       maxWidthOrHeight: 1920, // Keep 1080p/HD resolution
+       useWebWorker: true,
+       fileType: 'image/webp' // Convert to modern web format for maximum savings
+     };
+     const compressedFile = await imageCompression(rawFile, options);
+     ```
+   - Request the signed URL (pass `contentType: 'image/webp'` if your backend requires it).
+   - `PUT` the `compressedFile` to the Supabase signed URL instead of the raw file.
+3. Show a subtle loading state on the UI while compression and uploading occur (e.g., "Processing images...").
+
+Verification:
+Run `nx-workspace-verify`. Test the upload flow with a large 5MB+ image and verify in the Supabase Storage dashboard that the resulting file is under 500KB and visually clear in the app.
+```

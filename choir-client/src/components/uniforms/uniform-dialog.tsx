@@ -15,6 +15,7 @@ import { cn } from '../../lib/utils';
 import { useCreateUniform, useUpdateUniform } from '../../hooks/use-uniforms';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import imageCompression from 'browser-image-compression';
 import { apiClient } from '../../lib/api-client';
 import { toast } from 'sonner';
 
@@ -83,18 +84,31 @@ export function UniformDialog({
       const uploadedUrls: string[] = [];
       
       // Upload new files to Supabase
-      for (const file of newFiles) {
+      for (const rawFile of newFiles) {
+        // Compress image before upload
+        const options = {
+          maxSizeMB: 0.5,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+          fileType: 'image/webp'
+        };
+        const compressedFile = await imageCompression(rawFile, options);
+
+        // We replace the original extension with .webp
+        const newFilename = rawFile.name.replace(/\.[^/.]+$/, "") + ".webp";
+
         // Get signed URL
         const { data: urlData } = await apiClient.post('/uniforms/upload-url', {
-          filename: file.name
+          filename: newFilename,
+          contentType: 'image/webp'
         });
         
         // PUT directly to Supabase storage
         await fetch(urlData.signedUrl, {
           method: 'PUT',
-          body: file,
+          body: compressedFile,
           headers: {
-            'Content-Type': file.type,
+            'Content-Type': 'image/webp',
           }
         });
         
@@ -247,7 +261,7 @@ export function UniformDialog({
               {(isSubmitting || isUploading) ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  Processing images...
                 </>
               ) : 'Save'}
             </Button>
