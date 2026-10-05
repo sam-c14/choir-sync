@@ -1084,3 +1084,62 @@ Verification:
 1. Run `nx-workspace-verify` to ensure clean TypeScript compilation.
 2. Start the dev servers, click the side tab, and verify that the layout does not break the mobile viewport and that multi-turn chat works successfully.
 ```
+
+## Milestone 17 — Uniform Inspiration Images (Signed Uploads)
+**Goal:** Allow Directors to attach up to 4 inspiration images to a Uniform Schedule, utilizing Supabase Signed Upload URLs for secure, direct-to-cloud file hosting.
+**Do:**
+1. Update `UniformSchedule` (or your uniform model) in `schema.prisma` to include `imageUrls String[] @default([])` and run a migration.
+2. In `choir-api/`, create a `POST /api/v1/uniforms/upload-url` endpoint that uses `supabaseAdmin` to generate a signed upload URL for the `uniform-inspos` bucket.
+3. Update the Uniform CRUD endpoints (`POST` and `PATCH`) to accept the `imageUrls` array. In the `PATCH` and `DELETE` endpoints, implement a diffing logic to automatically remove deleted images from the Supabase bucket.
+4. In `choir-client/`, update the Uniform form to include an image picker/dropzone with a hard limit of 4 images. Display local thumbnail previews with a clickable "X" to remove them.
+5. Implement the upload flow: `GET` signed URLs for new files $\rightarrow$ `PUT` files directly to Supabase $\rightarrow$ append public URLs to the form payload.
+6. Render the uploaded images in a responsive grid on the Uniform Schedule view, supporting a click-to-expand lightbox or fullscreen view.
+**Verify with:** `nx-workspace-verify`, uploading 3 images, viewing them, editing the uniform to delete 1 image, and verifying it disappears from both the UI and the Supabase storage bucket.
+
+## Followup Prompt
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 17 — Uniform Inspiration Images (Signed Uploads).
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Tasks:
+
+1. Database & Validation (`choir-api/` & `libs/shared/`):
+   - In `choir-api/src/prisma/schema.prisma`, add `imageUrls String[] @default([])` to the `UniformSchedule` model.
+   - Run `prisma-create-migration`.
+   - In `libs/shared/`, update the uniform DTOs (`CreateUniformDto`, `UpdateUniformDto`) to accept `imageUrls: z.array(z.string().url()).max(4).optional()`.
+
+2. Backend Signed URL Endpoint (`choir-api/`):
+   - Create `POST /api/v1/uniforms/upload-url` (Directors only).
+   - Require a `filename` or `contentType` in the body.
+   - Generate a unique path: `inspos/${Date.now()}-${crypto.randomUUID()}-${filename}`.
+   - Call `supabaseAdmin.storage.from('uniform-inspos').createSignedUploadUrl(path)`.
+   - Return `{ signedUrl, publicUrl }` (construct publicUrl using `supabaseAdmin.storage.from('uniform-inspos').getPublicUrl(path).data.publicUrl`).
+
+3. Backend Storage Cleanup Logic (`choir-api/`):
+   - In `PATCH /api/v1/uniforms/:id`:
+     - Fetch the existing uniform record first.
+     - Compare the existing `imageUrls` with the incoming `imageUrls` payload.
+     - Find any URLs that were removed. Extract their storage paths and call `supabaseAdmin.storage.from('uniform-inspos').remove(pathsToDelete)` so we don't leave orphaned files in Supabase.
+   - In `DELETE /api/v1/uniforms/:id`:
+     - Automatically remove all associated `imageUrls` from the Supabase bucket before deleting the DB record.
+
+4. Frontend Image Picker & Form (`choir-client/`):
+   - Update the Uniform create/edit form.
+   - Add a file input widget restricted to `image/*` and a max of 4 files combined (existing + new).
+   - Display thumbnail previews of selected images. Add a top-right "X" button (destructive badge/icon) to each thumbnail to remove it.
+   - On submit, for any *newly* added `File` objects:
+     1. Call `/api/v1/uniforms/upload-url` to get the signed URL.
+     2. `fetch(signedUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })`.
+     3. Collect the resulting `publicUrl`s and combine them with the kept existing URLs.
+     4. Send the final string array in the `POST` or `PATCH` uniform request.
+
+5. Frontend View Grid (`choir-client/`):
+   - On the Uniform Schedule display component/card, map over `uniform.imageUrls`.
+   - Render them in a CSS grid (e.g., `grid-cols-2` or `grid-cols-4` depending on the count).
+   - Make the images clickable to open a larger view (you can use a simple Dialog containing an `img` tag for a quick lightbox effect).
+
+Verification:
+1. Run `nx-workspace-verify` to ensure clean TypeScript compilation.
+2. Verify frontend upload orchestration handles failures cleanly without saving a broken state to the database.
+```
