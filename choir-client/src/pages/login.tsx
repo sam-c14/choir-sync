@@ -91,12 +91,22 @@ export default function LoginPage() {
                       const res = await apiClient.post<{
                         token: string;
                         refreshToken: string;
+                        user?: { createdAt: string };
                       }>("/auth/google", {
                         idToken: credentialResponse.credential,
                       });
                       login(res.data.token, res.data.refreshToken);
                       trackChoirEvent({ action: "login_success", params: { method: "google" } });
-                      navigate(from, { replace: true });
+                      
+                      let nextUrl = from;
+                      if (res.data.user && res.data.user.createdAt) {
+                        const createdTime = new Date(res.data.user.createdAt).getTime();
+                        // If account was created less than 2 minutes ago, consider it a new signup
+                        if (Date.now() - createdTime < 2 * 60 * 1000) {
+                          nextUrl = "/profile";
+                        }
+                      }
+                      navigate(nextUrl, { replace: true });
                     } catch (err: unknown) {
                       setIsGoogleLoading(false);
                       const message =

@@ -46,7 +46,14 @@ export class AuthService {
       },
     });
 
-    return { token, refreshToken };
+    return { 
+      token, 
+      refreshToken,
+      user: {
+        id: user.id,
+        createdAt: user.createdAt,
+      }
+    };
   }
 
   async login(dto: LoginDto) {
