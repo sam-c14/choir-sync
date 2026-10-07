@@ -73,7 +73,17 @@ export default function AdminUsersPage() {
           {usersData?.data.map((u) => (
             <Card key={u.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4">
               <div className="space-y-1 w-full sm:w-auto">
-                <p className="font-medium text-lg leading-none truncate max-w-[250px] sm:max-w-xs">{u.email}</p>
+                <div className="flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-2">
+                  {u.name && (
+                    <>
+                      <span className="font-medium text-lg leading-none truncate max-w-[250px] lg:max-w-xs" title={u.name}>{u.name}</span>
+                      <span className="hidden lg:inline text-muted-foreground">&bull;</span>
+                    </>
+                  )}
+                  <span className={`leading-none truncate max-w-[250px] lg:max-w-xs ${u.name ? 'text-sm text-muted-foreground lg:text-lg lg:text-foreground lg:font-medium' : 'font-medium text-lg'}`} title={u.email}>
+                    {u.email}
+                  </span>
+                </div>
                 <div className="flex gap-2 text-sm text-muted-foreground items-center mt-1">
                   <span>{new Date(u.createdAt).toLocaleDateString()}</span>
                   <span>&bull;</span>
