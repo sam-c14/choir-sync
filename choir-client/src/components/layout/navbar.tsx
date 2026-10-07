@@ -52,7 +52,7 @@ export function Navbar() {
             <Link to="/uniforms" className={getLinkClass('/uniforms')}>
               Uniforms
             </Link>
-            {user.role === 'DIRECTOR' && (
+            {(user.role === 'DIRECTOR' || user.role === 'ADMIN') && (
               <Link to="/admin/users" className={getLinkClass('/admin/users')}>
                 Users
               </Link>

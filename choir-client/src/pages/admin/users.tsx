@@ -37,11 +37,11 @@ export default function AdminUsersPage() {
     deleteMutation.mutate(userId);
   };
 
-  if (currentUser?.role !== 'DIRECTOR') {
+  if (currentUser?.role !== 'DIRECTOR' && currentUser?.role !== 'ADMIN') {
     return (
       <div className="max-w-5xl mx-auto space-y-6 px-4 py-6">
         <h2 className="text-2xl font-bold text-destructive">Access Denied</h2>
-        <p>You must be a Director to view this page.</p>
+        <p>You must be a Director or Admin to view this page.</p>
       </div>
     );
   }
@@ -90,6 +90,7 @@ export default function AdminUsersPage() {
                     <SelectItem value="CHORISTER">Chorister</SelectItem>
                     <SelectItem value="SECTION_LEADER">Section Leader</SelectItem>
                     <SelectItem value="DIRECTOR">Director</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -106,7 +107,7 @@ export default function AdminUsersPage() {
                   </Select>
                 )}
 
-                {u.role !== 'DIRECTOR' && (
+                {u.role !== 'DIRECTOR' && u.role !== 'ADMIN' && (
                   <AlertDialog>
                     <AlertDialogTrigger
                       render={

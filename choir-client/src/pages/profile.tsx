@@ -123,6 +123,29 @@ export function ProfilePage() {
               )}
             </div>
 
+            <div className="space-y-3">
+              <Label htmlFor="participationType">Participation Role</Label>
+              <Controller
+                control={form.control}
+                name="participationType"
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value || 'VOCALIST'}>
+                    <SelectTrigger id="participationType" className="w-full">
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="VOCALIST">Vocalist</SelectItem>
+                      <SelectItem value="INSTRUMENTALIST">Instrumentalist</SelectItem>
+                      <SelectItem value="CHOIR_DIRECTOR">Choir Director</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {form.formState.errors.participationType && (
+                <p className="text-sm text-destructive">{form.formState.errors.participationType.message}</p>
+              )}
+            </div>
+
             <Button 
               type="submit" 
               className="w-full py-4" 

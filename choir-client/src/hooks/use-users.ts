@@ -8,7 +8,7 @@ export interface User {
   email: string;
   name?: string | null;
   comfortableKey?: string | null;
-  role: 'DIRECTOR' | 'SECTION_LEADER' | 'CHORISTER';
+  role: 'DIRECTOR' | 'SECTION_LEADER' | 'CHORISTER' | 'ADMIN';
   leadsVoicePart: 'SOPRANO' | 'ALTO' | 'TENOR' | null;
   provider: 'LOCAL' | 'GOOGLE';
   createdAt: string;
