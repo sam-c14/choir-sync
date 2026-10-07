@@ -124,7 +124,7 @@ export function ProfilePage() {
             </div>
 
             <div className="space-y-3">
-              <Label htmlFor="participationType">Participation Role</Label>
+              <Label htmlFor="participationType">Choir Role</Label>
               <Controller
                 control={form.control}
                 name="participationType"
@@ -135,8 +135,8 @@ export function ProfilePage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="VOCALIST">Vocalist</SelectItem>
-                      <SelectItem value="INSTRUMENTALIST">Instrumentalist</SelectItem>
-                      <SelectItem value="CHOIR_DIRECTOR">Choir Director</SelectItem>
+                      <SelectItem value="MUSICIAN">Musician</SelectItem>
+                      <SelectItem value="BOTH">Vocalist & Musician</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

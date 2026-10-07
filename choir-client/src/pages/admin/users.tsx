@@ -107,7 +107,7 @@ export default function AdminUsersPage() {
                   </Select>
                 )}
 
-                {u.role !== 'DIRECTOR' && u.role !== 'ADMIN' && (
+                {u.role !== 'DIRECTOR' && u.role !== 'ADMIN' && currentUser?.role === 'ADMIN' && (
                   <AlertDialog>
                     <AlertDialogTrigger
                       render={

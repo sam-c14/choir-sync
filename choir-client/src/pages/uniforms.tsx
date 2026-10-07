@@ -36,7 +36,8 @@ export default function UniformsPage() {
   const [deletingUniformId, setDeletingUniformId] = useState<string | null>(null);
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxUrl, setLightboxUrl] = useState('');
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const isDirector = user?.role === 'DIRECTOR';
 
@@ -251,7 +252,8 @@ export default function UniformsPage() {
                             key={url} 
                             className="aspect-square rounded-md overflow-hidden cursor-pointer border hover:opacity-90 transition-opacity"
                             onClick={() => {
-                              setLightboxUrl(url);
+                              setLightboxImages(u.imageUrls);
+                              setLightboxIndex(i);
                               setLightboxOpen(true);
                             }}
                           >
@@ -267,11 +269,39 @@ export default function UniformsPage() {
           </div>
           
           <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-            <DialogContent className="max-w-4xl p-1 bg-transparent border-none shadow-none">
+            <DialogContent className="max-w-screen-lg p-0 bg-transparent border-none shadow-none flex flex-col items-center justify-center [&>button]:bg-black [&>button]:text-white [&>button]:rounded-full [&>button]:p-2 [&>button]:hover:bg-black/80 [&>button]:right-2 [&>button]:top-2 [&>button]:opacity-100">
               <DialogTitle className="sr-only">Image Preview</DialogTitle>
               <DialogDescription className="sr-only">Full size view of the uniform inspiration image</DialogDescription>
               <div className="relative flex justify-center items-center h-full w-full max-h-[90vh]">
-                <img src={lightboxUrl} alt="Preview" className="max-h-[90vh] max-w-full object-contain rounded-md" />
+                {lightboxImages.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute left-2 z-10 bg-black text-white hover:bg-black/80 hover:text-white rounded-full opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxIndex((prev) => (prev > 0 ? prev - 1 : lightboxImages.length - 1));
+                    }}
+                  >
+                    <span className="sr-only">Previous</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  </Button>
+                )}
+                <img src={lightboxImages[lightboxIndex]} alt="Preview" className="max-h-[85vh] max-w-[90vw] object-contain rounded-md shadow-2xl" />
+                {lightboxImages.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 z-10 bg-black text-white hover:bg-black/80 hover:text-white rounded-full opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxIndex((prev) => (prev < lightboxImages.length - 1 ? prev + 1 : 0));
+                    }}
+                  >
+                    <span className="sr-only">Next</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </Button>
+                )}
               </div>
             </DialogContent>
           </Dialog>
