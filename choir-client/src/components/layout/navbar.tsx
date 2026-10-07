@@ -23,7 +23,7 @@ export function Navbar() {
     return `text-sm font-medium transition-all rounded-md py-1 pb-1.5 px-3 whitespace-nowrap border ${
       isActive 
         ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
-        : 'text-gray-300 border-transparent hover:bg-primary/10 hover:text-primary hover:border-primary/20'
+        : 'text-gray-600 dark:text-gray-300 border-transparent hover:bg-primary/10 hover:text-primary hover:border-primary/20'
     }`;
   };
 
