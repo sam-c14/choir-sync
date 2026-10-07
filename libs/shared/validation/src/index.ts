@@ -13,7 +13,7 @@ export const LinkPlatformEnum = z.enum([
   "AUDIOMACK",
   "OTHER",
 ]);
-export const UserRoleEnum = z.enum(["DIRECTOR", "SECTION_LEADER", "CHORISTER"]);
+export const UserRoleEnum = z.enum(["ADMIN", "DIRECTOR", "SECTION_LEADER", "CHORISTER"]);
 
 export const CreateSongLinkSchema = z.object({
   platform: LinkPlatformEnum,

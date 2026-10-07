@@ -60,6 +60,7 @@ model User {
   role           UserRole       @default(CHORISTER)
   // Only meaningful when role = SECTION_LEADER; which part they're allowed to edit
   leadsVoicePart VoicePartType?
+  participationType ParticipationType @default(VOCALIST)
   name           String?
   comfortableKey String?
   createdAt      DateTime       @default(now())
