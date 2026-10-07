@@ -10,6 +10,7 @@ export interface JwtPayload {
   leadsVoicePart: z.infer<typeof VoicePartTypeEnum> | null;
   name?: string | null;
   comfortableKey?: string | null;
+  participationType?: string;
 }
 
 interface AuthContextType {

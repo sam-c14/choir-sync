@@ -147,8 +147,10 @@ export const CurateSetlistSchema = z.object({
 
 export type CurateSetlistDto = z.infer<typeof CurateSetlistSchema>;
 
+export const ParticipationTypeEnum = z.enum(["VOCALIST", "MUSICIAN", "BOTH"]);
 export const UpdateProfileSchema = z.object({
   name: z.string().nullable().optional(),
   comfortableKey: z.string().nullable().optional(),
+  participationType: ParticipationTypeEnum.optional(),
 });
 export type UpdateProfileDto = z.infer<typeof UpdateProfileSchema>;

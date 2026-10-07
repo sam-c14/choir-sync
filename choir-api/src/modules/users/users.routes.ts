@@ -10,11 +10,8 @@ router.use(requireAuth);
 router.get('/me', usersController.getProfile.bind(usersController));
 router.patch('/me', usersController.updateProfile.bind(usersController));
 
-// Director only routes
-router.use(requireRole('DIRECTOR'));
-
-router.get('/', usersController.getUsers.bind(usersController));
-router.patch('/:id/role', usersController.updateUserRole.bind(usersController));
-router.delete('/:id', usersController.deleteUser.bind(usersController));
+router.get('/', requireRole('DIRECTOR'), usersController.getUsers.bind(usersController));
+router.patch('/:id/role', requireRole(['DIRECTOR', 'ADMIN']), usersController.updateUserRole.bind(usersController));
+router.delete('/:id', requireRole('ADMIN'), usersController.deleteUser.bind(usersController));
 
 export default router;

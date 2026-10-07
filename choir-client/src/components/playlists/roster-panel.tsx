@@ -22,7 +22,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
   const isDirector = user?.role === 'DIRECTOR';
   
   const { data: roster, isLoading: loadingRoster } = useRoster(playlistId);
-  const { data: usersData, isLoading: loadingUsers } = useUsers();
+  const { data: usersData, isLoading: loadingUsers } = useUsers(1, 100, true);
   const users = usersData?.data || [];
   
   const saveRoster = useSaveRoster();

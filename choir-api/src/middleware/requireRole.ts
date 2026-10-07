@@ -12,6 +12,11 @@ export const requireRole = (allowedRoles: Role | Role[]) => {
       return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
     }
 
+    // ADMIN automatically passes any DIRECTOR checks
+    if (req.user.role === 'ADMIN' && roles.includes('DIRECTOR')) {
+      return next();
+    }
+
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Forbidden: Insufficient role' });
     }
@@ -25,7 +30,7 @@ export const requirePartLeadOrDirector = (req: Request, res: Response, next: Nex
     return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
   }
 
-  if (req.user.role === 'DIRECTOR') {
+  if (req.user.role === 'DIRECTOR' || req.user.role === 'ADMIN') {
     return next();
   }
 

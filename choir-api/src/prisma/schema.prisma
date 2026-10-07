@@ -8,6 +8,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum ParticipationType {
+  VOCALIST
+  MUSICIAN
+  BOTH
+}
+
 enum VoicePartType {
   SOPRANO
   ALTO
@@ -34,6 +40,7 @@ enum LinkPlatform {
 }
 
 enum UserRole {
+  ADMIN
   DIRECTOR
   SECTION_LEADER
   CHORISTER

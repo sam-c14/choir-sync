@@ -2,11 +2,14 @@ import { prisma } from '../../lib/prisma';
 import { UpdateUserRoleDto, UpdateProfileDto } from '@choir-workspace/shared-validation';
 
 export class UsersService {
-  async getUsers(page: number = 1, limit: number = 20) {
+  async getUsers(page: number = 1, limit: number = 20, assignable: boolean = false) {
     const skip = (page - 1) * limit;
+    
+    const where = assignable ? { participationType: { not: 'MUSICIAN' as any } } : {};
     
     const [data, total] = await Promise.all([
       prisma.user.findMany({
+        where,
         skip,
         take: limit,
         select: {
@@ -21,7 +24,7 @@ export class UsersService {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.user.count(),
+      prisma.user.count({ where }),
     ]);
 
     return {
@@ -60,6 +63,7 @@ export class UsersService {
         comfortableKey: true,
         role: true,
         leadsVoicePart: true,
+        participationType: true,
         provider: true,
         createdAt: true,
       },
@@ -71,8 +75,8 @@ export class UsersService {
     if (!userToDelete) {
       throw { code: 'NOT_FOUND', message: 'User not found' };
     }
-    if (userToDelete.role === 'DIRECTOR') {
-      throw { code: 'FORBIDDEN', message: 'Cannot delete a Director account' };
+    if (userToDelete.role === 'DIRECTOR' || userToDelete.role === 'ADMIN') {
+      throw { code: 'FORBIDDEN', message: 'Cannot delete a Director or Admin account' };
     }
     
     await prisma.user.delete({ where: { id } });
@@ -84,6 +88,7 @@ export class UsersService {
       data: {
         name: dto.name,
         comfortableKey: dto.comfortableKey,
+        participationType: dto.participationType,
       },
       select: {
         id: true,
@@ -92,6 +97,7 @@ export class UsersService {
         comfortableKey: true,
         role: true,
         leadsVoicePart: true,
+        participationType: true,
         provider: true,
         createdAt: true,
       }

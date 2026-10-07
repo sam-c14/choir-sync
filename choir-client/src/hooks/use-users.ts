@@ -21,11 +21,11 @@ export interface PaginatedUsers {
   totalPages: number;
 }
 
-export function useUsers(page: number = 1, limit: number = 20) {
+export function useUsers(page: number = 1, limit: number = 20, assignable: boolean = false) {
   return useQuery({
-    queryKey: ['users', page, limit],
+    queryKey: ['users', page, limit, assignable],
     queryFn: async () => {
-      const res = await apiClient.get<PaginatedUsers>(`/users?page=${page}&limit=${limit}`);
+      const res = await apiClient.get<PaginatedUsers>(`/users?page=${page}&limit=${limit}&assignable=${assignable}`);
       return res.data;
     },
   });

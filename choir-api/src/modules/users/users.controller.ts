@@ -7,8 +7,9 @@ export class UsersController {
   async getUsers(req: Request, res: Response) {
     try {
       const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const result = await usersService.getUsers(page, limit);
+      const limit = parseInt(req.query.limit as string) || 100;
+      const assignable = req.query.assignable === 'true';
+      const result = await usersService.getUsers(page, limit, assignable);
       res.json(result);
     } catch (error: any) {
       logger.error(error);

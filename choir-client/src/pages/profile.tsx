@@ -23,6 +23,7 @@ export function ProfilePage() {
     defaultValues: {
       name: user?.name || '',
       comfortableKey: user?.comfortableKey || '',
+      participationType: (user as any)?.participationType || 'VOCALIST',
     },
   });
 
@@ -40,10 +41,11 @@ export function ProfilePage() {
       form.reset({
         name: profile.name || '',
         comfortableKey: profile.comfortableKey || '',
+        participationType: profile.participationType || 'VOCALIST',
       });
       // Ensure context is synced with latest fetched DB state just in case JWT is old
-      if (profile.name !== user?.name || profile.comfortableKey !== user?.comfortableKey) {
-        updateLocalUser({ name: profile.name, comfortableKey: profile.comfortableKey });
+      if (profile.name !== user?.name || profile.comfortableKey !== user?.comfortableKey || profile.participationType !== (user as any)?.participationType) {
+        updateLocalUser({ name: profile.name, comfortableKey: profile.comfortableKey, participationType: profile.participationType });
       }
     }
   }, [profile, form, user, updateLocalUser]);

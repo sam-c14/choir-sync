@@ -1171,3 +1171,59 @@ Tasks (`choir-client/`):
 Verification:
 Run `nx-workspace-verify`. Test the upload flow with a large 5MB+ image and verify in the Supabase Storage dashboard that the resulting file is under 500KB and visually clear in the app.
 ```
+
+## Milestone 18 — Musician & Vocalist Participation Roles
+**Goal:** Allow users to specify their involvement type (Vocalist, Musician, or Both) on their profile, and automatically exclude pure Musicians from being assignable to vocal parts in the Sunday Roster.
+**Do:**
+1. Update the `User` model in `schema.prisma` to include a `participationType` field (e.g., `VOCALIST`, `MUSICIAN`, `BOTH`) defaulting to `VOCALIST`, and run a migration.
+2. In `choir-api/`, update the profile endpoint (`PATCH /api/v1/users/me`) to accept and persist this new field.
+3. In the playlist roster assignment endpoints and queries, filter out users whose `participationType` is strictly `MUSICIAN` so they do not appear in the dropdowns for Soprano, Alto, Tenor, or Lead.
+4. In `choir-client/`, update the `/profile` page to include a "Participation Role" dropdown field.
+**Verify with:** `nx-workspace-verify`, setting a user to "Musician", and confirming they disappear from the voice part selection dropdowns on the Playlist Roster page.
+
+---
+
+## Milestone 19 — Admin Role & Granular Permissions
+**Goal:** Introduce an `ADMIN` role that acts as a super-user. Admins inherit all Director privileges, but only Admins can delete users, while both Directors and Admins can promote someone to Admin.
+**Do:**
+1. Update the `Role` enum in `schema.prisma` to include `ADMIN` and run a migration.
+2. In `choir-api/`, update the Role-Based Access Control (RBAC) middleware so that `ADMIN` automatically passes any `DIRECTOR` permission checks.
+3. Restrict the `DELETE /api/v1/users/:id` endpoint so that ONLY users with the `ADMIN` role can access it (remove `DIRECTOR` access).
+4. Update the user role promotion endpoint (`PATCH /api/v1/users/:id/role`) to ensure both `DIRECTOR` and `ADMIN` can change a user's role to `ADMIN`.
+5. In `choir-client/`, hide the "Delete User" button in the member directory for Directors, ensuring it is only visible to Admins.
+**Verify with:** `nx-workspace-verify`, logging in as a Director to confirm the "Delete User" button is gone but "Promote to Admin" works, then logging in as an Admin to confirm deletion works.
+
+## Followup Prompt for Milestone 18 & 19
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 18 (Musician Roles) and Milestone 19 (Admin Role).
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Tasks for Milestone 18 (Participation Type):
+1. Database (`choir-api/`):
+   - Update `choir-api/src/prisma/schema.prisma`. Add an enum `ParticipationType { VOCALIST MUSICIAN BOTH }`.
+   - Add `participationType ParticipationType @default(VOCALIST)` to the `User` model.
+   - Run `prisma-create-migration`.
+2. Shared Validation (`libs/shared/`):
+   - Update the profile update DTO to accept `participationType` as an optional enum/string.
+3. Backend Filtering (`choir-api/`):
+   - Update `PATCH /api/v1/users/me` to accept `participationType`.
+   - Find the endpoint that fetches the list of assignable users for the Roster UI (likely `GET /api/v1/users` or a specific roster-members route). Update the Prisma query to filter out pure musicians: `where: { participationType: { not: 'MUSICIAN' } }`.
+4. Frontend Profile UI (`choir-client/`):
+   - On the `/profile` page, add a Select/Dropdown for "Participation Role" with the three options.
+
+Tasks for Milestone 19 (Admin Role):
+1. Database (`choir-api/`):
+   - In `schema.prisma`, add `ADMIN` to the existing `Role` enum. Run `prisma-create-migration`.
+2. Backend RBAC (`choir-api/`):
+   - Audit the authentication/authorization middleware (e.g., `requireRole(Role.DIRECTOR)`). Ensure that if a route requires `DIRECTOR`, a user with `ADMIN` is also permitted.
+   - Locate the `DELETE /api/v1/users/:id` endpoint. Change its permission guard so that strictly ONLY `ADMIN` can execute it.
+   - Locate the `PATCH /api/v1/users/:id/role` endpoint. Ensure the guard allows both `DIRECTOR` and `ADMIN` to execute it, and they can pass `role: 'ADMIN'` in the body.
+3. Frontend UI (`choir-client/`):
+   - In the Member Directory or Roster management page where user roles and deletions are handled:
+     - Wrap the "Delete User" (or trash icon) button in a conditional render so it ONLY shows if `currentUser.role === 'ADMIN'`.
+     - Ensure the Role select dropdown includes "Admin" as an option for both Directors and Admins to use.
+
+Verification:
+Run `nx-workspace-verify` to ensure clean TypeScript compilation across all packages. Verify RBAC middleware strictly blocks Directors from calling the delete endpoint.
+```
