@@ -111,25 +111,51 @@ export const playlistsService = {
   },
 
   async setPlaylistSongs(playlistId: string, songs: CreatePlaylistSongDto[]) {
-    // Delete existing songs and recreate them to ensure fresh ordering
-    await prisma.playlistSong.deleteMany({
-      where: { playlistId }
-    });
+    return prisma.$transaction(async (tx) => {
+      const playlist = await tx.playlist.findUnique({
+        where: { id: playlistId },
+        select: { isActive: true }
+      });
 
-    if (songs.length === 0) {
-      return [];
-    }
+      // Delete existing songs and recreate them to ensure fresh ordering
+      await tx.playlistSong.deleteMany({
+        where: { playlistId }
+      });
 
-    await prisma.playlistSong.createMany({
-      data: songs.map((s) => ({
-        ...s,
-        playlistId
-      }))
-    });
+      if (songs.length > 0) {
+        await tx.playlistSong.createMany({
+          data: songs.map((s) => ({
+            ...s,
+            playlistId
+          }))
+        });
+      }
 
-    return prisma.playlistSong.findMany({
-      where: { playlistId },
-      orderBy: { orderIndex: 'asc' }
+      if (playlist?.isActive) {
+        const newSongIds = songs.map(s => s.songId);
+        
+        // 1. Any song that is currently ACTIVE_SUNDAY but no longer in this active playlist becomes ARCHIVED
+        await tx.song.updateMany({
+          where: {
+            status: 'ACTIVE_SUNDAY',
+            ...(newSongIds.length > 0 ? { id: { notIn: newSongIds } } : {})
+          },
+          data: { status: 'ARCHIVED' }
+        });
+
+        // 2. Any new song added to the active playlist becomes ACTIVE_SUNDAY
+        if (newSongIds.length > 0) {
+          await tx.song.updateMany({
+            where: { id: { in: newSongIds } },
+            data: { status: 'ACTIVE_SUNDAY' }
+          });
+        }
+      }
+
+      return tx.playlistSong.findMany({
+        where: { playlistId },
+        orderBy: { orderIndex: 'asc' }
+      });
     });
   }
 };
