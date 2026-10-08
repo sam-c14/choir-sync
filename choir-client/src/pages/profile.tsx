@@ -57,7 +57,7 @@ export function ProfilePage() {
     },
     onSuccess: (data) => {
       toast.success('Profile updated successfully');
-      updateLocalUser({ name: data.name, comfortableKey: data.comfortableKey });
+      updateLocalUser({ name: data.name, comfortableKey: data.comfortableKey, participationType: data.participationType });
       
       // Explicitly refetch the profile and any user lists
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
@@ -72,6 +72,8 @@ export function ProfilePage() {
   const onSubmit = (data: UpdateProfileDto) => {
     updateProfileMutation.mutate(data);
   };
+
+  const currentParticipationType = form.watch('participationType');
 
   return (
     <div className="container mx-auto p-4 max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -97,31 +99,33 @@ export function ProfilePage() {
               )}
             </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="comfortableKey">Comfortable Key</Label>
-              <Controller
-                control={form.control}
-                name="comfortableKey"
-                render={({ field }) => (
-                  <Select onValueChange={(val) => field.onChange(val === 'none' ? null : val)} value={field.value || 'none'}>
-                    <SelectTrigger id="comfortableKey" className="w-full">
-                      <SelectValue placeholder="Select a key (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None / Clear</SelectItem>
-                      {MUSICAL_KEYS.map((key) => (
-                        <SelectItem key={key} value={key}>
-                          {key}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            {currentParticipationType !== 'MUSICIAN' && (
+              <div className="space-y-3">
+                <Label htmlFor="comfortableKey">Comfortable Key</Label>
+                <Controller
+                  control={form.control}
+                  name="comfortableKey"
+                  render={({ field }) => (
+                    <Select onValueChange={(val) => field.onChange(val === 'none' ? null : val)} value={field.value || 'none'}>
+                      <SelectTrigger id="comfortableKey" className="w-full">
+                        <SelectValue placeholder="Select a key (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None / Clear</SelectItem>
+                        {MUSICAL_KEYS.map((key) => (
+                          <SelectItem key={key} value={key}>
+                            {key}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.comfortableKey && (
+                  <p className="text-sm text-destructive">{form.formState.errors.comfortableKey.message}</p>
                 )}
-              />
-              {form.formState.errors.comfortableKey && (
-                <p className="text-sm text-destructive">{form.formState.errors.comfortableKey.message}</p>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="space-y-3">
               <Label htmlFor="participationType">Choir Role</Label>

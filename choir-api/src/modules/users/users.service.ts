@@ -115,6 +115,7 @@ export class UsersService {
         role: true,
         leadsVoicePart: true,
         provider: true,
+        participationType: true,
         createdAt: true,
       }
     });
