@@ -19,7 +19,7 @@ interface UserNode {
 
 export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, serviceDate?: string | Date | null }) {
   const { user } = useAuth();
-  const isDirector = user?.role === 'DIRECTOR';
+  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
   
   const { data: roster, isLoading: loadingRoster } = useRoster(playlistId);
   const { data: usersData, isLoading: loadingUsers } = useUsers(1, 100, true);

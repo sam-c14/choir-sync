@@ -328,7 +328,7 @@ function ManualUrlInput({ songId, platform, onAdded }: ManualUrlInputProps) {
 export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
   const { user } = useAuth();
   const { playTrack, currentTrack, setActivePreviewUrls } = usePlayer();
-  const isDirector = user?.role === "DIRECTOR";
+  const isDirector = user?.role === "DIRECTOR" || user?.role === "ADMIN";
   const deleteLink = useDeleteSongLink();
 
   const [platform, setPlatform] = useState<CreateSongLinkDto["platform"]>("YOUTUBE");

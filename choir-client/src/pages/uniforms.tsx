@@ -39,7 +39,7 @@ export default function UniformsPage() {
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  const isDirector = user?.role === 'DIRECTOR';
+  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
 
   const handleAdd = () => {
     setEditingUniform(null);

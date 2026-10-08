@@ -30,7 +30,7 @@ export default function PlaylistDetailsPage() {
   const [search, setSearch] = useState('');
   const [songToRemove, setSongToRemove] = useState<string | null>(null);
   
-  const isDirector = user?.role === 'DIRECTOR';
+  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
 
   if (isLoading) {
     return (

@@ -29,7 +29,7 @@ export default function PlaylistsPage() {
   const [serviceDate, setServiceDate] = useState<Date | undefined>(new Date());
   const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
 
-  const isDirector = user?.role === 'DIRECTOR';
+  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
