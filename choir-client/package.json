@@ -1,7 +1,0 @@
-{
-	"dependencies": {
-		"@radix-ui/react-dialog": "^1.2.0",
-		"cmdk": "^1.1.1",
-		"cn": "^0.2.6"
-	}
-}
