@@ -10,6 +10,7 @@ import notificationsRoutes from './modules/notifications/notifications.routes';
 import aiRoutes from './modules/ai/ai.routes';
 import usersRoutes from './modules/users/users.routes';
 import externalMusicRoutes from './modules/external-music/external-music.routes';
+import searchRoutes from './modules/search/search.routes';
 import { prisma } from "./lib/prisma";
 import playlistsRoutes from './modules/playlists/playlists.routes';
 import songPartsRoutes from './modules/snippets/song-parts.routes';
@@ -41,6 +42,7 @@ app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/external-music', externalMusicRoutes);
 app.use('/api/v1/playlists', playlistsRoutes);
+app.use('/api/v1/search', searchRoutes);
 
 app.get('/api/health', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');

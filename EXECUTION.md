@@ -1227,3 +1227,71 @@ Tasks for Milestone 19 (Admin Role):
 Verification:
 Run `nx-workspace-verify` to ensure clean TypeScript compilation across all packages. Verify RBAC middleware strictly blocks Directors from calling the delete endpoint.
 ```
+
+## Milestone 20 — Mobile Bottom Navigation (YouTube Web Style)
+**Goal:** Refactor the mobile navigation layout to use a persistent bottom navigation bar (matching YouTube's mobile web experience) while keeping the desktop top-nav intact.
+**Do:**
+1. In `choir-client/`, create a new `BottomNav` component fixed to the bottom of the screen (`fixed bottom-0 w-full z-50 border-t`).
+2. Hide the existing mobile hamburger menu and ensure the main layout adds `pb-16` on mobile so content isn't hidden behind the bottom bar.
+3. Add the core navigation links: **Songs**, **Playlists**, **Uniforms**, and **You** (Profile page). 
+4. Structure each link with an icon centered above small text (e.g., 10px or 11px font size). Highlight the active route with the primary color.
+5. Conditionally render a 5th link, **Users**, only if the authenticated user's role is `DIRECTOR` or `ADMIN`.
+**Verify with:** Browser DevTools device emulator (e.g., iPhone viewport). Ensure the bottom nav is visible on mobile and hidden on desktop, and verify the "Users" tab only appears for authorized roles.
+
+---
+
+## Milestone 21 — Global Omni-Search (Doc-Style Command Palette)
+**Goal:** Implement a global command palette (like Cmd+K on developer documentation sites) allowing users to instantly search across songs, playlists, users, and app features.
+**Do:**
+1. In `choir-client/`, install and configure the shadcn/ui `Command` component (which wraps `cmdk`).
+2. Add a global search trigger button (a fake input bar with a magnifying glass and "Search... (⌘K)" placeholder) to the top header.
+3. Build a `GlobalSearchDialog` that opens on click or keyboard shortcut (`Cmd+K` / `Ctrl+K`).
+4. In `choir-api/`, create a unified `GET /api/v1/search?q=` endpoint that performs a fast, parallel ILIKE/contains query across the `Song`, `Playlist`, and `User` tables, returning grouped results.
+5. In the frontend dialog, render the search results categorized by group (e.g., "Songs", "Playlists", "Actions"). Clicking a result should instantly route the user to that specific page or open that specific modal.
+**Verify with:** `nx-workspace-verify`, typing a known song title into the search bar, and verifying the dialog routes correctly to the song details page.
+
+## Followup Prompt
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 20 (Mobile Bottom Nav) and Milestone 21 (Global Omni-Search).
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Tasks for Milestone 20 (Mobile Bottom Nav):
+1. UI Construction (`choir-client/`):
+   - Create a `BottomNav.tsx` component. Use Tailwind classes: `fixed bottom-0 left-0 right-0 z-50 bg-background border-t flex justify-around items-center h-14 md:hidden`.
+   - The desktop Navbar should now use `hidden md:flex` for its internal link lists, removing the mobile hamburger/sheet menu entirely.
+   - Update the root layout/container to have `pb-14 md:pb-0` so the bottom nav doesn't overlap page content.
+2. Link Items & Roles:
+   - Use `lucide-react` icons. Structure each item as a flex column: Icon (size ~20px) on top, text (size `text-[10px]`) on the bottom.
+   - Core Links: 
+     - Songs (`Music` icon)
+     - Playlists (`ListMusic` icon)
+     - Uniforms (`Shirt` icon)
+     - You (`CircleUser` icon) -> routes to `/profile`.
+   - Role-Protected Link:
+     - Read the user context. If `role === 'DIRECTOR' || role === 'ADMIN'`, render the Users link (`Users` icon) -> routes to `/users`.
+   - Apply the `text-primary` color to the active route based on `useLocation()`.
+
+Tasks for Milestone 21 (Global Omni-Search):
+1. Backend Unified Search (`choir-api/`):
+   - Create `GET /api/v1/search?q=...`
+   - If `q` is provided, run parallel Prisma queries (limit ~5 results each):
+     - `prisma.song.findMany({ where: { title: { contains: q, mode: 'insensitive' } } })`
+     - `prisma.playlist.findMany({ where: { title: { contains: q, mode: 'insensitive' } } })`
+   - Return `{ songs: [...], playlists: [...] }`.
+2. Frontend Command Palette (`choir-client/`):
+   - Add shadcn/ui `Command` and `Dialog` components (or `cmdk` directly).
+   - Create a `GlobalSearch.tsx` component.
+   - Trigger UI: A standard search input button placed in the top header (visible on both mobile and desktop). Placeholder: "Search CSync...". On desktop, add a subtle `⌘K` badge.
+   - Modal UI: When triggered, open a centralized `Command` dialog.
+   - Fetch results dynamically from `GET /api/v1/search` as the user types (with a 300ms debounce).
+   - Group the results in the UI using `<CommandGroup heading="Songs">`, etc.
+   - Add static "Quick Actions" to the bottom of the list (e.g., "Create New Song", "Switch Theme").
+   - Upon selecting an item, close the dialog and use `react-router-dom` to navigate to the respective route (`/songs/:id`, `/playlists/:id`, etc.).
+   - Add a global `useEffect` listener for `keydown` to open the modal when `Cmd+K` or `Ctrl+K` is pressed.
+
+Verification:
+Run `nx-workspace-verify`. 
+1. Check mobile emulation: Verify the bottom nav displays 4 items for choristers and 5 for admins, with exact YouTube-style icon-above-text spacing.
+2. Check search: Press Cmd+K, type "thanksgiving", and ensure the UI shows matching songs/playlists.
+```

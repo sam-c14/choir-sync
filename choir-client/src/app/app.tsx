@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '../auth/auth-context';
 import { RequireAuth } from '../auth/require-auth';
 import { Navbar } from '../components/layout/navbar';
+import { BottomNav } from '../components/layout/bottom-nav';
 import { PlayerProvider } from '../contexts/player-context';
 import { GlobalPlayer } from '../components/global-player';
 import { ScrollToTop } from '../components/scroll-to-top';
@@ -34,7 +35,7 @@ export function App() {
               path="/*"
               element={
                 <RequireAuth>
-                  <div className="min-h-screen bg-background pb-14 sm:pb-0">
+                  <div className="min-h-screen bg-background pb-14 md:pb-0">
                     <Navbar />
                     <main>
                       <Routes>
@@ -54,6 +55,7 @@ export function App() {
                     <FloatingChatTab />
                     <Toaster />
                     <BackToTopButton />
+                    <BottomNav />
                   </div>
                 </RequireAuth>
               }
