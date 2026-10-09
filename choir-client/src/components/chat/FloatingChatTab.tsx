@@ -66,14 +66,14 @@ export function FloatingChatTab() {
       {/* Slide-over Drawer Backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 z-50 transition-opacity"
+          className="fixed inset-0 bg-black/40 z-[100] transition-opacity"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Slide-over Drawer */}
       <div 
-        className={`fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-background border-l shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-background border-l shadow-2xl z-[100] transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
@@ -85,7 +85,7 @@ export function FloatingChatTab() {
             <p className="text-xs text-muted-foreground">Ask about vocal tips, harmonies, or theory</p>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="rounded-full">
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </Button>
         </div>
 

@@ -29,6 +29,7 @@ export class AuthService {
         leadsVoicePart: user.leadsVoicePart,
         name: user.name,
         comfortableKey: user.comfortableKey,
+        participationType: user.participationType,
       },
       JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRES_IN }

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '../../lib/api-client';
 import { useAuth } from '../../auth/auth-context';
 import { useRoster, useSaveRoster, useDispatchRoster } from '../../hooks/use-rosters';
 import { useUsers } from '../../hooks/use-users';
@@ -22,7 +24,14 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
   const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
   
   const { data: roster, isLoading: loadingRoster } = useRoster(playlistId);
-  const { data: usersData, isLoading: loadingUsers } = useUsers(1, 100, true);
+  const { data: usersData, isLoading: loadingUsers } = useQuery({
+    queryKey: ['users', 1, 100, true],
+    queryFn: async () => {
+      const res = await apiClient.get(`/users?page=1&limit=100&assignable=true`);
+      return res.data;
+    },
+    enabled: isDirector,
+  });
   const users = usersData?.data || [];
   
   const saveRoster = useSaveRoster();
@@ -45,7 +54,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
     }
   }, [roster]);
 
-  if (loadingRoster || loadingUsers) {
+  if (loadingRoster || (isDirector && loadingUsers)) {
     return (
       <div className="border rounded-xl bg-card overflow-hidden">
         <div className="bg-muted/30 border-b px-4 py-3 flex justify-between items-center">
