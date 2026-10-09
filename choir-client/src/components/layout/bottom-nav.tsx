@@ -38,6 +38,7 @@ export function BottomNav() {
           let id = undefined;
           if (item.name === 'Profile') id = 'tour-profile-nav';
           if (item.name === 'Playlists') id = 'tour-playlists-nav';
+          if (item.name === 'Uniforms') id = 'tour-uniforms-nav';
           if (item.name === 'Users') id = 'tour-users-nav';
 
           return (

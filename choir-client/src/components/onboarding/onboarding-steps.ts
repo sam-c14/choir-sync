@@ -33,6 +33,14 @@ export const getOnboardingSteps = (
       },
     },
     {
+      element: '#tour-uniforms-nav',
+      popover: {
+        title: 'Uniforms Schedule',
+        description: 'Check here to see the assigned dress code for upcoming Sunday services.',
+        side: 'top',
+      },
+    },
+    {
       element: '#tour-profile-nav',
       popover: {
         title: 'Your Profile',
