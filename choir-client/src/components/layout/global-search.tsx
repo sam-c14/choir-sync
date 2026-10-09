@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Music, ListMusic, PlusCircle, Sun, Moon, Shirt } from 'lucide-react';
+import { Search, Music, ListMusic, PlusCircle, Sun, Moon, Shirt, Map } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api-client';
 import { useTheme } from '../theme-provider';
@@ -119,6 +119,17 @@ export function GlobalSearch() {
             <CommandItem onSelect={() => runCommand(() => navigate('/uniforms'))}>
               <Shirt className="mr-2 h-4 w-4" />
               <span>Check current uniform</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(async () => {
+              try {
+                await apiClient.patch('/users/me', { hasCompletedOnboarding: false });
+                window.location.reload();
+              } catch (e) {
+                console.error(e);
+              }
+            })}>
+              <Map className="mr-2 h-4 w-4" />
+              <span>Restart App Tour</span>
             </CommandItem>
           </CommandGroup>
         </CommandList>
