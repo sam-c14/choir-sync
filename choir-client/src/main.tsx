@@ -28,6 +28,17 @@ if ('serviceWorker' in navigator) {
       window.location.reload();
     }
   });
+
+  // Proactively check for updates when the app is brought to the foreground
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.update().catch(() => {
+          // Silent catch for offline or dev scenarios
+        });
+      });
+    }
+  });
 }
 
 root.render(
