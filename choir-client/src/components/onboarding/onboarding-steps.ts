@@ -7,7 +7,7 @@ export const getOnboardingSteps = (
   const steps: DriveStep[] = [
     {
       popover: {
-        title: 'Welcome to ChoirSync!',
+        title: 'Welcome to CSync!',
         description: 'Let’s take a quick tour to help you get familiar with the app.',
       },
     },
