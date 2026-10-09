@@ -59,6 +59,7 @@ apiClient.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
+            originalRequest._retry = true;
             originalRequest.headers.Authorization = `Bearer ${token}`;
             return apiClient(originalRequest);
           })
@@ -71,34 +72,43 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
       const refreshToken = localStorage.getItem('refreshToken');
 
-      if (refreshToken) {
-        try {
-          const res = await axios.post(`${import.meta.env.VITE_API_URL || '/api/v1'}/auth/refresh`, {
-            token: refreshToken,
-          });
-
-          if (res.status === 200) {
-            localStorage.setItem('token', res.data.token);
-            localStorage.setItem('refreshToken', res.data.refreshToken);
-
-            processQueue(null, res.data.token);
-
-            // Retry original request with new token
-            originalRequest.headers.Authorization = `Bearer ${res.data.token}`;
-            return apiClient(originalRequest);
-          }
-        } catch (refreshError) {
-          processQueue(refreshError, null);
-        } finally {
-          isRefreshing = false;
-        }
+      if (!refreshToken) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(error);
       }
 
-      // Clear tokens and redirect to login if refresh fails or no refresh token
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      try {
+        const res = await axios.post(`${import.meta.env.VITE_API_URL || '/api/v1'}/auth/refresh`, {
+          token: refreshToken,
+        });
+
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('refreshToken', res.data.refreshToken);
+
+        processQueue(null, res.data.token);
+
+        originalRequest.headers.Authorization = `Bearer ${res.data.token}`;
+        return apiClient(originalRequest);
+      } catch (refreshError: any) {
+        processQueue(refreshError, null);
+        
+        const status = refreshError.response?.status;
+        // Only force logout on 4xx errors (invalid/expired refresh token).
+        // 5xx errors or network timeouts should not clear the user's session.
+        if (status && status >= 400 && status < 500) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
+        
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
     return Promise.reject(error);
   }
