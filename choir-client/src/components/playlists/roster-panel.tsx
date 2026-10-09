@@ -29,17 +29,18 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
   const dispatchRoster = useDispatchRoster();
 
   // Local state for assignments
-  const [assignments, setAssignments] = useState<{userId: string, role: string, notes?: string, notified: boolean}[]>([]);
+  const [assignments, setAssignments] = useState<{userId: string, role: string, notes?: string, notified: boolean, user?: any}[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
 
   useEffect(() => {
     if (roster?.members) {
-      setAssignments(roster.members.map((m: { userId: string; assignedRole: string; notes?: string; notified: boolean }) => ({
+      setAssignments(roster.members.map((m: { userId: string; assignedRole: string; notes?: string; notified: boolean; user?: any }) => ({
         userId: m.userId,
         role: m.assignedRole,
         notes: m.notes || undefined,
-        notified: m.notified
+        notified: m.notified,
+        user: m.user
       })));
     }
   }, [roster]);
@@ -185,7 +186,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
                     <div className="text-xs text-muted-foreground italic text-center py-2 border rounded-md border-dashed bg-muted/10">Unassigned</div>
                   ) : (
                     assignedInRole.map(a => {
-                      const user = users.find((u: UserNode) => u.id === a.userId);
+                      const user = users.find((u: UserNode) => u.id === a.userId) || a.user;
                       return (
                         <div key={a.userId} className="text-sm px-3 py-1.5 rounded-md bg-muted/40 border font-medium truncate flex justify-between items-center">
                           <div className="flex items-center gap-1">

@@ -107,7 +107,7 @@ export const playlistsController = {
         where: { playlistId: id },
         include: {
           members: {
-            include: { user: { select: { id: true, email: true, role: true } } }
+            include: { user: { select: { id: true, email: true, name: true, comfortableKey: true, role: true } } }
           }
         }
       });
@@ -157,7 +157,7 @@ export const playlistsController = {
 
         return tx.serviceRoster.findUnique({
           where: { id: roster.id },
-          include: { members: { include: { user: { select: { id: true, email: true, role: true } } } } }
+          include: { members: { include: { user: { select: { id: true, email: true, name: true, comfortableKey: true, role: true } } } } }
         });
       }, {
         maxWait: 5000,
