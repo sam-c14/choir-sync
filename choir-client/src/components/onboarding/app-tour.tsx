@@ -4,6 +4,7 @@ import { driver, Config } from "driver.js";
 import "driver.js/dist/driver.css";
 import { getOnboardingSteps } from "./onboarding-steps";
 import { apiClient } from "../../lib/api-client";
+import { trackChoirEvent } from "../../lib/analytics";
 
 export function AppTour() {
   const { user, updateLocalUser } = useAuth();
@@ -27,11 +28,28 @@ export function AppTour() {
 
     const steps = getOnboardingSteps(user.role, user.participationType);
 
+    trackChoirEvent({
+      action: 'onboarding_started',
+      params: { userId: user.id, email: user.email, role: user.role }
+    });
+
     const driverObj = driver({
       showProgress: true,
       popoverClass: "driverjs-theme",
       steps,
       onDestroyStarted: () => {
+        const isComplete = !driverObj.hasNextStep();
+        if (isComplete) {
+          trackChoirEvent({
+            action: 'onboarding_completed',
+            params: { userId: user.id, email: user.email, role: user.role }
+          });
+        } else {
+          trackChoirEvent({
+            action: 'onboarding_skipped',
+            params: { userId: user.id, email: user.email, role: user.role }
+          });
+        }
         driverObj.destroy();
         markTourCompleted();
       },

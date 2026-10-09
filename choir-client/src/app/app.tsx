@@ -36,7 +36,7 @@ export function App() {
               path="/*"
               element={
                 <RequireAuth>
-                  <div className="min-h-screen bg-background pb-14 md:pb-0">
+                  <div className="min-h-screen bg-background pb-20 md:pb-0">
                     <Navbar />
                     <main>
                       <Routes>

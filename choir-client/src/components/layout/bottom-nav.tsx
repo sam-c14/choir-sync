@@ -26,7 +26,7 @@ export function BottomNav() {
 
   return (
     <nav id="tour-bottom-nav" className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background z-50 pb-safe">
-      <div className="flex items-center justify-around h-14 px-2">
+      <div className="flex items-center justify-around h-16 py-1 px-2">
         {navItems.map((item) => {
           const isActive =
             item.path === '/'

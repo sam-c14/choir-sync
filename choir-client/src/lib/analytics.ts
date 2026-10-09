@@ -22,7 +22,10 @@ type ChoirEvent =
   | { action: 'playlist_activated', params: { playlistId: string, title: string } }
   | { action: 'ai_setlist_curated', params: { theme: string, songCount: number } }
   | { action: 'roster_dispatched', params: { playlistId: string, notifiedCount: number } }
-  | { action: 'whatsapp_broadcast_copied', params: { playlistId: string } };
+  | { action: 'whatsapp_broadcast_copied', params: { playlistId: string } }
+  | { action: 'onboarding_started', params: { userId: string, email: string, role: string } }
+  | { action: 'onboarding_completed', params: { userId: string, email: string, role: string } }
+  | { action: 'onboarding_skipped', params: { userId: string, email: string, role: string, stepIndex?: number } };
 
 export const trackChoirEvent = (event: ChoirEvent) => {
   const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID;
