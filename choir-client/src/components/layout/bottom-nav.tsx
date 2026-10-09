@@ -25,7 +25,7 @@ export function BottomNav() {
   navItems.push({ name: 'Profile', path: '/profile', icon: CircleUser });
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background z-50 pb-safe">
+    <nav id="tour-bottom-nav" className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background z-50 pb-safe">
       <div className="flex items-center justify-around h-14 px-2">
         {navItems.map((item) => {
           const isActive =
@@ -35,9 +35,15 @@ export function BottomNav() {
 
           const Icon = item.icon;
 
+          let id = undefined;
+          if (item.name === 'Profile') id = 'tour-profile-nav';
+          if (item.name === 'Playlists') id = 'tour-playlists-nav';
+          if (item.name === 'Users') id = 'tour-users-nav';
+
           return (
             <Link
               key={item.path}
+              id={id}
               to={item.path}
               className={cn(
                 "flex flex-col items-center justify-center w-full h-full space-y-1 text-muted-foreground hover:text-foreground transition-colors",

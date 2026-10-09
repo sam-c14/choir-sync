@@ -11,6 +11,7 @@ export interface JwtPayload {
   name?: string | null;
   comfortableKey?: string | null;
   participationType?: string;
+  hasCompletedOnboarding?: boolean;
 }
 
 interface AuthContextType {

@@ -55,6 +55,7 @@ export function FloatingChatTab() {
       {/* Edge anchored trigger button */}
       <div className="fixed -right-2 top-1/2 -translate-y-1/2 z-40">
         <Button 
+          id="tour-copilot"
           onClick={() => setIsOpen(true)}
           className="rounded-l-full rounded-r-none pb-0.5 h-9 pl-3 pr-3 shadow-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all"
         >

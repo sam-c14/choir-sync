@@ -66,6 +66,7 @@ export class UsersService {
         participationType: true,
         provider: true,
         createdAt: true,
+        hasCompletedOnboarding: true,
       },
     });
   }
@@ -89,6 +90,7 @@ export class UsersService {
         name: dto.name,
         comfortableKey: dto.comfortableKey,
         participationType: dto.participationType,
+        hasCompletedOnboarding: dto.hasCompletedOnboarding,
       },
       select: {
         id: true,
@@ -100,6 +102,7 @@ export class UsersService {
         participationType: true,
         provider: true,
         createdAt: true,
+        hasCompletedOnboarding: true,
       }
     });
   }
@@ -114,9 +117,10 @@ export class UsersService {
         comfortableKey: true,
         role: true,
         leadsVoicePart: true,
-        provider: true,
         participationType: true,
+        provider: true,
         createdAt: true,
+        hasCompletedOnboarding: true,
       }
     });
     if (!user) throw { code: 'NOT_FOUND', message: 'User not found' };

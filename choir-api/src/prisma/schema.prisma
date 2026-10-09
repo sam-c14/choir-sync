@@ -63,6 +63,7 @@ model User {
   participationType ParticipationType @default(VOCALIST)
   name           String?
   comfortableKey String?
+  hasCompletedOnboarding Boolean @default(false)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   refreshTokens  RefreshToken[]

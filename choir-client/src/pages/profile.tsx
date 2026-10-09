@@ -160,6 +160,29 @@ export function ProfilePage() {
           </form>
         </CardContent>
       </Card>
+
+      <Card className="max-w-md mx-auto mt-6">
+        <CardHeader>
+          <CardTitle>App Preferences</CardTitle>
+          <CardDescription>Manage your app experience</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={async () => {
+              try {
+                await apiClient.patch('/users/me', { hasCompletedOnboarding: false });
+                window.location.reload();
+              } catch (e) {
+                toast.error('Failed to restart tour');
+              }
+            }}
+          >
+            Restart App Tour
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

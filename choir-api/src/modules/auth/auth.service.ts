@@ -30,6 +30,7 @@ export class AuthService {
         name: user.name,
         comfortableKey: user.comfortableKey,
         participationType: user.participationType,
+        hasCompletedOnboarding: user.hasCompletedOnboarding,
       },
       JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRES_IN }

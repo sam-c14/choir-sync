@@ -7,18 +7,21 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 ---
 
 ## Milestone 0 — Workspace Scaffold
+
 **PRD refs:** §4.1, §9.1–§9.3
 **Goal:** Nx workspace exists with both apps and both shared libs generated and wired together.
 **Do:**
+
 - `npx create-nx-workspace@latest choir-workspace --preset=apps`
 - Generate `apps/choir-api` (Express) and `apps/choir-client` (Next.js).
 - Generate `libs/shared/types` and `libs/shared/validation`.
-**Verify with:** `nx-workspace-verify`
-**Done when:** `nx show projects` lists all four projects; a trivial import from `libs/shared/validation` works in both apps.
+  **Verify with:** `nx-workspace-verify`
+  **Done when:** `nx show projects` lists all four projects; a trivial import from `libs/shared/validation` works in both apps.
 
 ---
 
 ## Milestone 1 — Shared Contracts
+
 **PRD refs:** §6
 **Goal:** All Zod schemas and enums from §6 exist in `libs/shared/validation`, nowhere else.
 **Do:** Implement `VoicePartTypeEnum`, `SongStatusEnum`, `SongComplexityEnum`, `LinkPlatformEnum`, `UserRoleEnum`, `CreateSongSchema`, `CreateSongPartSchema`, `CreateSongLinkSchema`, `UpdateSongSchema`, `UpdateSongPartSchema`, `LoginSchema`, and their inferred DTO types.
@@ -28,6 +31,7 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 ---
 
 ## Milestone 2 — Database Layer
+
 **PRD refs:** §5, §8.1
 **Goal:** Prisma schema matches §5 exactly; first migration applied to a dev database.
 **Do:** Write `schema.prisma` (User, Song, SongPart, SongLink, all enums); set up Supabase dev project; create the first migration.
@@ -37,6 +41,7 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 ---
 
 ## Milestone 3 — Auth
+
 **PRD refs:** §2, §4.2, §7 (auth row), §9.6
 **Goal:** `POST /api/v1/auth/login` works; `requireAuth` and `requireRole` middleware exist; the Section-Leader-scoped check for voice parts is implemented.
 **Do:** Password hashing (bcrypt), JWT issuance/verification, the two middleware functions, seed one Director user for testing.
@@ -46,6 +51,7 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 ---
 
 ## Milestone 4 — Core API (Songs, Parts, Links)
+
 **PRD refs:** §7
 **Goal:** Every remaining row in the §7 endpoint table is implemented and guarded correctly.
 **Do:** Songs CRUD, parts bulk-upsert and single-part update (with the leadsVoicePart check), links add/remove.
@@ -55,6 +61,7 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 ---
 
 ## Milestone 5a — Frontend Design System Scaffold
+
 **PRD refs:** §4.1, §4.3
 **Goal:** `choir-client` (Vite + React 19) has Tailwind configured via `@nx/react:setup-tailwind`, shadcn/ui initialized and the full §4.3 component set added — scoped to `choir-client/` so Nx's own config isn't disturbed — and the `cn()` helper in place. Verified with a single rendered component before building real UI on top of it.
 **Do:** `npx nx g @nx/react:setup-tailwind --project=choir-client`; `cd choir-client && npx shadcn@latest init`; `cd choir-client && npx shadcn@latest add button input textarea select form dialog card badge dropdown-menu sonner`; confirm `vite.config.ts`'s alias resolution (check for a conflict between `shadcn init`'s own edits and Nx's `nxViteTsPaths()` plugin, if present) before moving on.
@@ -62,6 +69,7 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 **Done when:** the app renders a styled shadcn component with a clean console, and the actual file structure (confirmed: `src/app/app.tsx`, `src/styles.css`, not the originally assumed `src/App.tsx`/`src/index.css`) is reflected in `PRD.md`.
 
 ## Milestone 5b — Frontend Data Layer
+
 **PRD refs:** §4.1, §4.3
 **Goal:** The client can actually talk to the live API.
 **Do:** `src/lib/api-client.ts` (Axios instance, `VITE_API_URL`, JWT header attachment per §4.4), `src/lib/query-keys.ts`, `src/hooks/use-songs.ts` (TanStack Query hooks: list/detail/create/update/delete).
@@ -71,6 +79,7 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 ---
 
 ## Milestone 6 — Frontend Features
+
 **PRD refs:** §3.1–§3.4, §4.3
 **Goal:** The full catalog experience — search, S/A/T filter chips, sort (Title / Recently Added / Complexity), add/edit song dialog with react-hook-form + zodResolver, inline part-notes editor scoped to the logged-in user's role, and the links section.
 **Do:** Build the components listed in the PRD §4.1 tree under `songs/_components/`.
@@ -80,61 +89,68 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 ---
 
 ## Milestone 7 — Google SSO
+
 **PRD refs:** §5 (User model), §6 (`GoogleAuthSchema`), §7 (auth row), §10
 **Goal:** Users can sign in with Google as an alternative to email/password. Everything downstream of login (`AuthContext`, `requireAuth`, `requireRole`, the Section-Leader `leadsVoicePart` check) works identically regardless of which method was used.
 **Do:**
+
 - **Before writing any code**, confirm the §10.2 role-assignment policy for new Google sign-ins (default-to-CHORISTER, or Google Workspace domain restriction via the `hd` claim) — this is an open decision in the PRD, not yet settled. Surface it in the Implementation Plan artifact and get explicit approval on it specifically before proceeding, per rules.md's ambiguity rule.
 - One-time manual setup (human, not agent): create the Google Cloud OAuth Client ID per §10.3, add `GOOGLE_CLIENT_ID` / `VITE_GOOGLE_CLIENT_ID` to env config (local `.env` and eventually Render/Vercel).
 - Prisma migration: add `provider` (`AuthProvider` enum: `LOCAL`/`GOOGLE`) and `googleId` fields to `User`, make `passwordHash` nullable — via `prisma-create-migration`, reviewing the generated SQL carefully since `passwordHash` is changing from required to optional on an existing table.
 - Add `GoogleAuthSchema` to `libs/shared/validation` (§6) if not already present from the PRD write-up.
 - Backend: `POST /api/v1/auth/google` — verify the ID token via `google-auth-library`'s `OAuth2Client.verifyIdToken()` (signature, `aud`, `iss`, `email_verified`), then create-or-link the `User` per §10.1's three cases, then issue the same JWT format as the existing login endpoint. Follow `api-endpoint-scaffold` for this.
 - Frontend: install `@react-oauth/google`; add `<GoogleLogin>` to the login page; wire its success callback to `POST /api/v1/auth/google` and into the existing `AuthContext`/`api-client.ts` flow — no changes needed to anything downstream of "a JWT exists."
-**Verify with:**
+  **Verify with:**
 - `api-endpoint-scaffold` while building the endpoint.
 - `auth-guard-verify` — re-run the full matrix, but this time include a seeded `GOOGLE`-provider user for at least one role (e.g. a Chorister who signed in via Google) and confirm their guard results are identical to a `LOCAL`-provider user of the same role. The thing being proven here is that `provider` never leaks into the permission logic.
 - `frontend-browser-verify` — confirm the Google button renders correctly in both light and dark mode (per the design work from Milestone 6), and that a full Google sign-in round-trip lands the user in the catalog view with the correct role-based UI state.
-**Done when:** both login paths produce functionally identical sessions, the auth matrix passes for both provider types, and the §10.2 policy decision is reflected in the actual implementation (not just documented as pending).
+  **Done when:** both login paths produce functionally identical sessions, the auth matrix passes for both provider types, and the §10.2 policy decision is reflected in the actual implementation (not just documented as pending).
 
 ---
 
 ## Milestone 8 — Uniform Scheduling Module
+
 **PRD refs:** §5 (`UniformSchedule`), §6 (`CreateUniformSchema`/`UpdateUniformSchema`), §7 (uniforms rows), §11
 **Goal:** Directors can schedule and edit what's worn for upcoming/past services; everyone else can view it. Replaces the Excel-based tracking.
 **Do:**
+
 - Add the `UniformSchedule` model to `choir-api/src/prisma/schema.prisma` exactly as in §5 — migrate via `prisma-create-migration`.
 - Add `CreateUniformSchema`/`UpdateUniformSchema` (and both DTO types) to `libs/shared/validation`, using `z.coerce.date()` for `serviceDate` — not `z.string().datetime()`.
 - Implement `choir-api/src/modules/uniforms/` per `api-endpoint-scaffold`: `GET` open to any authenticated user, `POST`/`PATCH`/`DELETE` gated to `requireRole(DIRECTOR)`.
 - Implement the `?filter=current|past|all` logic exactly per §11.2 — **the "current" comparison must use start-of-today, not the current timestamp**, or today's entry disappears from view on the day it's needed. Get this specific comparison right before moving to the frontend; it's the one part of this milestone that's easy to get subtly wrong and hard to notice without deliberately testing it on the actual boundary.
 - Frontend: new `/uniforms` route in `routes.tsx` with a nav link; default view calls `?filter=current`, with a "View Past Entries" toggle switching to `?filter=past`. Add shadcn's `calendar` and `popover` components via `shadcn-component-add` (not part of the original Milestone 5a set) for the date picker in the Director's add/edit dialog, built with `react-hook-form` + `zodResolver(CreateUniformSchema)` matching the existing Song form pattern.
-**Verify with:**
+  **Verify with:**
 - `api-endpoint-scaffold` while building the endpoints.
 - `auth-guard-verify` — extend the existing role matrix with the four `/uniforms` endpoints; confirm Chorister/Section Leader get 403 on all three write endpoints and 200 on `GET`, same shape as the Songs matrix.
 - A dedicated boundary check as part of this milestone's own verification, not just `frontend-browser-verify`: seed one entry with `serviceDate` = today, and confirm it appears under `?filter=current` when tested at multiple times of day (not just once, right after seeding) — this is the one thing in this milestone actually worth a targeted manual check rather than trusting the general test suite.
 - `frontend-browser-verify` for the UI itself (list rendering, the past/current toggle, the add-entry dialog and its validation).
-**Done when:** the auth matrix passes for all four endpoints, the current/past boundary is confirmed correct at more than one point in the day, and a Director can create/edit/delete entries through the UI while other roles cannot.
+  **Done when:** the auth matrix passes for all four endpoints, the current/past boundary is confirmed correct at more than one point in the day, and a Director can create/edit/delete entries through the UI while other roles cannot.
 
 ---
 
 ## Milestone 9 — User Management (Roles & Deletion)
+
 **PRD refs:** §7 (users rows), §12
 **Goal:** Directors can see all users, promote a Chorister to Section Leader (or Director), and delete a non-Director user — closing the gap §10.2 left open (Google SSO auto-provisions Choristers with no other way to manage them).
 **Do:**
+
 - Add `UpdateUserRoleSchema` to `libs/shared/validation` per §6/§12.2, including the `.refine()` requiring `leadsVoicePart` when `role === SECTION_LEADER`. No Prisma migration needed — the fields already exist.
 - Implement `choir-api/src/modules/users/` per `api-endpoint-scaffold`: `GET /api/v1/users`, `PATCH /api/v1/users/:id/role`, and `DELETE /api/v1/users/:id` — all `requireRole(DIRECTOR)`. Confirm the `GET` response mapping explicitly excludes `passwordHash` and `googleId` — select only the safe fields, don't rely on Prisma's default and trim it later.
 - Implement the "last Director" safety check per §12.2 on the role-update endpoint (409 if the update would leave zero Directors) before the write happens, not as a client-side-only guard.
 - Implement `role !== SECTION_LEADER` clearing `leadsVoicePart` to `null` server-side, regardless of what the request body contains.
 - Implement the delete endpoint's Director-protection rule: reject with 403 if the target's role is `DIRECTOR` — this is a fixed policy (any Director, not just "the last one"), and correctly blocks self-deletion as a side effect. Do not build support for deleting a Director in this milestone; that's explicitly deferred.
 - Frontend: `/admin/users` route (Director-only, both nav visibility and route-level redirect), a `use-users.ts` TanStack Query hook (list, role-update, delete), and a table/list UI with a role `Select` per user (revealing a `leadsVoicePart` `Select` when `SECTION_LEADER` is chosen) plus a Delete action per row. The Delete action must be hidden entirely for Director rows, not just disabled. Add shadcn's `AlertDialog` via `shadcn-component-add` for a delete confirmation — this is a destructive, irreversible action.
-**Verify with:**
+  **Verify with:**
 - `api-endpoint-scaffold` while building the endpoints.
 - `auth-guard-verify` — extend the matrix with all three endpoints; confirm non-Directors get 403 on all writes.
 - Two targeted checks beyond the standard matrix, both worth testing deliberately rather than trusting the happy path: (1) attempt to demote the sole seeded Director and confirm 409; (2) attempt to delete a seeded Director (as another Director) and confirm 403, including a Director attempting to delete themselves.
 - `frontend-browser-verify` for the admin UI — role changes, the delete confirmation dialog, and confirming the Delete action is genuinely absent (not just disabled) on Director rows.
-**Done when:** the auth matrix passes, both safety checks (last-Director demotion, Director deletion) are proven to actually block their respective actions, and a Director can promote a Chorister and delete a non-Director user end-to-end through the UI.
+  **Done when:** the auth matrix passes, both safety checks (last-Director demotion, Director deletion) are proven to actually block their respective actions, and a Director can promote a Chorister and delete a non-Director user end-to-end through the UI.
 
 ---
 
 ## Milestone 10 — Deployment Readiness
+
 **PRD refs:** §8
 **Goal:** The app is actually deployable to Render + Vercel on the free tier, per §8, with no placeholder config left in place.
 **Do:** Finalize the Dockerfile, set real Render/Vercel env vars (including `GOOGLE_CLIENT_ID`/`VITE_GOOGLE_CLIENT_ID` and the production Google Cloud Console authorized origin), confirm CORS origin matches the real Vercel URL, seed the production Director user.
@@ -144,16 +160,18 @@ Do not skip ahead. Do not combine milestones "to save time." A milestone that ha
 ## POST RELEASE MILESTONES
 
 ## Milestone 1 — External Song Auto-Fill (Spotify Integration)
+
 **Goal:** Allow users to search an external music database to auto-populate the Create Song form.
-**Do:** 
+**Do:**
+
 1. Add a proxy endpoint `GET /api/v1/external-music/search?q={query}` to `apps/choir-api` that calls the Spotify Web API (Search & Audio Features) to retrieve Title, Artist, BPM, and Key. Secure the Spotify Client ID/Secret in the backend `.env`.
 2. In `apps/choir-client`, add an async search combobox at the top of the "Add Song" dialog.
-3. When a search result is selected, use `react-hook-form`'s `setValue` to auto-populate the `title`, `composer`, `tempoBpm`, and `musicalKey` fields. 
+3. When a search result is selected, use `react-hook-form`'s `setValue` to auto-populate the `title`, `composer`, `tempoBpm`, and `musicalKey` fields.
 4. The user must still be able to manually edit these fields and append voice parts before submitting via the standard `CreateSongSchema`.
-**Verify with:** `api-endpoint-scaffold` for the proxy, and `frontend-browser-verify` to ensure the combobox correctly populates the form without triggering validation errors prematurely.
-**Done when:** A user can search a song, click it, see the metadata fill the form, and successfully save it to the local database.
+   **Verify with:** `api-endpoint-scaffold` for the proxy, and `frontend-browser-verify` to ensure the combobox correctly populates the form without triggering validation errors prematurely.
+   **Done when:** A user can search a song, click it, see the metadata fill the form, and successfully save it to the local database.
 
-## MileStone 1 Prompt 
+## MileStone 1 Prompt
 
 ```bash
 Execute Milestone 6.5 — External Song Auto-Fill (Spotify Integration).
@@ -189,14 +207,16 @@ Use api-endpoint-scaffold to verify the proxy routing, and run nx-workspace-veri
 ```
 
 ## Milestone 2 — YouTube Search & Unified Reference Links Integration
+
 **Goal:** Extend external search to support YouTube, and ensure both Spotify and YouTube search results automatically append to the song's reference links.
 **Do:**
+
 1. Extend backend external music endpoints in `choir-api/` to integrate the YouTube Data API v3 (`search` endpoint, `part=snippet`, `type=video`), returning title, channel/artist, and video URL.
 2. In `choir-client/`, update the search combobox to toggle between Spotify and YouTube sources.
 3. Automatically append the selected Spotify track URL or YouTube video URL into the form's reference links array (`platform`: `SPOTIFY` or `YOUTUBE`).
 4. Ensure the Song Details page renders reference links with appropriate platform badges/icons (YouTube, Spotify, Audiomack) and supports manual additions/removals.
-**Verify with:** `api-endpoint-scaffold`, `nx-workspace-verify`, and manual browser verification.
-**Done when:** Searching YouTube returns video results, picking a Spotify or YouTube result populates song metadata AND adds the URL into the reference links list, and links render correctly on the song details view.
+   **Verify with:** `api-endpoint-scaffold`, `nx-workspace-verify`, and manual browser verification.
+   **Done when:** Searching YouTube returns video results, picking a Spotify or YouTube result populates song metadata AND adds the URL into the reference links list, and links render correctly on the song details view.
 
 ```bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 2 — YouTube Search & Unified Reference Links Integration.
@@ -234,14 +254,16 @@ Verification:
 ```
 
 ## Milestone 3 — Automated Lyrics Auto-Fill (LRCLIB Integration)
+
 **Goal:** Automatically fetch and populate plain-text lyrics using the open-source LRCLIB API when a song is selected via external search.
 **Do:**
+
 1. In `choir-client/`, implement a lyrics fetch utility querying `https://lrclib.net/api/get?track_name={title}&artist_name={artist}`.
 2. Hook this utility into the external search selection workflow in the "Add/Edit Song" modal.
 3. Automatically set the form's `lyrics` field via `react-hook-form`'s `setValue` using the returned `plainLyrics`.
 4. Wrap the request in resilient error handling: silently catch `404 Not Found` or network errors without raising UI error toasts, ensuring the textarea remains cleanly open for manual input.
-**Verify with:** `frontend-browser-verify` and `nx-workspace-verify`.
-**Done when:** Selecting a recognizable track populates the lyrics field automatically, while selecting an unindexed track leaves the field empty and editable without console or UI errors.
+   **Verify with:** `frontend-browser-verify` and `nx-workspace-verify`.
+   **Done when:** Selecting a recognizable track populates the lyrics field automatically, while selecting an unindexed track leaves the field empty and editable without console or UI errors.
 
 ## Milestone 3 Prompt
 
@@ -283,13 +305,15 @@ Also, increase the debounce across all frontend instances of the debounce functi
 ```
 
 ## Milestone 4 — Playlists, Quick-Add Bridge & Mobile Rehearsal Reader
+
 **Goal:** Enable playlist creation with auto-add fallbacks and transform the song part view into a responsive, mobile-first reader.
 **Do:**
+
 1. Add `Playlist` and `PlaylistSong` models to `choir-api/src/prisma/schema.prisma` and create migrations.
 2. Implement backend CRUD endpoints at `/api/v1/playlists`.
 3. In `choir-client/`, build the playlist management UI with quick-add song integration: if a search yields no results in the playlist builder, offer an inline "Create & Add to Setlist" modal.
 4. Replace the raw textboxes in the song view with a mobile-optimized Rehearsal Reader: swipeable S/A/T tabs, large formatted sol-fa blocks, and an edit mode toggle scoped to section leaders and directors.
-**Verify with:** `api-endpoint-scaffold`, `nx-workspace-verify`, and manual browser responsive testing.
+   **Verify with:** `api-endpoint-scaffold`, `nx-workspace-verify`, and manual browser responsive testing.
 
 ## Followup Prompt
 
@@ -320,8 +344,10 @@ Verify with `nx-workspace-verify` and browser checks for mobile layout responsiv
 ---
 
 ## Milestone 5 — Voice Part Audio Snippets (Supabase Signed Upload URLs)
+
 **Goal:** Allow choristers and leaders to record and attach quick audio references (max 60s) to voice parts using secure, backend-minted Supabase Signed Upload URLs.
 **Do:**
+
 1. Add `VoiceSnippet` model to Prisma schema and run migrations.
 2. Ensure `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_URL` exist in `choir-api/.env`.
 3. In `choir-api/`, create an endpoint `POST /api/v1/song-parts/:partId/snippets/upload-url`:
@@ -334,7 +360,7 @@ Verify with `nx-workspace-verify` and browser checks for mobile layout responsiv
    - `PUT` the audio blob directly to the signed URL.
    - Post metadata to save the snippet to database.
    - Render inline audio player on the voice part tab.
-**Verify with:** Browser recording test, zero RLS errors, verify file lands in Supabase bucket and DB record is created.
+     **Verify with:** Browser recording test, zero RLS errors, verify file lands in Supabase bucket and DB record is created.
 
 ## Followup Prompt
 
@@ -379,16 +405,19 @@ Verify with `nx-workspace-verify`.
 ---
 
 ## Milestone 6 — Sunday Roster, Confirmation Modal & In-App Notifications
+
 **Goal:** Implement service roster assignments, intentional confirmation modals, and zero-cost in-app notifications.
 **Do:**
+
 1. Add `ServiceRoster`, `RosterMember`, and `Notification` models to `schema.prisma`.
 2. Implement endpoints to manage rosters and query user notifications (`GET /api/v1/notifications`, `PATCH /api/v1/notifications/:id/read`).
 3. Build the Roster Assignment UI inside the Playlist view allowing Directors to assign vocalists to Soprano, Alto, Tenor, or Lead.
 4. Implement the intentional dispatch confirmation modal. Upon confirmation, batch-insert notification rows for all assigned users.
 5. Add a Notification Bell icon with an unread badge to the mobile navigation bar.
-**Verify with:** Role testing: assign users as Director, verify receipt of in-app notifications on assigned member accounts.
+   **Verify with:** Role testing: assign users as Director, verify receipt of in-app notifications on assigned member accounts.
 
 ## Followup Prompt
+
 ```bash
 Read PRD.md, RULES.md, and EXECUTION.md. In Post Release Milestones, Execute Milestone 6 — Sunday Roster, Confirmation Modal & In-App Notifications.
 
@@ -408,17 +437,20 @@ Tasks:
 
 Verify with `nx-workspace-verify` and test the notification flow between two user accounts.
 ```
+
 ---
 
 ## Milestone 7 — AI Worship Curator & Song Discovery
+
 **Goal:** Integrate Gemini 2.0 Flash via Google AI Studio free tier to suggest setlists and recommend repertoire based on season, theme, or vibe.
 **Do:**
+
 1. Secure `GEMINI_API_KEY` in `choir-api/.env`.
 2. Add backend endpoint `POST /api/v1/ai/curate-setlist` and `POST /api/v1/ai/discover-songs`.
 3. In `choir-api/`, implement a service passing the current catalog metadata (titles, tempos, keys, tags) to Gemini using structured JSON output schemas (`responseSchema`).
 4. In `choir-client/`, build an "AI Curator" slide-over sheet in the Playlists section offering scenario buttons (Thanksgiving, Praise Night, Communion) and custom vibe inputs.
 5. Enable one-click conversion from AI suggestions into drafted playlists.
-**Verify with:** `api-endpoint-scaffold`, JSON schema conformance checks, and rate-limit error handling.
+   **Verify with:** `api-endpoint-scaffold`, JSON schema conformance checks, and rate-limit error handling.
 
 ## Followup Prompt
 
@@ -448,16 +480,18 @@ Verify with `nx-workspace-verify` and ensure graceful error handling if rate lim
 ---
 
 ## Milestone 8 — One-Click WhatsApp Broadcast Formatter
+
 **Goal:** Auto-generate complete Sunday morning summary texts with uniform schedules, setlists, and deep links.
 **Do:**
+
 1. Implement a client-side formatting engine combining `UniformSchedule`, `Playlist`, and `ServiceRoster` data for a selected date.
 2. Structure the formatted output: Date, Male/Female dress codes, ordered songs with rehearsal deep-links, and assigned vocal leads.
 3. Build the Broadcast Preview Card with "Copy to Clipboard" (with toast feedback) and "Send via WhatsApp" deep-link integration (`https://wa.me/?text=...`).
-**Verify with:** Copy-to-clipboard functionality across mobile and desktop browsers, ensuring correct URL encoding and layout rendering.
+   **Verify with:** Copy-to-clipboard functionality across mobile and desktop browsers, ensuring correct URL encoding and layout rendering.
 
 ## Followup Prompt
 
-```bash
+````bash
 Read PRD.md, RULES.md, and EXECUTION.md. In Post Release Milestones, Execute Milestone 8 — One-Click WhatsApp Broadcast Formatter.
 
 Tasks:
@@ -470,18 +504,18 @@ Tasks:
      👗 *UNIFORM:*
      • Female: [Female Outfit]
      • Male: [Male Outfit]
-     
+
      🎶 *MINISTRATION SETLIST:*
      1. [Song Title] (Key: [Key]) — Lead: [Lead Name]
         🔗 [App Song Rehearsal Deep Link]
      2. [Song Title] (Key: [Key]) — Lead: [Lead Name]
         🔗 [App Song Rehearsal Deep Link]
-     
+
      👥 *ROSTER ASSIGNMENTS:*
      • Soprano: [Names]
      • Alto: [Names]
      • Tenor: [Names]
-     
+
      Please review your parts on the choir portal before rehearsal!
      ```
 
@@ -492,17 +526,19 @@ Tasks:
    - Include an "Open WhatsApp" button linking to `https://wa.me/?text=${encodeURIComponent(formattedText)}`.
 
 Verify with `nx-workspace-verify` and confirm mobile clipboard and WhatsApp link behavior.
-```
+````
 
 ## Milestone 9 — Active Sunday Playlist Sync
+
 **Goal:** Reconcile Playlists with the "Active Sunday Songs" state on the Songs page so marking a playlist as the Active Lineup automatically synchronizes the active Sunday songs across the app.
 **Do:**
+
 1. Add `isActive Boolean @default(false)` to the `Playlist` model in `schema.prisma` and run migration.
 2. In `choir-api/`, create `PATCH /api/v1/playlists/:id/active` to toggle a playlist as the single active Sunday lineup inside a Prisma `$transaction`, automatically syncing the active Sunday boolean on the underlying `Song` records.
 3. Hook into the Playlist add-song and remove-song controllers: if the target playlist has `isActive: true`, automatically mark the added/removed song as active/inactive for Sunday.
 4. Hook into the Song active-status toggle controller: if a song is manually toggled on the Songs page and an active Playlist exists, automatically add or remove that song from the active Playlist.
 5. In `choir-client/`, add a prominent "Set as Active Sunday Lineup" toggle/badge in the Playlist Details header and an "Active Sunday Lineup" badge on the Playlists index card.
-**Verify with:** `nx-workspace-verify` and browser verification confirming that activating a playlist or modifying its songs immediately updates the Active Sunday Songs view on the `/songs` page.
+   **Verify with:** `nx-workspace-verify` and browser verification confirming that activating a playlist or modifying its songs immediately updates the Active Sunday Songs view on the `/songs` page.
 
 ## Followup Prompt
 
@@ -544,14 +580,16 @@ Verify with `nx-workspace-verify` and test the full flow between `/playlists` an
 ```
 
 ## Milestone 10 — Automated Roster Email Notifications (Brevo HTTP Integration)
+
 **Goal:** Dispatch personalized HTML assignment emails to rostered choristers when the Director confirms team notifications, using Brevo's HTTP API to bypass Render free-tier SMTP port blocks.
 **Do:**
+
 1. Configure `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, and `FRONTEND_URL` in `choir-api/.env`.
 2. In `choir-api/`, build an `EmailService` using native HTTP `fetch` against `https://api.brevo.com/v3/smtp/email`.
 3. Create a responsive HTML email template displaying the chorister's assigned voice part (`SOPRANO`, `ALTO`, `TENOR`, or `LEAD`), service date, playlist title, scheduled songs with custom keys/soloists, and a direct CTA button linking to the live playlist/rehearsal view.
 4. Hook the email dispatch into the existing Roster Notification endpoint (`POST /api/v1/playlists/:id/roster/dispatch` or equivalent) using `Promise.allSettled` so email delivery never blocks or crashes in-app notifications.
 5. Update the Frontend "Notify Team" confirmation modal in `choir-client/` to indicate that assigned members will receive both an In-App Notification and an Email alert, returning delivery counts in the success toast.
-**Verify with:** `nx-workspace-verify` and triggering a roster notification to verify receipt of the formatted HTML email in a real inbox.
+   **Verify with:** `nx-workspace-verify` and triggering a roster notification to verify receipt of the formatted HTML email in a real inbox.
 
 ## Followup Prompt
 
@@ -729,13 +767,15 @@ Run `nx-workspace-verify` to ensure there are no unused imports or TypeScript er
 ```
 
 ## Milestone 11 — Backend OpenAPI / Swagger Documentation
+
 **Goal:** Expose interactive OpenAPI 3.0 documentation for `choir-api` so all endpoints, schemas, and role-protected routes can be inspected and tested in the browser.
 **Do:**
+
 1. Install `swagger-ui-express` and `swagger-jsdoc` (plus `@types/swagger-ui-express` and `@types/swagger-jsdoc`) in `choir-api/`.
 2. Create a centralized OpenAPI 3.0 configuration (`choir-api/src/config/swagger.ts`) defining API metadata, server URLs, reusable component schemas (`Song`, `SongPart`, `VoiceSnippet`, `Playlist`, `ServiceRoster`, `Notification`, `UniformSchedule`), and Bearer JWT security (`bearerAuth`).
 3. Document all route groups (`Auth`, `Songs`, `Voice Snippets`, `Playlists & Active Lineup`, `Roster & Notifications`, `Uniforms`, `AI Curator`, `External Search`) with request bodies, query params, and response codes.
 4. Mount the interactive Swagger UI at `GET /api/docs` and expose the raw OpenAPI JSON spec at `GET /api/docs.json`.
-**Verify with:** `nx-workspace-verify` and verifying in the browser that `/api/docs` renders cleanly with working JWT "Authorize" functionality.
+   **Verify with:** `nx-workspace-verify` and verifying in the browser that `/api/docs` renders cleanly with working JWT "Authorize" functionality.
 
 ## Followup Prompt
 
@@ -778,14 +818,16 @@ Verification:
 ---
 
 ## Milestone 12 — Product Analytics & Error Monitoring (Google Analytics 4)
+
 **Goal:** Integrate Google Analytics 4 (`react-ga4`) into `choir-client` to monitor SPA page navigation, feature adoption (rehearsal audio playback, recording, AI curation, roster notifications), and client/API exceptions.
 **Do:**
+
 1. Install `react-ga4` in `choir-client/` and configure `VITE_GA_MEASUREMENT_ID` in `.env`.
 2. Create a centralized analytics utility (`choir-client/src/lib/analytics.ts`) that safely no-ops in local development if the Measurement ID is absent.
 3. Build a `<RouteTracker />` listener hooked into `react-router-dom`'s `useLocation` to automatically record SPA pageviews across all routes.
 4. Instrument core choir workflows with typed custom events (`song_viewed`, `voice_snippet_played`, `voice_snippet_recorded`, `playlist_activated`, `ai_setlist_curated`, `roster_dispatched`, `whatsapp_broadcast_copied`).
 5. Hook an error/exception tracker into the Axios `apiClient` interceptor and global window error handler to monitor failed API calls (`5xx` / network timeouts) and UI crashes in GA4.
-**Verify with:** `nx-workspace-verify` and verifying network beacons (`google-analytics.com/g/collect`) in browser DevTools.
+   **Verify with:** `nx-workspace-verify` and verifying network beacons (`google-analytics.com/g/collect`) in browser DevTools.
 
 ## Followup Prompt
 
@@ -833,16 +875,18 @@ Run `nx-workspace-verify` to confirm all TypeScript types, tests, and builds suc
 ```
 
 ## Milestone 12.5 — Health Check Endpoint & Cold-Start Prevention
+
 **Goal:** Expose a fast `/api/health` endpoint in `choir-api` (supporting both `GET` and `HEAD` requests) to keep the Render container and Supabase Prisma connection pool warm via UptimeRobot.
 **Do:**
+
 1. In `choir-api/`, create a `/api/health` route (mounted before auth middleware) that returns HTTP `200 OK` with `{ status: "ok", uptime, timestamp, db: "connected" }`.
 2. Execute a lightweight `prisma.$queryRaw\`SELECT 1\`` with a safe fallback so pings keep both the Express server and Supabase connection pool active.
 3. Add the `/api/health` endpoint to the OpenAPI/Swagger specification under a `System` tag.
-**Verify with:** `nx-workspace-verify` and verifying `GET /api/health` and `HEAD /api/health` return `200 OK`.
+   **Verify with:** `nx-workspace-verify` and verifying `GET /api/health` and `HEAD /api/health` return `200 OK`.
 
 ## Followup Prompt
 
-```bash
+````bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 12.5 — Health Check Endpoint & Cold-Start Prevention.
 
 Paths reminder: Projects are located directly at `choir-api/`, `choir-client/`, and `libs/shared/`.
@@ -866,20 +910,23 @@ Tasks (`choir-api/`):
    - Register `GET /api/health` under a `System` tag in the Swagger/OpenAPI spec (`choir-api/src/config/swagger.ts`).
 
 Verify with `nx-workspace-verify`.
-```
+````
 
 ## Milestone 13 — User Profiles & Roster Display Names
+
 **Goal:** Allow users to set a preferred display name and their comfortable vocal key, and ensure the app uses this name globally (especially in the Sunday Roster UI).
 **Do:**
+
 1. Update the `User` model in `schema.prisma` to include `name String?` and `comfortableKey String?` (if not already present), and run a migration.
 2. In `choir-api/`, create a `PATCH /api/v1/users/me` endpoint to allow users to update these fields.
 3. In `choir-client/`, build a mobile-first `/profile` page with a form to edit Name and Comfortable Key (using a select dropdown for standard musical keys).
 4. Update the Navbar: add a "Profile" or Avatar link to the desktop right-hand nav, and to the mobile hamburger menu/popover.
 5. Update the Roster Assignment UI and any other list views to render `user.name || user.email` (or Google fallback) so the customized name takes priority.
-**Verify with:** `nx-workspace-verify` and manual browser testing ensuring the name updates immediately in the navbar and roster selection dropdowns.
+   **Verify with:** `nx-workspace-verify` and manual browser testing ensuring the name updates immediately in the navbar and roster selection dropdowns.
 
 ## Followup Prompt
-```bash
+
+````bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 13 — User Profiles & Roster Display Names.
 
 Paths reminder: Projects are located directly at `choir-api/`, `choir-client/`, and `libs/shared/`.
@@ -919,19 +966,22 @@ Tasks:
 
 Verification:
 Run `nx-workspace-verify` to ensure zero TypeScript errors.
-```
+````
 
 ## Milestone 14 — Playlist Master Key & Interactive Pitch Keyboard (Web Audio API)
+
 **Goal:** Enable setting an overarching key for a Playlist with an interactive, labeled virtual pitch keyboard using the browser's native Web Audio API, keeping individual song keys strictly independent.
 **Do:**
+
 1. Add `key String?` to the `Playlist` model in `schema.prisma` and run migration.
 2. Update playlist DTOs in `libs/shared/` and the playlist update endpoints in `choir-api/` to accept and persist `key`. Ensure this mutation strictly updates the playlist record and does NOT modify `PlaylistSong.customKey` or `Song.key`.
 3. Create a zero-dependency Web Audio synthesizer utility (`choir-client/src/lib/pitch-synth.ts`) that plays accurate note frequencies (A4 = 440 Hz) using an `AudioContext` oscillator with smooth gain attack/decay.
 4. Build a mobile-optimized, labeled virtual keyboard component (`VirtualPitchKeyboard`) with standard white and black piano keys displaying note names (e.g., C, C#, D, Eb, E, F, F#, G, Ab, A, Bb, B).
 5. Integrate the keyboard into a Key Picker dialog/drawer on the Playlist Details page, allowing the Director to test pitches before confirming the playlist's master key.
-**Verify with:** `nx-workspace-verify`, playing pitch notes on mobile touch devices, saving a playlist key, and verifying that existing song keys in the playlist remain unchanged.
+   **Verify with:** `nx-workspace-verify`, playing pitch notes on mobile touch devices, saving a playlist key, and verifying that existing song keys in the playlist remain unchanged.
 
 ## Followup Prompt
+
 ```bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 14 — Playlist Master Key & Interactive Pitch Keyboard (Web Audio API).
 
@@ -980,8 +1030,10 @@ Verification:
 ```
 
 ## Milestone 15 — Clear Active Sunday Lineup (Atomic Batch Reset)
+
 **Goal:** Allow Directors to clear all active Sunday songs and deactivate any connected active playlist in a single atomic database transaction.
 **Do:**
+
 1. In `choir-api/`, create an endpoint `POST /api/v1/songs/clear-active` (restricted to Directors).
 2. Execute the reset inside a single atomic `prisma.$transaction`:
    - Set the Sunday active flag to `false` for all songs currently marked active (`prisma.song.updateMany`).
@@ -989,9 +1041,10 @@ Verification:
 3. In `choir-client/`, add an intentional "Clear Active Lineup" action in the "Active Sunday Songs" section header on the Songs page (`/songs`).
 4. Implement a confirmation dialog summarizing the action: "This will remove all songs from this Sunday's lineup and deactivate the connected playlist."
 5. On confirmation, invoke the reset endpoint, invalidate both the `songs` and `playlists` React Query caches, and display a confirmation toast.
-**Verify with:** `nx-workspace-verify` and browser testing confirming that clicking clear updates both the Songs page and the Playlists page simultaneously with zero partial states.
+   **Verify with:** `nx-workspace-verify` and browser testing confirming that clicking clear updates both the Songs page and the Playlists page simultaneously with zero partial states.
 
 ## Followup Prompt
+
 ```bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 15 — Clear Active Sunday Lineup (Atomic Batch Reset).
 
@@ -1034,16 +1087,19 @@ Verification:
 ```
 
 ## Milestone 16 — In-App AI Assistant (ChoirSync Copilot)
+
 **Goal:** Implement a floating, edge-anchored chat button that opens a conversational AI interface (powered by Gemini), allowing choristers to ask for vocal tips, harmony guidance, or music theory help directly within the app.
 **Do:**
+
 1. In `choir-api/`, create a `POST /api/v1/ai/chat` endpoint utilizing the Gemini 2.0 Flash SDK. Configure a system prompt instructing the model to act as a helpful, encouraging ChoirSync vocal and music theory assistant.
 2. Ensure the endpoint accepts a chat history array so the model maintains conversational context.
 3. In `choir-client/`, build a `FloatingChatButton` component anchored to the right edge of the screen (poking out slightly) and render it globally in the root layout.
 4. Build a `ChatSheet` UI (using a right-side sliding drawer/sheet) containing a scrollable message history, distinct User vs. AI chat bubbles, and a sticky input field with a loading state.
 5. Connect the chat UI to the backend endpoint, handling loading states and automatic scroll-to-bottom behavior as new messages arrive.
-**Verify with:** `nx-workspace-verify`, verifying the side-tab renders correctly on mobile/desktop, and testing a multi-turn conversation with the AI.
+   **Verify with:** `nx-workspace-verify`, verifying the side-tab renders correctly on mobile/desktop, and testing a multi-turn conversation with the AI.
 
 ## Followup Prompt
+
 ```bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 16 — In-App AI Assistant (ChoirSync Copilot).
 
@@ -1055,7 +1111,7 @@ Tasks:
    - Ensure the Google Gemini SDK (e.g., `@google/genai` or `@google/generative-ai`) is installed.
    - Create a new endpoint `POST /api/v1/ai/chat` (authenticated users only).
    - Expect a JSON body: `{ messages: { role: 'user' | 'model', content: string }[], newMessage: string }`.
-   - Initialize the Gemini 2.0 Flash model. Apply a System Instruction/Prompt: 
+   - Initialize the Gemini 2.0 Flash model. Apply a System Instruction/Prompt:
      "You are the ChoirSync Copilot, a friendly, encouraging AI assistant built into a choir management app. Your job is to help choristers and directors with music theory, vocal warmups, harmonizing tips, and general choir advice. Keep answers concise, mobile-friendly, and formatted nicely. The user you are talking to is named [Inject req.user.name or req.user.email]."
    - Pass the existing `messages` array as history, send the `newMessage`, and return the AI's text response.
 
@@ -1068,7 +1124,7 @@ Tasks:
 3. Chat Interface Drawer (`choir-client/`):
    - Use the `Sheet` component (from shadcn/ui) configured with `side="right"` to act as the chat container.
    - **Header**: "ChoirSync Copilot" with a subtle subtitle ("Ask about vocal tips, harmonies, or music theory").
-   - **Message Area**: A flex column with overflow-y-auto. 
+   - **Message Area**: A flex column with overflow-y-auto.
      - AI messages: Aligned left, gray/muted bubble background.
      - User messages: Aligned right, primary color bubble background.
      - Implement a `useRef` to automatically scroll to the bottom whenever a new message is added.
@@ -1086,17 +1142,20 @@ Verification:
 ```
 
 ## Milestone 17 — Uniform Inspiration Images (Signed Uploads)
+
 **Goal:** Allow Directors to attach up to 4 inspiration images to a Uniform Schedule, utilizing Supabase Signed Upload URLs for secure, direct-to-cloud file hosting.
 **Do:**
+
 1. Update `UniformSchedule` (or your uniform model) in `schema.prisma` to include `imageUrls String[] @default([])` and run a migration.
 2. In `choir-api/`, create a `POST /api/v1/uniforms/upload-url` endpoint that uses `supabaseAdmin` to generate a signed upload URL for the `uniform-inspos` bucket.
 3. Update the Uniform CRUD endpoints (`POST` and `PATCH`) to accept the `imageUrls` array. In the `PATCH` and `DELETE` endpoints, implement a diffing logic to automatically remove deleted images from the Supabase bucket.
 4. In `choir-client/`, update the Uniform form to include an image picker/dropzone with a hard limit of 4 images. Display local thumbnail previews with a clickable "X" to remove them.
 5. Implement the upload flow: `GET` signed URLs for new files $\rightarrow$ `PUT` files directly to Supabase $\rightarrow$ append public URLs to the form payload.
 6. Render the uploaded images in a responsive grid on the Uniform Schedule view, supporting a click-to-expand lightbox or fullscreen view.
-**Verify with:** `nx-workspace-verify`, uploading 3 images, viewing them, editing the uniform to delete 1 image, and verifying it disappears from both the UI and the Supabase storage bucket.
+   **Verify with:** `nx-workspace-verify`, uploading 3 images, viewing them, editing the uniform to delete 1 image, and verifying it disappears from both the UI and the Supabase storage bucket.
 
 ## Followup Prompt
+
 ```bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 17 — Uniform Inspiration Images (Signed Uploads).
 
@@ -1145,7 +1204,8 @@ Verification:
 ```
 
 ## Followup Prompt 2
-```bash
+
+````bash
 Read PRD.md and the current implementation of the Uniform Schedule image upload in `choir-client/`.
 
 Requirement: We must implement client-side image compression before uploading files to Supabase Signed URLs to protect our 500MB free tier storage limit and ensure fast mobile uploads.
@@ -1170,30 +1230,35 @@ Tasks (`choir-client/`):
 
 Verification:
 Run `nx-workspace-verify`. Test the upload flow with a large 5MB+ image and verify in the Supabase Storage dashboard that the resulting file is under 500KB and visually clear in the app.
-```
+````
 
 ## Milestone 18 — Musician & Vocalist Participation Roles
+
 **Goal:** Allow users to specify their involvement type (Vocalist, Musician, or Both) on their profile, and automatically exclude pure Musicians from being assignable to vocal parts in the Sunday Roster.
 **Do:**
+
 1. Update the `User` model in `schema.prisma` to include a `participationType` field (e.g., `VOCALIST`, `MUSICIAN`, `BOTH`) defaulting to `VOCALIST`, and run a migration.
 2. In `choir-api/`, update the profile endpoint (`PATCH /api/v1/users/me`) to accept and persist this new field.
 3. In the playlist roster assignment endpoints and queries, filter out users whose `participationType` is strictly `MUSICIAN` so they do not appear in the dropdowns for Soprano, Alto, Tenor, or Lead.
 4. In `choir-client/`, update the `/profile` page to include a "Participation Role" dropdown field.
-**Verify with:** `nx-workspace-verify`, setting a user to "Musician", and confirming they disappear from the voice part selection dropdowns on the Playlist Roster page.
+   **Verify with:** `nx-workspace-verify`, setting a user to "Musician", and confirming they disappear from the voice part selection dropdowns on the Playlist Roster page.
 
 ---
 
 ## Milestone 19 — Admin Role & Granular Permissions
+
 **Goal:** Introduce an `ADMIN` role that acts as a super-user. Admins inherit all Director privileges, but only Admins can delete users, while both Directors and Admins can promote someone to Admin.
 **Do:**
+
 1. Update the `Role` enum in `schema.prisma` to include `ADMIN` and run a migration.
 2. In `choir-api/`, update the Role-Based Access Control (RBAC) middleware so that `ADMIN` automatically passes any `DIRECTOR` permission checks.
 3. Restrict the `DELETE /api/v1/users/:id` endpoint so that ONLY users with the `ADMIN` role can access it (remove `DIRECTOR` access).
 4. Update the user role promotion endpoint (`PATCH /api/v1/users/:id/role`) to ensure both `DIRECTOR` and `ADMIN` can change a user's role to `ADMIN`.
 5. In `choir-client/`, hide the "Delete User" button in the member directory for Directors, ensuring it is only visible to Admins.
-**Verify with:** `nx-workspace-verify`, logging in as a Director to confirm the "Delete User" button is gone but "Promote to Admin" works, then logging in as an Admin to confirm deletion works.
+   **Verify with:** `nx-workspace-verify`, logging in as a Director to confirm the "Delete User" button is gone but "Promote to Admin" works, then logging in as an Admin to confirm deletion works.
 
 ## Followup Prompt for Milestone 18 & 19
+
 ```bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 18 (Musician Roles) and Milestone 19 (Admin Role).
 
@@ -1229,28 +1294,33 @@ Run `nx-workspace-verify` to ensure clean TypeScript compilation across all pack
 ```
 
 ## Milestone 20 — Mobile Bottom Navigation (YouTube Web Style)
+
 **Goal:** Refactor the mobile navigation layout to use a persistent bottom navigation bar (matching YouTube's mobile web experience) while keeping the desktop top-nav intact.
 **Do:**
+
 1. In `choir-client/`, create a new `BottomNav` component fixed to the bottom of the screen (`fixed bottom-0 w-full z-50 border-t`).
 2. Hide the existing mobile hamburger menu and ensure the main layout adds `pb-16` on mobile so content isn't hidden behind the bottom bar.
-3. Add the core navigation links: **Songs**, **Playlists**, **Uniforms**, and **You** (Profile page). 
+3. Add the core navigation links: **Songs**, **Playlists**, **Uniforms**, and **You** (Profile page).
 4. Structure each link with an icon centered above small text (e.g., 10px or 11px font size). Highlight the active route with the primary color.
 5. Conditionally render a 5th link, **Users**, only if the authenticated user's role is `DIRECTOR` or `ADMIN`.
-**Verify with:** Browser DevTools device emulator (e.g., iPhone viewport). Ensure the bottom nav is visible on mobile and hidden on desktop, and verify the "Users" tab only appears for authorized roles.
+   **Verify with:** Browser DevTools device emulator (e.g., iPhone viewport). Ensure the bottom nav is visible on mobile and hidden on desktop, and verify the "Users" tab only appears for authorized roles.
 
 ---
 
 ## Milestone 21 — Global Omni-Search (Doc-Style Command Palette)
+
 **Goal:** Implement a global command palette (like Cmd+K on developer documentation sites) allowing users to instantly search across songs, playlists, users, and app features.
 **Do:**
+
 1. In `choir-client/`, install and configure the shadcn/ui `Command` component (which wraps `cmdk`).
 2. Add a global search trigger button (a fake input bar with a magnifying glass and "Search... (⌘K)" placeholder) to the top header.
 3. Build a `GlobalSearchDialog` that opens on click or keyboard shortcut (`Cmd+K` / `Ctrl+K`).
 4. In `choir-api/`, create a unified `GET /api/v1/search?q=` endpoint that performs a fast, parallel ILIKE/contains query across the `Song`, `Playlist`, and `User` tables, returning grouped results.
 5. In the frontend dialog, render the search results categorized by group (e.g., "Songs", "Playlists", "Actions"). Clicking a result should instantly route the user to that specific page or open that specific modal.
-**Verify with:** `nx-workspace-verify`, typing a known song title into the search bar, and verifying the dialog routes correctly to the song details page.
+   **Verify with:** `nx-workspace-verify`, typing a known song title into the search bar, and verifying the dialog routes correctly to the song details page.
 
 ## Followup Prompt
+
 ```bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 20 (Mobile Bottom Nav) and Milestone 21 (Global Omni-Search).
 
@@ -1263,7 +1333,7 @@ Tasks for Milestone 20 (Mobile Bottom Nav):
    - Update the root layout/container to have `pb-14 md:pb-0` so the bottom nav doesn't overlap page content.
 2. Link Items & Roles:
    - Use `lucide-react` icons. Structure each item as a flex column: Icon (size ~20px) on top, text (size `text-[10px]`) on the bottom.
-   - Core Links: 
+   - Core Links:
      - Songs (`Music` icon)
      - Playlists (`ListMusic` icon)
      - Uniforms (`Shirt` icon)
@@ -1291,7 +1361,67 @@ Tasks for Milestone 21 (Global Omni-Search):
    - Add a global `useEffect` listener for `keydown` to open the modal when `Cmd+K` or `Ctrl+K` is pressed.
 
 Verification:
-Run `nx-workspace-verify`. 
+Run `nx-workspace-verify`.
 1. Check mobile emulation: Verify the bottom nav displays 4 items for choristers and 5 for admins, with exact YouTube-style icon-above-text spacing.
 2. Check search: Press Cmd+K, type "thanksgiving", and ensure the UI shows matching songs/playlists.
+```
+
+## Milestone 22 — Role-Aware Mobile Onboarding Walkthrough
+
+**Goal:** Provide a seamless, mobile-optimized onboarding tour for first-time users that adapts dynamically to their role, highlighting only the features they have access to.
+**Do:**
+
+1. Update the `User` model in `schema.prisma` with `hasCompletedOnboarding Boolean @default(false)` and run a migration to track completion status.
+2. In `choir-api/`, expose this field in the `/auth/me` response and create a lightweight `PATCH /api/v1/users/me/onboarding` endpoint to mark it as complete.
+3. In `choir-client/`, implement a mobile-friendly onboarding tour (using a library like `react-joyride` or a custom sequence of shadcn/ui Dialogs/Popovers with spotlight masking).
+4. Design the step sequence to be strictly role-aware:
+   - **Choristers & Musicians:** Tour the Song catalog, playback controls, Active Sunday lineup, and Profile preferences.
+   - **Part Leaders:** Add steps for the voice snippet recording and uploading UI.
+   - **Directors & Admins:** Add steps highlighting the AI Copilot/Curator, Playlist Builder, Sunday Rostering, and User Management.
+5. Trigger the flow automatically on the first login, and add a "Restart Tour" button in the Profile page settings for users who want a refresher.
+   **Verify with:** `nx-workspace-verify`, simulating a first-time login for a Chorister and a Director to ensure neither sees the other's restricted features.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 22 — Role-Aware Mobile Onboarding Walkthrough.
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Core Requirement:
+We need a highly polished, mobile-first product tour for first-time users. Because you have the full context of the ChoirSync architecture (Playlists, Songs, AI Curator, Voice Snippets, Bottom Nav, Roles), I am giving you the creative freedom to design the optimal UX and step sequence. You may choose to use a library like `react-joyride`, `driver.js`, or build a custom overlay system using `framer-motion` and `shadcn/ui`—whichever yields the most native, fluid mobile experience.
+
+Tasks:
+
+1. State Management (`choir-api/`):
+   - Add `hasCompletedOnboarding Boolean @default(false)` to the `User` model in `schema.prisma` and run `prisma-create-migration`.
+   - Update `PATCH /api/v1/users/me` (or create a dedicated endpoint) to allow the client to toggle this boolean. Ensure the user context (`/auth/me`) returns this field.
+
+2. Onboarding Engine & UX Design (`choir-client/`):
+   - Implement the tour system. It must look exceptional on mobile devices (e.g., handling bottom nav positioning, avoiding tooltips clipping off-screen, and supporting swipe or easy tap-to-advance interactions).
+   - Create a central configuration file (e.g., `onboarding-steps.ts`) that defines the tour steps.
+
+3. Role-Aware Logic (`choir-client/`):
+   - Dynamically filter the tour steps based on `currentUser.role` and `participationType` so users never see tooltips for UI elements they cannot access.
+   - **Base Steps (All Users):**
+     - Welcome & Bottom Nav orientation.
+     - Songs page (how to search and find the active Sunday lineup).
+     - Playback (how to use the persistent floating audio player).
+     - Profile (remind them to set their preferred Name and Vocal Key).
+   - **Part Leader Steps (Appended):**
+     - Highlight where to record or upload voice snippets.
+   - **Director / Admin Steps (Appended):**
+     - Highlight the AI Copilot button.
+     - Show the Playlist creation and Roster assignment features.
+     - (Admin only) Highlight the User Management tab.
+
+4. Integration (`choir-client/`):
+   - Mount the onboarding component at the root layout level so it can span route changes if necessary.
+   - Auto-start the tour if `hasCompletedOnboarding === false`.
+   - When the user finishes or skips the tour, fire the API call to update the backend and update the local user state.
+   - Add a "Restart App Tour" button in the `/profile` page so users can trigger it manually.
+
+Verification:
+Run `nx-workspace-verify`.
+Review your chosen library/implementation to ensure it does not break mobile scrolling or conflict with the `z-index` of the new Bottom Nav or Floating AI Chat button.
 ```

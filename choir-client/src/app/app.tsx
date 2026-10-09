@@ -21,6 +21,7 @@ import { ProfilePage } from '../pages/profile';
 import { Toaster } from '../components/ui/sonner';
 import { AnalyticsTracker } from '../lib/analytics';
 import { FloatingChatTab } from '../components/chat/FloatingChatTab';
+import { AppTour } from '../components/onboarding/app-tour';
 
 export function App() {
   return (
@@ -53,6 +54,7 @@ export function App() {
                     </main>
                     <GlobalPlayer />
                     <FloatingChatTab />
+                    <AppTour />
                     <Toaster />
                     <BackToTopButton />
                     <BottomNav />

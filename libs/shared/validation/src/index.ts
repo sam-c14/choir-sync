@@ -152,5 +152,6 @@ export const UpdateProfileSchema = z.object({
   name: z.string().nullable().optional(),
   comfortableKey: z.string().nullable().optional(),
   participationType: ParticipationTypeEnum.optional(),
+  hasCompletedOnboarding: z.boolean().optional(),
 });
 export type UpdateProfileDto = z.infer<typeof UpdateProfileSchema>;
