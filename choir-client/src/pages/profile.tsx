@@ -173,7 +173,7 @@ export function ProfilePage() {
             onClick={async () => {
               try {
                 await apiClient.patch('/users/me', { hasCompletedOnboarding: false });
-                window.location.reload();
+                updateLocalUser({ hasCompletedOnboarding: false });
               } catch (e) {
                 toast.error('Failed to restart tour');
               }

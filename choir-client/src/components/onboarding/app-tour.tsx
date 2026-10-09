@@ -6,7 +6,7 @@ import { getOnboardingSteps } from './onboarding-steps';
 import { apiClient } from '../../lib/api-client';
 
 export function AppTour() {
-  const { user, login } = useAuth();
+  const { user, updateLocalUser } = useAuth();
   const driverRef = useRef<any>(null);
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export function AppTour() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [user]);
+  }, [user?.hasCompletedOnboarding]);
 
   const startTour = () => {
     if (!user) return;
@@ -29,12 +29,11 @@ export function AppTour() {
 
     const driverObj = driver({
       showProgress: true,
+      popoverClass: 'driverjs-theme',
       steps,
       onDestroyStarted: () => {
-        if (!driverObj.hasNextStep() || confirm('Are you sure you want to skip the tour?')) {
-          driverObj.destroy();
-          markTourCompleted();
-        }
+        driverObj.destroy();
+        markTourCompleted();
       },
     });
 
@@ -44,11 +43,11 @@ export function AppTour() {
 
   const markTourCompleted = async () => {
     try {
-      await apiClient.patch('/users/me', { hasCompletedOnboarding: true });
       if (user) {
         // Optimistically update the context
-        login({ ...user, hasCompletedOnboarding: true } as any, localStorage.getItem('token') || '');
+        updateLocalUser({ hasCompletedOnboarding: true });
       }
+      await apiClient.patch('/users/me', { hasCompletedOnboarding: true });
     } catch (error) {
       console.error('Failed to mark onboarding as complete:', error);
     }

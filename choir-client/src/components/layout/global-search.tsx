@@ -4,6 +4,7 @@ import { Search, Music, ListMusic, PlusCircle, Sun, Moon, Shirt, Map } from 'luc
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api-client';
 import { useTheme } from '../theme-provider';
+import { useAuth } from '../../auth/auth-context';
 import { Button } from '../ui/button';
 import {
   CommandDialog,
@@ -20,6 +21,7 @@ export function GlobalSearch() {
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
   const { setTheme } = useTheme();
+  const { updateLocalUser } = useAuth();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -120,14 +122,18 @@ export function GlobalSearch() {
               <Shirt className="mr-2 h-4 w-4" />
               <span>Check current uniform</span>
             </CommandItem>
-            <CommandItem onSelect={() => runCommand(async () => {
-              try {
-                await apiClient.patch('/users/me', { hasCompletedOnboarding: false });
-                window.location.reload();
-              } catch (e) {
-                console.error(e);
-              }
-            })}>
+    <CommandItem onSelect={() => runCommand(async () => {
+      try {
+        await apiClient.patch('/users/me', { hasCompletedOnboarding: false });
+        if (updateLocalUser) {
+          updateLocalUser({ hasCompletedOnboarding: false });
+        } else {
+          window.location.reload();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })}>
               <Map className="mr-2 h-4 w-4" />
               <span>Restart App Tour</span>
             </CommandItem>

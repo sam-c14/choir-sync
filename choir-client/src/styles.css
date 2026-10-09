@@ -91,3 +91,37 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Driver.js Dark Mode Overrides */
+.dark .driver-popover.driverjs-theme {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+.dark .driver-popover.driverjs-theme .driver-popover-title {
+  color: var(--card-foreground) !important;
+}
+
+.dark .driver-popover.driverjs-theme .driver-popover-description {
+  color: var(--muted-foreground) !important;
+}
+
+.dark .driver-popover.driverjs-theme .driver-popover-close-btn {
+  color: var(--muted-foreground) !important;
+}
+
+.dark .driver-popover.driverjs-theme .driver-popover-close-btn:hover {
+  color: var(--card-foreground) !important;
+}
+
+.dark .driver-popover.driverjs-theme .driver-popover-footer button {
+  background-color: var(--secondary) !important;
+  color: var(--secondary-foreground) !important;
+  text-shadow: none !important;
+  border-color: var(--border) !important;
+}
+
+.dark .driver-popover.driverjs-theme .driver-popover-footer button.driver-popover-next-btn {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
