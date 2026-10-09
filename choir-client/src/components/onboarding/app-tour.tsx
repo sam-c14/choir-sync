@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { useAuth } from '../../auth/auth-context';
-import { driver, Config } from 'driver.js';
-import 'driver.js/dist/driver.css';
-import { getOnboardingSteps } from './onboarding-steps';
-import { apiClient } from '../../lib/api-client';
+import React, { useEffect, useRef } from "react";
+import { useAuth } from "../../auth/auth-context";
+import { driver, Config } from "driver.js";
+import "driver.js/dist/driver.css";
+import { getOnboardingSteps } from "./onboarding-steps";
+import { apiClient } from "../../lib/api-client";
 
 export function AppTour() {
   const { user, updateLocalUser } = useAuth();
@@ -29,8 +29,25 @@ export function AppTour() {
 
     const driverObj = driver({
       showProgress: true,
-      popoverClass: 'driverjs-theme',
+      popoverClass: "driverjs-theme",
       steps,
+      onPopoverRender: (popover: any) => {
+        const footer = popover.footer || popover.wrapper?.querySelector('.driver-popover-footer');
+        if (footer) {
+          let skipBtn = footer.querySelector('.driver-custom-skip');
+          if (!skipBtn) {
+            skipBtn = document.createElement('button');
+            skipBtn.className = 'driver-custom-skip';
+            skipBtn.innerText = 'Skip';
+            skipBtn.style.cssText = 'background: transparent; border: none; color: var(--muted-foreground); font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: underline; margin-right: auto; padding: 5px 0; text-shadow: none;';
+            skipBtn.onclick = () => {
+              driverObj.destroy();
+              markTourCompleted();
+            };
+            footer.insertBefore(skipBtn, footer.firstChild);
+          }
+        }
+      },
       onDestroyStarted: () => {
         driverObj.destroy();
         markTourCompleted();
@@ -47,9 +64,9 @@ export function AppTour() {
         // Optimistically update the context
         updateLocalUser({ hasCompletedOnboarding: true });
       }
-      await apiClient.patch('/users/me', { hasCompletedOnboarding: true });
+      await apiClient.patch("/users/me", { hasCompletedOnboarding: true });
     } catch (error) {
-      console.error('Failed to mark onboarding as complete:', error);
+      console.error("Failed to mark onboarding as complete:", error);
     }
   };
 
