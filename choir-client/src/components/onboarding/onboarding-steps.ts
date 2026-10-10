@@ -2,7 +2,9 @@ import { DriveStep } from 'driver.js';
 
 export const getOnboardingSteps = (
   role: string,
-  participationType?: string
+  participationType: string | undefined,
+  navigate: (path: string) => void,
+  demoSongId?: string | null
 ): DriveStep[] => {
   const steps: DriveStep[] = [
     {
@@ -21,16 +23,38 @@ export const getOnboardingSteps = (
       },
     },
     {
+      element: '#tour-song-catalog',
       popover: {
         title: 'Song Catalog',
         description: 'On the main page, you can browse all songs. Look out for the "ACTIVE SUNDAY" tag to see what we are singing this week.',
       },
+      onHighlightStarted: (element, step, options) => {
+        if (window.location.pathname !== '/') {
+          navigate('/');
+          // Give the DOM time to render the new page
+          setTimeout(() => {
+            options.config.driver?.moveNext();
+          }, 300);
+          return false;
+        }
+      }
     },
     {
+      element: '#tour-floating-player',
       popover: {
         title: 'Floating Player',
         description: 'When you play a song, a persistent player will appear at the bottom, letting you keep listening while you navigate the app.',
       },
+      onHighlightStarted: (element, step, options) => {
+        const targetPath = demoSongId ? `/songs/${demoSongId}` : '/';
+        if (window.location.pathname !== targetPath) {
+          navigate(targetPath);
+          setTimeout(() => {
+            options.config.driver?.moveNext();
+          }, 300);
+          return false;
+        }
+      }
     },
     {
       element: '#tour-uniforms-nav',

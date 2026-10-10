@@ -126,7 +126,7 @@ export default function SongsPage() {
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Songs Library</h1>
+          <h1 id="tour-song-catalog" className="text-3xl font-bold tracking-tight">Songs Library</h1>
           <p className="text-muted-foreground mt-1">Manage and view the choir's repertoire</p>
         </div>
         {isDirector && (

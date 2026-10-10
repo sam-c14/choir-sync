@@ -414,7 +414,7 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
                     variant="secondary"
                     size="sm"
                     className="w-full sm:w-auto h-8 text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-foreground"
-                    onClick={() => playTrack({ platform: link.platform, url: link.url, embedUrl, title: songTitle })}
+                    id="tour-floating-player" onClick={() => playTrack({ platform: link.platform, url: link.url, embedUrl, title: songTitle })}
                   >
                     <PlayCircle className="w-3.5 h-3.5 mr-2 text-primary" />
                     {currentTrack?.url === link.url ? 'Playing in Background' : 'Play in Background'}

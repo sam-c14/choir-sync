@@ -5,10 +5,12 @@ import "driver.js/dist/driver.css";
 import { getOnboardingSteps } from "./onboarding-steps";
 import { apiClient } from "../../lib/api-client";
 import { trackChoirEvent } from "../../lib/analytics";
+import { useNavigate } from "react-router-dom";
 
 export function AppTour() {
   const { user, updateLocalUser } = useAuth();
   const driverRef = useRef<any>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) return;
@@ -23,10 +25,20 @@ export function AppTour() {
     return () => clearTimeout(timer);
   }, [user?.hasCompletedOnboarding]);
 
-  const startTour = () => {
+  const startTour = async () => {
     if (!user) return;
 
-    const steps = getOnboardingSteps(user.role, user.participationType);
+    let demoSongId = null;
+    try {
+      const res = await apiClient.get('/songs?limit=1');
+      if (res.data?.data?.length > 0) {
+        demoSongId = res.data.data[0].id;
+      }
+    } catch (e) {
+      console.error("Failed to fetch demo song for tour", e);
+    }
+
+    const steps = getOnboardingSteps(user.role, user.participationType, navigate, demoSongId);
 
     trackChoirEvent({
       action: 'onboarding_started',
