@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/requireAuth';
-import { requireRole, requirePartLeadOrDirector } from '../../middleware/requireRole';
+import { requireRole } from '../../middleware/requireRole';
 import { songsController } from './songs.controller';
 
 const router = Router();
@@ -8,15 +8,15 @@ const router = Router();
 // Middleware: all routes require auth
 router.use(requireAuth);
 
-router.post('/clear-active', requireRole('DIRECTOR'), songsController.clearActiveLineup.bind(songsController));
-router.post('/', requireRole('DIRECTOR'), songsController.createSong.bind(songsController));
-router.patch('/:id', requireRole('DIRECTOR'), songsController.updateSong.bind(songsController));
+router.post('/clear-active', requireRole(['DIRECTOR', 'SECTION_LEADER']), songsController.clearActiveLineup.bind(songsController));
+router.post('/', requireRole(['DIRECTOR', 'SECTION_LEADER']), songsController.createSong.bind(songsController));
+router.patch('/:id', requireRole(['DIRECTOR', 'SECTION_LEADER']), songsController.updateSong.bind(songsController));
 router.patch('/:id/lyrics', songsController.updateLyrics.bind(songsController));
-router.delete('/:id', requireRole('DIRECTOR'), songsController.deleteSong.bind(songsController));
-router.put('/:id/parts', requireRole('DIRECTOR'), songsController.updateAllParts.bind(songsController));
-router.patch('/:id/parts/:part', requirePartLeadOrDirector, songsController.updatePart.bind(songsController));
-router.post('/:id/links', requireRole('DIRECTOR'), songsController.createLink.bind(songsController));
-router.delete('/:id/links/:linkId', requireRole('DIRECTOR'), songsController.deleteLink.bind(songsController));
+router.delete('/:id', requireRole(['DIRECTOR', 'SECTION_LEADER']), songsController.deleteSong.bind(songsController));
+router.put('/:id/parts', requireRole(['DIRECTOR', 'SECTION_LEADER']), songsController.updateAllParts.bind(songsController));
+router.patch('/:id/parts/:part', requireRole(['DIRECTOR', 'SECTION_LEADER']), songsController.updatePart.bind(songsController));
+router.post('/:id/links', requireRole(['DIRECTOR', 'SECTION_LEADER']), songsController.createLink.bind(songsController));
+router.delete('/:id/links/:linkId', requireRole(['DIRECTOR', 'SECTION_LEADER']), songsController.deleteLink.bind(songsController));
 
 // Any authenticated user
 router.get('/', songsController.getSongs.bind(songsController));

@@ -25,7 +25,7 @@ export default function SongDetailPage() {
   const { id: songId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
+  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN' || user?.role === 'SECTION_LEADER';
   const { data: song, isLoading, isError } = useSong(songId!);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
 

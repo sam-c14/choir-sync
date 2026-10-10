@@ -60,7 +60,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
   
   const [isRecordOpen, setIsRecordOpen] = useState(false);
 
-  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
+  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN' || user?.role === 'SECTION_LEADER';
   const isSectionLeader = user?.role === 'SECTION_LEADER';
   
   const canEditCurrentTab = () => {

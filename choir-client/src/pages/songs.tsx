@@ -116,7 +116,7 @@ function ClearLineupButton() {
 
 export default function SongsPage() {
   const { user } = useAuth();
-  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
+  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN' || user?.role === 'SECTION_LEADER';
 
   const navigate = useNavigate();
 
