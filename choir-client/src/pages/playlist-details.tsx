@@ -211,8 +211,10 @@ export default function PlaylistDetailsPage() {
                     <Link to={`/songs/${ps.songId}`} className="font-medium hover:underline truncate block">
                       {ps.song.title}
                     </Link>
-                    <div className="text-xs text-muted-foreground">
-                      {ps.song.originalKey && `Key: ${ps.customKey || ps.song.originalKey}`}
+                    <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                      {ps.song.composer && <span className="font-medium text-foreground/70">{ps.song.composer}</span>}
+                      {ps.song.composer && ps.song.originalKey && <span>•</span>}
+                      {ps.song.originalKey && <span>Key: {ps.customKey || ps.song.originalKey}</span>}
                     </div>
                   </div>
                   {isDirector && (
