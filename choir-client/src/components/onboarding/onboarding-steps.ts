@@ -1,10 +1,21 @@
 import { DriveStep } from 'driver.js';
 
+const waitForElement = (selector: string, callback: () => void, maxAttempts = 20) => {
+  let attempts = 0;
+  const check = () => {
+    if (document.querySelector(selector)) callback();
+    else if (attempts < maxAttempts) { attempts++; setTimeout(check, 200); }
+    else callback();
+  };
+  check();
+};
+
 export const getOnboardingSteps = (
   role: string,
   participationType: string | undefined,
   navigate: (path: string) => void,
-  demoSongId?: string | null
+  demoSongId?: () => string | null,
+  getDriver?: () => any
 ): DriveStep[] => {
   const steps: DriveStep[] = [
     {
@@ -32,9 +43,9 @@ export const getOnboardingSteps = (
         if (window.location.pathname !== '/') {
           navigate('/');
           // Give the DOM time to render the new page
-          setTimeout(() => {
-            options.config.driver?.moveNext();
-          }, 300);
+          waitForElement('#tour-song-catalog', () => {
+            getDriver?.()?.moveNext();
+          });
           return false;
         }
       }
@@ -46,12 +57,13 @@ export const getOnboardingSteps = (
         description: 'When you play a song, a persistent player will appear at the bottom, letting you keep listening while you navigate the app.',
       },
       onHighlightStarted: (element, step, options) => {
-        const targetPath = demoSongId ? `/songs/${demoSongId}` : '/';
+        const id = demoSongId?.();
+        const targetPath = id ? `/songs/${id}` : '/';
         if (window.location.pathname !== targetPath) {
           navigate(targetPath);
-          setTimeout(() => {
-            options.config.driver?.moveNext();
-          }, 300);
+          waitForElement('#tour-floating-player', () => {
+            getDriver?.()?.moveNext();
+          });
           return false;
         }
       }
