@@ -1,20 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/auth-context';
-import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { ModeToggle } from '../mode-toggle';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuGroup } from '../ui/dropdown-menu';
-import { Menu, Moon, Sun, Laptop, LogOut, User } from 'lucide-react';
-import { useTheme } from '../theme-provider';
 import { NotificationsPopover } from './notifications-popover';
 import { GlobalSearch } from './global-search';
 
 export function Navbar() {
-  const { user, logout } = useAuth();
-  const { setTheme } = useTheme();
-  const [logoutOpen, setLogoutOpen] = useState(false);
+  const { user } = useAuth();
   const { pathname } = useLocation();
 
   if (!user) return null;
@@ -86,35 +79,9 @@ export function Navbar() {
               </span>
             </Link>
             <ModeToggle />
-            <Button variant="outline" size="sm" onClick={() => setLogoutOpen(true)}>Log out</Button>
           </div>
         </div>
-
-
       </div>
-
-      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Log Out</DialogTitle>
-            <p className="text-sm text-muted-foreground mt-2">
-              Are you sure you want to log out of Choir Sync?
-            </p>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setLogoutOpen(false)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setLogoutOpen(false);
-                logout();
-              }}
-            >
-              Log out
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </header>
   );
 }

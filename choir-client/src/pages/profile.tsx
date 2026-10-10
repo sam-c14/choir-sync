@@ -173,7 +173,7 @@ export function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Card className="max-w-md mx-auto mt-6">
+      <Card className="max-w-full mx-auto mt-6">
         <CardHeader>
           <CardTitle>App Preferences</CardTitle>
           <CardDescription>Manage your app experience</CardDescription>
@@ -181,12 +181,12 @@ export function ProfilePage() {
         <CardContent className="space-y-4">
           <Button 
             variant="outline" 
-            className="w-full"
+            className="w-full py-4"
             onClick={async () => {
               try {
                 await apiClient.patch('/users/me', { hasCompletedOnboarding: false });
                 updateLocalUser({ hasCompletedOnboarding: false });
-              } catch (e) {
+              } catch (_e) {
                 toast.error('Failed to restart tour');
               }
             }}
@@ -195,7 +195,7 @@ export function ProfilePage() {
           </Button>
           <Button
             variant="destructive"
-            className="w-full"
+            className="w-full py-4"
             onClick={() => {
               logout();
               toast.success('Logged out successfully');
