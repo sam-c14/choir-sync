@@ -165,7 +165,7 @@ export function ProfilePage() {
             <Button 
               type="submit" 
               className="w-full py-4" 
-              disabled={updateProfileMutation.isPending}
+              disabled={updateProfileMutation.isPending || !form.formState.isDirty}
             >
               {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>

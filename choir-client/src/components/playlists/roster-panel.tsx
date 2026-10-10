@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Users, Send, Loader2, Save, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { cn } from '../../lib/utils';
-import { FacePile } from '../ui/face-pile';
+
 import { RosterAssignmentDialog } from './RosterAssignmentDialog';
 
 interface UserNode {
@@ -185,11 +185,28 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
                 )}
               </div>
               
-              <div className="min-h-[40px] flex items-center">
+              <div className="min-h-[40px] flex items-center pt-2">
                 {assignedInRole.length === 0 ? (
                   <div className="text-xs text-muted-foreground italic">No members assigned</div>
                 ) : (
-                  <FacePile users={mappedUsers} max={5} />
+                  <div className="flex flex-wrap gap-4">
+                    {mappedUsers.map(u => (
+                      <div key={u.id} className="flex flex-col items-center gap-1.5 w-14">
+                        <div className="relative w-10 h-10 rounded-full border-2 border-background bg-muted flex items-center justify-center overflow-hidden shadow-sm">
+                          {u.avatarUrl ? (
+                            <img src={u.avatarUrl} alt={u.name || ''} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xs font-bold text-muted-foreground uppercase">
+                              {(u.name || u.email || 'U').charAt(0)}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-medium text-muted-foreground truncate w-full text-center" title={u.name || u.email}>
+                          {u.name ? u.name.split(' ')[0] : u.email?.split('@')[0]}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
