@@ -36,6 +36,7 @@ export function BottomNav() {
           const Icon = item.icon;
 
           let id = undefined;
+          if (item.name === 'Songs') id = 'tour-songs-nav';
           if (item.name === 'Profile') id = 'tour-profile-nav';
           if (item.name === 'Playlists') id = 'tour-playlists-nav';
           if (item.name === 'Uniforms') id = 'tour-uniforms-nav';

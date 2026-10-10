@@ -5,12 +5,14 @@ import "driver.js/dist/driver.css";
 import { getOnboardingSteps } from "./onboarding-steps";
 import { apiClient } from "../../lib/api-client";
 import { trackChoirEvent } from "../../lib/analytics";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, } from "react-router-dom";
 
 export function AppTour() {
   const { user, updateLocalUser } = useAuth();
   const driverRef = useRef<any>(null);
   const navigate = useNavigate();
+
+  const demoSongIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -25,20 +27,20 @@ export function AppTour() {
     return () => clearTimeout(timer);
   }, [user?.hasCompletedOnboarding]);
 
+  useEffect(() => {
+    if (!user) return;
+    apiClient.get('/songs?limit=10').then(res => {
+      if (res.data?.data?.length > 0) {
+        const songWithLinks = res.data.data.find((s: any) => s.links && s.links.length > 0);
+        demoSongIdRef.current = songWithLinks ? songWithLinks.id : res.data.data[0].id;
+      }
+    }).catch(e => console.error("Failed to fetch demo song for tour", e));
+  }, [user]);
+
   const startTour = async () => {
     if (!user) return;
 
-    let demoSongId = null;
-    try {
-      const res = await apiClient.get('/songs?limit=1');
-      if (res.data?.data?.length > 0) {
-        demoSongId = res.data.data[0].id;
-      }
-    } catch (e) {
-      console.error("Failed to fetch demo song for tour", e);
-    }
-
-    const steps = getOnboardingSteps(user.role, user.participationType, navigate, demoSongId);
+    const steps = getOnboardingSteps(user.role, user.participationType, navigate, () => demoSongIdRef.current, () => driverRef.current);
 
     trackChoirEvent({
       action: 'onboarding_started',
