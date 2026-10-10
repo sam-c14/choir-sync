@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { UpdateProfileSchema, UpdateProfileDto } from '@choir-workspace/shared-validation';
@@ -13,12 +13,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api-client';
 
 import { AvatarUpload } from '../components/AvatarUpload';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 
 const MUSICAL_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 export function ProfilePage() {
   const { user, updateLocalUser, logout } = useAuth();
   const queryClient = useQueryClient();
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   
   const form = useForm<UpdateProfileDto>({
     resolver: zodResolver(UpdateProfileSchema),
@@ -193,16 +195,32 @@ export function ProfilePage() {
           >
             Restart App Tour
           </Button>
-          <Button
-            variant="destructive"
-            className="w-full py-4"
-            onClick={() => {
-              logout();
-              toast.success('Logged out successfully');
-            }}
-          >
-            Log Out
-          </Button>
+          <Dialog open={isLogoutModalOpen} onOpenChange={setIsLogoutModalOpen}>
+            <DialogTrigger asChild className="w-full">
+              <Button variant="destructive" className="w-full py-4">
+                Log Out
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Log out of Choir Sync?</DialogTitle>
+                <DialogDescription>
+                  You will need to sign in again to access your team and playlists.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsLogoutModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={() => {
+                  logout();
+                  toast.success('Logged out successfully');
+                }}>
+                  Log Out
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     </div>
