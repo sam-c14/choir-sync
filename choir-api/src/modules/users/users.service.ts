@@ -21,6 +21,7 @@ export class UsersService {
           leadsVoicePart: true,
           provider: true,
           createdAt: true,
+          avatarUrl: true,
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -67,6 +68,7 @@ export class UsersService {
         provider: true,
         createdAt: true,
         hasCompletedOnboarding: true,
+        avatarUrl: true,
       },
     });
   }
@@ -91,6 +93,7 @@ export class UsersService {
         comfortableKey: dto.comfortableKey,
         participationType: dto.participationType,
         hasCompletedOnboarding: dto.hasCompletedOnboarding,
+        avatarUrl: dto.avatarUrl,
       },
       select: {
         id: true,
@@ -103,6 +106,7 @@ export class UsersService {
         provider: true,
         createdAt: true,
         hasCompletedOnboarding: true,
+        avatarUrl: true,
       }
     });
   }
@@ -121,6 +125,7 @@ export class UsersService {
         provider: true,
         createdAt: true,
         hasCompletedOnboarding: true,
+        avatarUrl: true,
       }
     });
     if (!user) throw { code: 'NOT_FOUND', message: 'User not found' };

@@ -2,8 +2,38 @@ import { logger } from '../../lib/logger';
 import { Request, Response } from 'express';
 import { usersService } from './users.service';
 import { UpdateUserRoleSchema, UpdateProfileSchema } from '@choir-workspace/shared-validation';
+import { supabaseAdmin } from '../../lib/supabase';
+import crypto from 'crypto';
 
 export class UsersController {
+  async getAvatarUploadUrl(req: Request, res: Response) {
+    try {
+      const filename = req.body.filename || 'avatar.jpg';
+      const userId = (req as any).user.id;
+      const path = `${userId}/${Date.now()}-${crypto.randomUUID()}-${filename}`;
+      
+      const { data, error } = await supabaseAdmin.storage
+        .from('avatars')
+        .createSignedUploadUrl(path);
+
+      if (error || !data) {
+        logger.error('Supabase signed URL error:', error);
+        return res.status(500).json({ error: 'Failed to generate upload URL' });
+      }
+
+      const { data: publicUrlData } = supabaseAdmin.storage
+        .from('avatars')
+        .getPublicUrl(path);
+
+      res.status(200).json({
+        signedUrl: data.signedUrl,
+        publicUrl: publicUrlData.publicUrl,
+      });
+    } catch (error: any) {
+      logger.error('Get Upload URL Error:', error);
+      res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+  }
   async getUsers(req: Request, res: Response) {
     try {
       const page = parseInt(req.query.page as string) || 1;

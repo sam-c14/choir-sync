@@ -9,6 +9,7 @@ router.use(requireAuth);
 // Accessible by all authenticated users
 router.get('/me', usersController.getProfile.bind(usersController));
 router.patch('/me', usersController.updateProfile.bind(usersController));
+router.post('/upload-avatar-url', usersController.getAvatarUploadUrl.bind(usersController));
 
 router.get('/', requireRole('DIRECTOR'), usersController.getUsers.bind(usersController));
 router.patch('/:id/role', requireRole(['DIRECTOR', 'ADMIN']), usersController.updateUserRole.bind(usersController));

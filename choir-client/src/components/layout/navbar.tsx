@@ -69,8 +69,19 @@ export function Navbar() {
           
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-4">
-            <Link to="/profile">
-              <span className="text-sm font-medium text-foreground hover:text-primary max-w-[160px] truncate" title={user.name || user.email}>
+            <Link to="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              {((user as any)?.avatarUrl) ? (
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-primary/20">
+                  <img src={(user as any).avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border border-primary/20">
+                  <span className="text-xs font-bold text-muted-foreground">
+                    {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <span className="text-sm font-medium text-foreground max-w-[160px] truncate" title={user.name || user.email}>
                 {user.name || (user.email?.length > 15 ? `${user.email.slice(0, 15)}...` : user.email)}
               </span>
             </Link>

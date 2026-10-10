@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api-client';
 
+import { AvatarUpload } from '../components/AvatarUpload';
+
 const MUSICAL_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 export function ProfilePage() {
@@ -44,8 +46,8 @@ export function ProfilePage() {
         participationType: profile.participationType || 'VOCALIST',
       });
       // Ensure context is synced with latest fetched DB state just in case JWT is old
-      if (profile.name !== user?.name || profile.comfortableKey !== user?.comfortableKey || profile.participationType !== (user as any)?.participationType) {
-        updateLocalUser({ name: profile.name, comfortableKey: profile.comfortableKey, participationType: profile.participationType });
+      if (profile.name !== user?.name || profile.comfortableKey !== user?.comfortableKey || profile.participationType !== (user as any)?.participationType || profile.avatarUrl !== (user as any)?.avatarUrl) {
+        updateLocalUser({ name: profile.name, comfortableKey: profile.comfortableKey, participationType: profile.participationType, avatarUrl: profile.avatarUrl });
       }
     }
   }, [profile, form, user, updateLocalUser]);
@@ -85,6 +87,16 @@ export function ProfilePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex justify-center mb-6">
+            <AvatarUpload 
+              currentUrl={profile?.avatarUrl || (user as any)?.avatarUrl} 
+              name={profile?.name || user?.name}
+              onUploadSuccess={(url) => {
+                updateLocalUser({ avatarUrl: url });
+                queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+              }}
+            />
+          </div>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             
             <div className="space-y-3">

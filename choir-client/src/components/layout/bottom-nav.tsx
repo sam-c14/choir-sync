@@ -51,7 +51,13 @@ export function BottomNav() {
                 isActive && "text-primary"
               )}
             >
-              <Icon className={cn("w-5 h-5", isActive && "fill-primary/20")} strokeWidth={isActive ? 2.5 : 2} />
+              {item.name === 'Profile' && (user as any)?.avatarUrl ? (
+                <div className={cn("w-6 h-6 rounded-full overflow-hidden border-2", isActive ? "border-primary" : "border-transparent")}>
+                  <img src={(user as any).avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <Icon className={cn("w-5 h-5", isActive && "fill-primary/20")} strokeWidth={isActive ? 2.5 : 2} />
+              )}
               <span className="text-[10px] font-medium leading-none">{item.name}</span>
             </Link>
           );

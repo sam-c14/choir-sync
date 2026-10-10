@@ -1425,3 +1425,60 @@ Verification:
 Run `nx-workspace-verify`.
 Review your chosen library/implementation to ensure it does not break mobile scrolling or conflict with the `z-index` of the new Bottom Nav or Floating AI Chat button.
 ```
+
+## Milestone 23 — User Avatars & Visual Roster Refactor
+
+**Goal:** Introduce user profile images (avatars) across the app, and completely refactor the Playlist Roster UI from a clunky vertical button list into a beautiful, compact, mobile-friendly visual selector.
+**Do:**
+
+1. Update `User` in `schema.prisma` with `avatarUrl String?` and run a migration.
+2. In `choir-api/`, create a signed URL endpoint (`/api/v1/users/upload-avatar-url`) pointing to the Supabase `avatars` bucket, and update the profile endpoint to accept `avatarUrl`.
+3. In `choir-client/`, build an interactive, circular Avatar upload widget on the `/profile` page (featuring a camera icon overlay) that compresses the image via `browser-image-compression` before uploading.
+4. Update the `BottomNav` and desktop Header to display the user's uploaded avatar instead of the default icon (falling back to name initials if null).
+5. Refactor the Playlist Roster Assignment UI: Replace the vertical list of buttons with a compact layout. Display assigned members as a row of avatars (a "face-pile"). Clicking "+ Add" should open a mobile-friendly Bottom Sheet/Drawer containing a searchable list of eligible choristers with their avatars to toggle them on/off.
+   **Verify with:** `nx-workspace-verify`, uploading a profile picture, ensuring it appears in the bottom nav, and testing the new Drawer-based Roster assignment flow.
+
+## Followup Prompt
+
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 23 — User Avatars & Visual Roster Refactor.
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Tasks:
+
+1. Database & API (`choir-api/` & `libs/shared/`):
+   - Update `User` model in `schema.prisma` with `avatarUrl String?`. Run `prisma-create-migration`.
+   - Update profile DTOs to accept `avatarUrl`.
+   - Create `POST /api/v1/users/upload-avatar-url`: Generate a Supabase signed URL for the `avatars` bucket (e.g., `avatars/${userId}-${Date.now()}.webp`). Return the `signedUrl` and `publicUrl`.
+
+2. Profile Avatar Uploader (`choir-client/`):
+   - On the `/profile` page, add a large circular Avatar at the top center.
+   - If `avatarUrl` is null, show a muted background with a `Camera` icon from `lucide-react`.
+   - On click, trigger a hidden `<input type="file" accept="image/*" />`.
+   - When a file is selected, intercept it using `browser-image-compression` (max 500KB, max width 500px, convert to webp).
+   - `PUT` the compressed image to the signed URL, then call `PATCH /api/v1/users/me` to save the `avatarUrl`.
+   - Show a loading spinner over the avatar during this process.
+
+3. Navigation Integration (`choir-client/`):
+   - Update the `BottomNav` (from Milestone 20): If `user.avatarUrl` exists, replace the `CircleUser` icon with a tiny `Avatar` component (using shadcn/ui Avatar with `AvatarImage` and `AvatarFallback` showing initials).
+   - Apply the same logic to the Desktop navbar.
+
+4. Visual Roster UI Refactor (`choir-client/`):
+   - Locate the Playlist Roster assignment UI (which currently uses a massive vertical list of buttons). We are completely rebuilding this to be concise, beautiful, and mobile-first.
+   - **Main Playlist View:** For each vocal part (Soprano, Alto, Tenor, Lead), display a clean summary card or row.
+     - Show the count of assigned people.
+     - Render their avatars in an overlapping horizontal row (a "face-pile").
+     - Add a prominent `+ Add [Part]` button (or edit icon).
+   - **Selection Interface (Drawer/BottomSheet):**
+     - Clicking `+ Add` should open a shadcn/ui `Drawer` (on mobile) or `Dialog` (on desktop).
+     - Inside the Drawer, render a sticky search bar to filter names.
+     - Render a scrollable list of eligible choristers (remembering to exclude `MUSICIAN` roles from Milestone 18).
+     - Each row in the Drawer should show: `Avatar` + `Name` + `Comfortable Key` (badge).
+     - Tapping a row toggles a Checkbox or highlight state.
+   - **Submission:** Keep the existing "Save Roster" mutation logic. The user selects choristers in the Drawer, closes it, and sees the face-pile update locally. Clicking the main "Save Draft" or "Confirm Roster" button sends the final arrays to the backend exactly as before.
+
+Verification:
+1. Run `nx-workspace-verify`.
+2. Test the mobile viewport: Ensure the Drawer doesn't overlap behind the Bottom Nav, and verify the overlapping avatars look visually clean.
+```

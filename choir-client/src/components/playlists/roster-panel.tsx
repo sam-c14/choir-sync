@@ -3,20 +3,21 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api-client';
 import { useAuth } from '../../auth/auth-context';
 import { useRoster, useSaveRoster, useDispatchRoster } from '../../hooks/use-rosters';
-import { useUsers } from '../../hooks/use-users';
 import { Button } from '../ui/button';
-import { trackChoirEvent } from '../../lib/analytics';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
-import { Users, Send, Loader2, Save } from 'lucide-react';
+import { Users, Send, Loader2, Save, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { cn } from '../../lib/utils';
+import { FacePile } from '../ui/face-pile';
+import { RosterAssignmentDialog } from './RosterAssignmentDialog';
 
 interface UserNode {
   id: string;
   email: string;
   name?: string | null;
   comfortableKey?: string | null;
+  avatarUrl?: string | null;
 }
 
 export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, serviceDate?: string | Date | null }) {
@@ -39,8 +40,8 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
 
   // Local state for assignments
   const [assignments, setAssignments] = useState<{userId: string, role: string, notes?: string, notified: boolean, user?: any}[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
+  const [activeRoleDialog, setActiveRoleDialog] = useState<string | null>(null);
 
   useEffect(() => {
     if (roster?.members) {
@@ -62,21 +63,12 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
             <div className="w-4 h-4 bg-muted rounded-full animate-pulse" />
             <div className="w-32 h-5 bg-muted rounded animate-pulse" />
           </div>
-          {isDirector && (
-            <div className="flex gap-2">
-              <div className="w-20 h-8 bg-muted rounded animate-pulse" />
-              <div className="w-24 h-8 bg-muted rounded animate-pulse" />
-            </div>
-          )}
         </div>
         <div className="p-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="space-y-3">
               <div className="w-20 h-5 bg-muted rounded animate-pulse" />
-              <div className="space-y-2">
-                <div className="w-full h-8 bg-muted rounded animate-pulse" />
-                <div className="w-full h-8 bg-muted rounded animate-pulse" />
-              </div>
+              <div className="w-full h-12 bg-muted rounded animate-pulse" />
             </div>
           ))}
         </div>
@@ -88,10 +80,8 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
     setAssignments(prev => {
       const existingInThisRole = prev.findIndex(a => a.userId === userId && a.role === role);
       if (existingInThisRole >= 0) {
-        // Remove
         return prev.filter((_, i) => i !== existingInThisRole);
       } else {
-        // Add, ensuring they only have ONE role to satisfy database constraints
         const filtered = prev.filter(a => a.userId !== userId);
         return [...filtered, { userId, role, notified: false }];
       }
@@ -111,7 +101,6 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
         }
       });
       toast.success('Roster saved as draft');
-      setIsEditing(false);
     } catch (error) {
       toast.error('Failed to save roster');
     }
@@ -134,6 +123,24 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
     }
   };
 
+  const hasChanges = () => {
+    if (!roster?.members) return assignments.length > 0;
+    if (roster.members.length !== assignments.length) return true;
+    
+    // Sort and compare
+    const current = [...assignments].sort((a, b) => a.userId.localeCompare(b.userId));
+    const original = [...roster.members].sort((a, b) => a.userId.localeCompare(b.userId));
+    
+    for (let i = 0; i < current.length; i++) {
+      if (current[i].userId !== original[i].userId) return true;
+      if (current[i].role !== original[i].assignedRole) return true;
+    }
+    
+    return false;
+  };
+
+  const isChanged = hasChanges();
+
   const roles = ['SOPRANO', 'ALTO', 'TENOR', 'LEAD'];
 
   return (
@@ -145,16 +152,11 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
         </div>
         {isDirector && (
           <div className="flex flex-wrap gap-2">
-            {!isEditing ? (
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                Edit Roster
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
-                Cancel
-              </Button>
-            )}
-            <Button size="sm" onClick={() => setDispatchOpen(true)} disabled={assignments.length === 0}>
+            <Button variant="outline" size="sm" onClick={handleSave} disabled={!isChanged || saveRoster.isPending}>
+              {saveRoster.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1" />} 
+              Save Changes
+            </Button>
+            <Button size="sm" onClick={() => setDispatchOpen(true)} disabled={assignments.length === 0 || isChanged}>
               <Send className="w-3.5 h-3.5 mr-1" /> Notify Team
             </Button>
           </div>
@@ -164,49 +166,30 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
       <div className="p-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {roles.map(role => {
           const assignedInRole = assignments.filter(a => a.role === role);
+          const mappedUsers = assignedInRole.map(a => {
+            const u = users.find((u: UserNode) => u.id === a.userId) || a.user;
+            return { id: a.userId, name: u?.name, email: u?.email, avatarUrl: u?.avatarUrl };
+          });
+          
           return (
             <div key={role} className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex justify-between">
-                {role}
-                <Badge variant="secondary" className="text-[10px] px-1.5">{assignedInRole.length}</Badge>
-              </h4>
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  {role}
+                  <Badge variant="secondary" className="text-[10px] px-1.5">{assignedInRole.length}</Badge>
+                </h4>
+                {isDirector && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => setActiveRoleDialog(role)}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
               
-              <div className="space-y-2">
-                {isEditing ? (
-                  users.map((u: UserNode) => {
-                    const isSelected = assignedInRole.some(a => a.userId === u.id);
-                    return (
-                      <div 
-                        key={u.id}
-                        onClick={() => handleToggleMember(u.id, role)}
-                        className={cn(
-                          "text-sm px-3 py-1.5 rounded-md cursor-pointer transition-colors border text-center truncate",
-                          isSelected 
-                            ? "bg-primary text-primary-foreground border-primary font-medium shadow-sm" 
-                            : "bg-background hover:bg-muted/50 border-border text-muted-foreground"
-                        )}
-                      >
-                        {u.name || u.email.split('@')[0]} {u.comfortableKey && <Badge variant="secondary" className="ml-1 text-[8px] px-1 h-3 leading-none opacity-70">{u.comfortableKey}</Badge>}
-                      </div>
-                    );
-                  })
+              <div className="min-h-[40px] flex items-center">
+                {assignedInRole.length === 0 ? (
+                  <div className="text-xs text-muted-foreground italic">No members assigned</div>
                 ) : (
-                  assignedInRole.length === 0 ? (
-                    <div className="text-xs text-muted-foreground italic text-center py-2 border rounded-md border-dashed bg-muted/10">Unassigned</div>
-                  ) : (
-                    assignedInRole.map(a => {
-                      const user = users.find((u: UserNode) => u.id === a.userId) || a.user;
-                      return (
-                        <div key={a.userId} className="text-sm px-3 py-1.5 rounded-md bg-muted/40 border font-medium truncate flex justify-between items-center">
-                          <div className="flex items-center gap-1">
-                            <span className="truncate">{user?.name || user?.email?.split('@')[0] || 'Unknown'}</span>
-                            {user?.comfortableKey && <Badge variant="secondary" className="text-[9px] px-1 h-[14px] leading-none opacity-60 font-medium">{user.comfortableKey}</Badge>}
-                          </div>
-                          {a.notified && <Check className="w-3 h-3 text-green-500" />}
-                        </div>
-                      );
-                    })
-                  )
+                  <FacePile users={mappedUsers} max={5} />
                 )}
               </div>
             </div>
@@ -214,13 +197,15 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
         })}
       </div>
 
-      {isEditing && (
-        <div className="bg-muted/30 border-t p-3 flex justify-end">
-          <Button onClick={handleSave} disabled={saveRoster.isPending}>
-            {saveRoster.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Save Draft
-          </Button>
-        </div>
+      {activeRoleDialog && (
+        <RosterAssignmentDialog
+          open={!!activeRoleDialog}
+          onOpenChange={(open) => !open && setActiveRoleDialog(null)}
+          users={users}
+          assignments={assignments}
+          onToggleMember={handleToggleMember}
+          role={activeRoleDialog}
+        />
       )}
 
       {/* Intentional Confirmation Modal */}
@@ -261,13 +246,5 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function Check({ className }: { className?: string }) {
-  return (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
   );
 }
