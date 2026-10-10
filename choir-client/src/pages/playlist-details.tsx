@@ -86,7 +86,6 @@ export default function PlaylistDetailsPage() {
         { songId, orderIndex: currentSongs.length }
       ]
     });
-    setSearch('');
   };
 
   const handleSetActive = async () => {
