@@ -31,7 +31,7 @@ export default function SongDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div>
           <Skeleton className="h-9 w-32 mb-4 -ml-4" />
           <div className="flex justify-between items-start">

@@ -203,7 +203,7 @@ export default function SongFormPage() {
 
   if (isEditing && isSongLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <Button variant="ghost" className="gap-2 -ml-2 text-muted-foreground" disabled>
           <ArrowLeft className="w-4 h-4" /> Back to Library
         </Button>
@@ -260,7 +260,7 @@ export default function SongFormPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 -ml-2 text-muted-foreground">
         <ArrowLeft className="w-4 h-4" /> Back to Library
       </Button>

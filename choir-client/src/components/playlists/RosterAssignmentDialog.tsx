@@ -24,6 +24,14 @@ export function RosterAssignmentDialog({ open, onOpenChange, users, assignments,
     if (!search) return true;
     const s = search.toLowerCase();
     return (u.name?.toLowerCase().includes(s) || u.email.toLowerCase().includes(s));
+  }).sort((a, b) => {
+    const aSelected = assignedInRole.some(as => as.userId === a.id);
+    const bSelected = assignedInRole.some(as => as.userId === b.id);
+    if (aSelected && !bSelected) return -1;
+    if (!aSelected && bSelected) return 1;
+    const nameA = (a.name || a.email).toLowerCase();
+    const nameB = (b.name || b.email).toLowerCase();
+    return nameA.localeCompare(nameB);
   });
 
   return (

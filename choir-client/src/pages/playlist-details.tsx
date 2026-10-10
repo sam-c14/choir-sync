@@ -48,7 +48,7 @@ export default function PlaylistDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4 max-w-4xl space-y-8">
+      <div className="container mx-auto p-4 max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <Skeleton className="h-9 w-40 mb-4" />
         <div className="space-y-2">
           <Skeleton className="h-9 w-64" />
@@ -78,7 +78,7 @@ export default function PlaylistDetailsPage() {
 
   if (!playlist) {
     return (
-      <div className="container mx-auto p-4 text-center mt-12">
+      <div className="container mx-auto p-4 text-center mt-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <h2 className="text-xl font-bold">Playlist not found</h2>
         <Button onClick={() => navigate("/playlists")} variant="link">
           Back to Playlists
@@ -143,7 +143,7 @@ export default function PlaylistDetailsPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl space-y-8">
+    <div className="container mx-auto p-4 max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Button
         variant="ghost"
         onClick={() => navigate("/playlists")}

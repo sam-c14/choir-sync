@@ -39,7 +39,7 @@ export default function AdminUsersPage() {
 
   if (currentUser?.role !== 'DIRECTOR' && currentUser?.role !== 'ADMIN') {
     return (
-      <div className="max-w-5xl mx-auto space-y-6 px-4 py-6">
+      <div className="max-w-5xl mx-auto space-y-6 px-4 py-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <h2 className="text-2xl font-bold text-destructive">Access Denied</h2>
         <p>You must be a Director or Admin to view this page.</p>
       </div>

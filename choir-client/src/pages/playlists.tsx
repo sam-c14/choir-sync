@@ -48,7 +48,7 @@ export default function PlaylistsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4 max-w-4xl space-y-6">
+      <div className="container mx-auto p-4 max-w-4xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between">
           <div>
             <Skeleton className="h-9 w-40" />
@@ -70,7 +70,7 @@ export default function PlaylistsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl space-y-6">
+    <div className="container mx-auto p-4 max-w-4xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Playlists</h1>
         {canEditPlaylist && (

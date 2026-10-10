@@ -60,7 +60,7 @@ export default function UniformsPage() {
   const totalPages = uniformsData?.totalPages || 1;
 
   return (
-    <div className="sm:max-w-5xl max-w-screen mx-auto space-y-6 px-4 py-6 sm:px-6">
+    <div className="sm:max-w-5xl max-w-screen mx-auto space-y-6 px-4 py-6 sm:px-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Uniform Schedule</h2>
