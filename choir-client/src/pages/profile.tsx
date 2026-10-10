@@ -17,7 +17,7 @@ import { AvatarUpload } from '../components/AvatarUpload';
 const MUSICAL_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 export function ProfilePage() {
-  const { user, updateLocalUser } = useAuth();
+  const { user, updateLocalUser, logout } = useAuth();
   const queryClient = useQueryClient();
   
   const form = useForm<UpdateProfileDto>({
@@ -178,7 +178,7 @@ export function ProfilePage() {
           <CardTitle>App Preferences</CardTitle>
           <CardDescription>Manage your app experience</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <Button 
             variant="outline" 
             className="w-full"
@@ -192,6 +192,16 @@ export function ProfilePage() {
             }}
           >
             Restart App Tour
+          </Button>
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={() => {
+              logout();
+              toast.success('Logged out successfully');
+            }}
+          >
+            Log Out
           </Button>
         </CardContent>
       </Card>
