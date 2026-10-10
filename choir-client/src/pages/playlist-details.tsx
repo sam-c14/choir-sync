@@ -44,7 +44,7 @@ export default function PlaylistDetailsPage() {
   const [isAddSongDialogOpen, setIsAddSongDialogOpen] = useState(false);
   const [songToRemove, setSongToRemove] = useState<string | null>(null);
 
-  const isDirector = user?.role === "DIRECTOR" || user?.role === "ADMIN";
+  const canEditPlaylist = user?.role === "DIRECTOR" || user?.role === "ADMIN" || user?.role === "SECTION_LEADER";
 
   if (isLoading) {
     return (
@@ -166,7 +166,7 @@ export default function PlaylistDetailsPage() {
             <h1 className="text-3xl font-bold tracking-tight">
               {playlist.title}
             </h1>
-            <KeyPickerDialog playlist={playlist} isDirector={isDirector} />
+            <KeyPickerDialog playlist={playlist} isDirector={canEditPlaylist} />
           </div>
           {playlist.description && (
             <p className="text-muted-foreground">{playlist.description}</p>
@@ -176,7 +176,7 @@ export default function PlaylistDetailsPage() {
           </div>
         </div>
 
-        {isDirector && (
+        {canEditPlaylist && (
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             {playlist.isActive ? (
               <Button
@@ -229,7 +229,7 @@ export default function PlaylistDetailsPage() {
             <h3 className="font-semibold text-lg flex items-center gap-2">
               <Music className="w-5 h-5" /> Setlist
             </h3>
-            {isDirector && (
+            {canEditPlaylist && (
               <Button
                 size="sm"
                 className="pb-3.5 pt-3"
@@ -245,7 +245,7 @@ export default function PlaylistDetailsPage() {
               <p className="text-muted-foreground text-sm mb-4">
                 No songs added yet.
               </p>
-              {isDirector && (
+              {canEditPlaylist && (
                 <Button
                   variant="outline"
                   onClick={() => setIsAddSongDialogOpen(true)}
@@ -285,7 +285,7 @@ export default function PlaylistDetailsPage() {
                       )}
                     </div>
                   </div>
-                  {isDirector && (
+                  {canEditPlaylist && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -331,7 +331,7 @@ export default function PlaylistDetailsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {isDirector && (
+      {canEditPlaylist && (
         <AddSongDialog
           open={isAddSongDialogOpen}
           onOpenChange={setIsAddSongDialogOpen}

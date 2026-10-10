@@ -29,7 +29,7 @@ export default function PlaylistsPage() {
   const [serviceDate, setServiceDate] = useState<Date | undefined>(new Date());
   const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
 
-  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
+  const canEditPlaylist = user?.role === 'DIRECTOR' || user?.role === 'ADMIN' || user?.role === 'SECTION_LEADER';
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +54,7 @@ export default function PlaylistsPage() {
             <Skeleton className="h-9 w-40" />
             <Skeleton className="h-5 w-64 mt-2" />
           </div>
-          {isDirector && <Skeleton className="h-10 w-32" />}
+          {canEditPlaylist && <Skeleton className="h-10 w-32" />}
         </div>
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -73,7 +73,7 @@ export default function PlaylistsPage() {
     <div className="container mx-auto p-4 max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Playlists</h1>
-        {isDirector && (
+        {canEditPlaylist && (
           <div className="flex gap-2">
             <AiCuratorDialog 
               trigger={
@@ -182,7 +182,7 @@ export default function PlaylistsPage() {
                 </span>
               </div>
               
-              {isDirector && (
+              {canEditPlaylist && (
                 <Button
                   variant="ghost"
                   size="icon"

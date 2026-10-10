@@ -22,7 +22,7 @@ interface UserNode {
 
 export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, serviceDate?: string | Date | null }) {
   const { user } = useAuth();
-  const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
+  const canEditPlaylist = user?.role === 'DIRECTOR' || user?.role === 'ADMIN' || user?.role === 'SECTION_LEADER';
   
   const { data: roster, isLoading: loadingRoster } = useRoster(playlistId);
   const { data: usersData, isLoading: loadingUsers } = useQuery({
@@ -31,7 +31,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
       const res = await apiClient.get(`/users?page=1&limit=100&assignable=true`);
       return res.data;
     },
-    enabled: isDirector,
+    enabled: canEditPlaylist,
   });
   const users = usersData?.data || [];
   
@@ -55,7 +55,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
     }
   }, [roster]);
 
-  if (loadingRoster || (isDirector && loadingUsers)) {
+  if (loadingRoster || (canEditPlaylist && loadingUsers)) {
     return (
       <div className="border rounded-xl bg-card overflow-hidden">
         <div className="bg-muted/30 border-b px-4 py-3 flex justify-between items-center">
@@ -150,7 +150,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
           <Users className="w-4 h-4 text-primary" />
           Sunday Team Roster
         </div>
-        {isDirector && (
+        {canEditPlaylist && (
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleSave} disabled={!isChanged || saveRoster.isPending}>
               {saveRoster.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1" />} 
@@ -178,7 +178,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
                   {role}
                   <Badge variant="secondary" className="text-[10px] px-1.5">{assignedInRole.length}</Badge>
                 </h4>
-                {isDirector && (
+                {canEditPlaylist && (
                   <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => setActiveRoleDialog(role)}>
                     <Plus className="w-4 h-4" />
                   </Button>
