@@ -31,7 +31,6 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
       const res = await apiClient.get(`/users?page=1&limit=100&assignable=true`);
       return res.data;
     },
-    enabled: canEditPlaylist,
   });
   const users = usersData?.data || [];
   
@@ -55,7 +54,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
     }
   }, [roster]);
 
-  if (loadingRoster || (canEditPlaylist && loadingUsers)) {
+  if (loadingRoster || loadingUsers) {
     return (
       <div className="border rounded-xl bg-card overflow-hidden">
         <div className="bg-muted/30 border-b px-4 py-3 flex justify-between items-center">
