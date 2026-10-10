@@ -202,7 +202,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
                           )}
                         </div>
                         <span className="text-[10px] font-medium text-muted-foreground truncate w-full text-center" title={u.name || u.email}>
-                          {u.name ? u.name.split(' ')[0] : u.email?.split('@')[0]}
+                          {u.name ? u.name.split(' ').slice(0, 2).join(' ') : u.email?.split('@')[0]}
                         </span>
                       </div>
                     ))}
