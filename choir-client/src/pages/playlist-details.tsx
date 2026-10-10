@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RosterPanel } from '../components/playlists/roster-panel';
 import { BroadcastDialog } from '../components/playlists/broadcast-dialog';
 import { KeyPickerDialog } from '../components/playlists/key-picker-dialog';
+import { AddSongDialog } from '../components/playlists/AddSongDialog';
 import { Send, CheckCircle2, X } from 'lucide-react';
 import { trackChoirEvent } from '../lib/analytics';
 import { Badge } from '../components/ui/badge';
@@ -27,7 +28,7 @@ export default function PlaylistDetailsPage() {
   const setPlaylistSongs = useSetPlaylistSongs();
   const setActivePlaylist = useSetActivePlaylist();
 
-  const [search, setSearch] = useState('');
+  const [isAddSongDialogOpen, setIsAddSongDialogOpen] = useState(false);
   const [songToRemove, setSongToRemove] = useState<string | null>(null);
   
   const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN';
@@ -122,10 +123,7 @@ export default function PlaylistDetailsPage() {
     });
   };
 
-  const filteredSongs = allSongs?.data?.filter((s: any) => 
-    s.title.toLowerCase().includes(search.toLowerCase()) || 
-    s.composer?.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+
 
   return (
     <div className="container mx-auto p-4 max-w-4xl space-y-8">
@@ -191,16 +189,28 @@ export default function PlaylistDetailsPage() {
         <RosterPanel playlistId={playlist.id} serviceDate={playlist.serviceDate} />
       </div>
 
-      <div className="grid md:grid-cols-[1fr_300px] grid-cols-1 gap-8">
+      <div className="space-y-4">
         {/* Songs List */}
         <div className="space-y-4">
-          <h3 className="font-semibold text-lg flex items-center gap-2">
-            <Music className="w-5 h-5" /> Setlist
-          </h3>
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Music className="w-5 h-5" /> Setlist
+            </h3>
+            {isDirector && (
+              <Button size="sm" onClick={() => setIsAddSongDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" /> Add Song
+              </Button>
+            )}
+          </div>
           
           {!playlist.songs?.length ? (
             <div className="text-center p-8 border rounded-xl bg-card border-dashed">
-              <p className="text-muted-foreground text-sm">No songs added yet.</p>
+              <p className="text-muted-foreground text-sm mb-4">No songs added yet.</p>
+              {isDirector && (
+                <Button variant="outline" onClick={() => setIsAddSongDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" /> Browse Library
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
@@ -232,55 +242,6 @@ export default function PlaylistDetailsPage() {
             </div>
           )}
         </div>
-
-        {/* Sidebar / Quick Add */}
-        {isDirector && (
-          <div className="space-y-4">
-            <div className="bg-card border rounded-xl p-4 sticky top-4">
-              <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide">Add Songs</h3>
-              <p className="text-muted-foreground text-sm mb-3">Note: Only songs in the library can be added.</p>
-              <div className="space-y-3 relative">
-                <Input 
-                  placeholder="Search library..." 
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
-                
-                {search && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-card border rounded-md shadow-lg max-h-60 overflow-y-auto z-10">
-                    {filteredSongs.length > 0 ? (
-                      filteredSongs.map((song: any) => {
-                        const inPlaylist = playlist.songs?.some((ps: any) => ps.songId === song.id);
-                        return (
-                          <button
-                            key={song.id}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-muted ${inPlaylist ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            onClick={() => !inPlaylist && handleAddSong(song.id)}
-                            disabled={inPlaylist}
-                          >
-                            <div className="font-medium">{song.title}</div>
-                            <div className="text-xs text-muted-foreground">{song.composer}</div>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="p-3">
-                        <p className="text-sm text-muted-foreground mb-3">No songs found in repertoire.</p>
-                        <Button 
-                          size="sm" 
-                          className="w-full"
-                          onClick={() => navigate(`/songs/new?playlistId=${playlist.id}`)}
-                        >
-                          <Plus className="w-4 h-4 mr-2" /> Add New Song to Repertoire & Playlist
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       <AlertDialog open={!!songToRemove} onOpenChange={(open) => !open && setSongToRemove(null)}>
@@ -307,6 +268,18 @@ export default function PlaylistDetailsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {isDirector && (
+        <AddSongDialog
+          open={isAddSongDialogOpen}
+          onOpenChange={setIsAddSongDialogOpen}
+          songs={allSongs?.data || []}
+          playlistSongs={playlist.songs || []}
+          onAddSong={handleAddSong}
+          isAdding={setPlaylistSongs.isPending}
+          playlistId={playlist.id}
+        />
+      )}
     </div>
   );
 }
