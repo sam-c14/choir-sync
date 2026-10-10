@@ -12,20 +12,33 @@ export function NotificationsPopover() {
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
   const navigate = useNavigate();
+  const [isOpen, setIsOpen] = React.useState(false);
 
   const unreadCount = notifications.filter((n: any) => !n.isRead).length;
 
-  const handleNotificationClick = (notification: any) => {
-    if (!notification.isRead) {
-      markAsRead.mutate(notification.id);
+  const handleNotificationClick = async (notification: any) => {
+    try {
+      if (!notification.isRead) {
+        await markAsRead.mutateAsync(notification.id);
+      }
+    } finally {
+      setIsOpen(false);
+      if (notification.linkUrl) {
+        navigate(notification.linkUrl);
+      }
     }
-    if (notification.linkUrl) {
-      navigate(notification.linkUrl);
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllAsRead.mutateAsync();
+    } finally {
+      setIsOpen(false);
     }
   };
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger
         render={
           <Button variant="ghost" size="icon" className="relative h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full" />
@@ -49,7 +62,7 @@ export function NotificationsPopover() {
               variant="ghost" 
               size="sm" 
               className="h-auto p-0 text-xs text-primary hover:text-primary hover:bg-transparent"
-              onClick={() => markAllAsRead.mutate()}
+              onClick={handleMarkAllRead}
             >
               <Check className="w-3.5 h-3.5 mr-1" />
               Mark all read

@@ -197,7 +197,7 @@ export default function PlaylistDetailsPage() {
               <Music className="w-5 h-5" /> Setlist
             </h3>
             {isDirector && (
-              <Button size="sm" onClick={() => setIsAddSongDialogOpen(true)}>
+              <Button size="sm" className="pb-3.5 pt-3" onClick={() => setIsAddSongDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" /> Add Song
               </Button>
             )}
