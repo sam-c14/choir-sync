@@ -106,9 +106,15 @@ export class UsersService {
       try {
         const pathParts = userToUpdate.avatarUrl.split('/avatars/');
         if (pathParts.length > 1) {
-          const storagePath = pathParts[1];
-          await supabaseAdmin.storage.from('avatars').remove([storagePath]);
-          logger.info(`Deleted old avatar from storage: ${storagePath} for user ${id}`);
+          // Remove any query parameters like ?t=... from the storage path and decode URI components
+          const rawStoragePath = pathParts[1].split('?')[0];
+          const storagePath = decodeURIComponent(rawStoragePath);
+          const { error } = await supabaseAdmin.storage.from('avatars').remove([storagePath]);
+          if (error) {
+            logger.error(`Supabase remove error for ${storagePath}: ${error.message}`);
+          } else {
+            logger.info(`Deleted old avatar from storage: ${storagePath} for user ${id}`);
+          }
         }
       } catch (error) {
         logger.error(`Failed to delete old avatar for user ${id}: ${error}`);
