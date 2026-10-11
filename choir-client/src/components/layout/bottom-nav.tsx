@@ -25,8 +25,14 @@ export function BottomNav() {
   navItems.push({ name: 'Profile', path: '/profile', icon: CircleUser });
 
   return (
-    <nav id="tour-bottom-nav" className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background z-50 pb-safe">
-      <div className="flex items-center justify-around h-16 py-1 px-2">
+    <nav
+      id="tour-bottom-nav"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 dark:border-white/10 bg-background/80 dark:bg-background/80 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/70 shadow-[0_-4px_20px_-2px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_24px_-2px_rgba(0,0,0,0.4)] pb-safe pb-[env(safe-area-inset-bottom,0px)] transition-colors"
+    >
+      {/* Specular top highlight for glass bevel */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 dark:via-white/10 to-transparent pointer-events-none" />
+
+      <div className="flex items-center justify-around h-16 py-1 px-1">
         {navItems.map((item) => {
           const isActive =
             item.path === '/'
@@ -48,18 +54,30 @@ export function BottomNav() {
               id={id}
               to={item.path}
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full space-y-2 text-muted-foreground hover:text-foreground transition-colors",
+                "flex flex-col items-center justify-center w-full h-full py-1 space-y-1 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-150 active:scale-95",
                 isActive && "text-primary"
               )}
             >
               {item.name === 'Profile' && (user as any)?.avatarUrl ? (
-                <div className={cn("w-6 h-6 rounded-full overflow-hidden border-2", isActive ? "border-primary" : "border-transparent")}>
+                <div
+                  className={cn(
+                    "w-6 h-6 rounded-full overflow-hidden border-2 transition-all",
+                    isActive ? "border-primary ring-2 ring-primary/20 scale-105" : "border-border/60"
+                  )}
+                >
                   <img src={(user as any).avatarUrl} alt="Profile" className="w-full h-full object-cover" />
                 </div>
               ) : (
-                <Icon className={cn("w-5 h-5", isActive && "fill-primary/20")} strokeWidth={isActive ? 2.5 : 2} />
+                <div className={cn("transition-transform duration-150", isActive && "scale-105")}>
+                  <Icon
+                    className={cn("w-5 h-5 transition-colors", isActive && "fill-primary/20")}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                </div>
               )}
-              <span className="text-[11px] font-medium leading-none">{item.name}</span>
+              <span className={cn("text-[11px] leading-none transition-colors", isActive ? "font-semibold text-primary" : "font-medium")}>
+                {item.name}
+              </span>
             </Link>
           );
         })}
