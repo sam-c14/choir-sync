@@ -1482,3 +1482,55 @@ Verification:
 1. Run `nx-workspace-verify`.
 2. Test the mobile viewport: Ensure the Drawer doesn't overlap behind the Bottom Nav, and verify the overlapping avatars look visually clean.
 ```
+
+## Milestone 24 — Android APK Web Distribution (Capacitor + Headless CI/CD)
+**Goal:** Package the ChoirSync web app into a standalone Android APK using Capacitor, built automatically via GitHub Actions, and distributed directly from the web app (bypassing the Google Play Store).
+**Do:**
+1. In `choir-client/`, install `@capacitor/core`, `@capacitor/cli`, and `@capacitor/android`.
+2. Initialize Capacitor (`capacitor.config.ts`) and set the `webDir` to match the frontend build output directory (e.g., `dist`).
+3. Create a GitHub Actions workflow (`.github/workflows/android-build.yml`) that runs on push to `main`. It should build the web app, sync Capacitor, and run Gradle to output a signed release APK using GitHub Secrets for the Keystore.
+4. Configure the GitHub Action to upload the resulting `app-release.apk` as a workflow artifact, or deploy it to the Supabase `public` bucket.
+5. In `choir-client/`, add a prominent "Install Android App (.apk)" button on the `/profile` page (and potentially the Login page) that links to the latest generated APK.
+**Verify with:** Triggering the GitHub Action, downloading the resulting `.apk` on an Android device, installing it, and verifying the app opens full-screen without browser UI.
+
+## Followup Prompt
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 24 — Android APK Web Distribution.
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Tasks:
+
+1. Capacitor Initialization (`choir-client/`):
+   - Install dependencies: `@capacitor/core`, `@capacitor/cli`, `@capacitor/android`.
+   - Initialize Capacitor. Create `capacitor.config.ts`:
+     - `appId`: `com.choirsync.app`
+     - `appName`: `ChoirSync`
+     - `webDir`: `dist` (or your Vite output folder)
+     - `bundledWebRuntime`: false
+   - Run `npx cap add android` to generate the `android/` folder.
+   - Add `/choir-client/android/` to the workspace root `.gitignore` (we will build this freshly in CI to keep the repo clean, OR if your framework requires committing the android folder, only ignore the `android/app/build` directories. *Agent: follow Capacitor best practices for monorepos*).
+
+2. Automated Headless Build (GitHub Actions):
+   - Create `.github/workflows/build-android.yml`.
+   - Trigger: `push` to `main`.
+   - Runner: `ubuntu-latest` (which comes with the Android SDK pre-installed).
+   - Steps:
+     1. Checkout code.
+     2. Setup Node.js & package manager (npm/pnpm).
+     3. Install dependencies (`npm install`).
+     4. Build the web app (`nx build choir-client` or Vite build).
+     5. Run `npx cap sync android` in `choir-client`.
+     6. Build the APK: `cd choir-client/android && ./gradlew assembleRelease`.
+     7. Sign the APK using the `r0adkll/sign-android-release@v1` action. It should expect these GitHub Secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
+     8. Upload the signed APK as a GitHub Action Artifact named `ChoirSync-Latest.apk`.
+
+3. Frontend Download UI (`choir-client/`):
+   - On the `/profile` page, add a new section called "App & Devices".
+   - Add a download button: `<Button icon={Download}>Install Android App (.apk)</Button>`.
+   - For now, link this button to a placeholder route or a fixed URL where the APK will be hosted (e.g., a public Supabase storage link or GitHub Releases link).
+   - Add a small helper text beneath it: "Note: You may need to allow 'Install from Unknown Sources' in your Android settings to install this app directly."
+
+Verification:
+Run `nx-workspace-verify` to ensure the new dependencies don't break the web build. Review the GitHub Actions YAML syntax for accuracy.
+```

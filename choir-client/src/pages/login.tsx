@@ -11,7 +11,7 @@ import {
 } from "../components/ui/card";
 import { ModeToggle } from "@/components/mode-toggle";
 import { trackChoirEvent } from "../lib/analytics";
-import { Loader2, Music2, Headphones, ListMusic, CalendarCheck, AlertCircle } from "lucide-react";
+import { Loader2, Music2, Headphones, ListMusic, CalendarCheck, AlertCircle, Smartphone } from "lucide-react";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -158,6 +158,18 @@ export default function LoginPage() {
                   <p className="text-xs text-muted-foreground mt-0.5">Check your service schedule and dress code.</p>
                 </div>
               </div>
+            </div>
+
+            <div className="pt-2 border-t border-border/50 text-center">
+              <a
+                href="https://github.com/Samuel-Affah/choir-sync/releases/latest/download/ChoirSync-Latest.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Prefer Android native app? Download .apk</span>
+              </a>
             </div>
           </CardContent>
         </Card>
