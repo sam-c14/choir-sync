@@ -19,31 +19,56 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
-// Force reload when a new service worker takes over
-if ('serviceWorker' in navigator) {
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
-      refreshing = true;
-      window.location.reload();
-    }
-  });
+import { Capacitor } from '@capacitor/core';
 
-  // Proactively check for updates when the app is brought to the foreground
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.update().catch(() => {
-          // Silent catch for offline or dev scenarios
-        });
+// Native Capacitor vs Web PWA Service Worker management
+if (Capacitor.isNativePlatform()) {
+  // In native Android/iOS WebView, unregister any service workers to prevent
+  // asset hijacking, reload loops, and blank screens.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
+    });
+  }
+} else {
+  // Web browser / PWA only
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
+        // Silent catch for registration failure
       });
-    }
-  });
+    });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+
+    // Proactively check for updates when the app is brought to the foreground
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.update().catch(() => {
+            // Silent catch for offline or dev scenarios
+          });
+        });
+      }
+    });
+  }
 }
+
+const googleClientId =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  '899614270215-orv5fv8rfh96h1oj0cmbbdviktv4u0ql.apps.googleusercontent.com';
 
 root.render(
   <StrictMode>
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+    <GoogleOAuthProvider clientId={googleClientId}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="system" storageKey="choir-sync-theme">
           <App />

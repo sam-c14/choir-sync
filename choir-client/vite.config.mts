@@ -30,6 +30,7 @@ export default defineConfig(() => ({
     nxCopyAssetsPlugin(['*.md']),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: null,
       devOptions: {
         enabled: true
       },

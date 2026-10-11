@@ -41,6 +41,10 @@ jobs:
 
       - name: Build Web Application
         run: pnpm exec nx build choir-client
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL || vars.VITE_API_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID || vars.VITE_GOOGLE_CLIENT_ID || '899614270215-orv5fv8rfh96h1oj0cmbbdviktv4u0ql.apps.googleusercontent.com' }}
+          VITE_GA_MEASUREMENT_ID: ${{ secrets.VITE_GA_MEASUREMENT_ID || vars.VITE_GA_MEASUREMENT_ID || 'G-8X1D41JRQG' }}
 
       - name: Sync Capacitor Android
         run: |
