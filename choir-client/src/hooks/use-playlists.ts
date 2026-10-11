@@ -1,15 +1,35 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { apiClient } from '../lib/api-client';
 import { toast } from 'sonner';
 import { CreatePlaylistDto, UpdatePlaylistDto, CreatePlaylistSongDto } from '@choir-workspace/shared-validation';
 
-export function usePlaylists() {
-  return useQuery({
-    queryKey: ['playlists'],
+export interface PaginatedPlaylists {
+  data: any[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export function usePlaylists(options: {
+  page?: number;
+  limit?: number;
+  search?: string;
+} = {}) {
+  const queryParams = new URLSearchParams();
+  if (options.page) queryParams.append('page', options.page.toString());
+  if (options.limit) queryParams.append('limit', options.limit.toString());
+  if (options.search) queryParams.append('search', options.search);
+
+  const queryString = queryParams.toString();
+  const url = queryString ? `/playlists?${queryString}` : '/playlists';
+
+  return useQuery<PaginatedPlaylists>({
+    queryKey: ['playlists', options],
     queryFn: async () => {
-      const { data } = await apiClient.get('/playlists');
+      const { data } = await apiClient.get<PaginatedPlaylists>(url);
       return data;
-    }
+    },
+    placeholderData: keepPreviousData,
   });
 }
 

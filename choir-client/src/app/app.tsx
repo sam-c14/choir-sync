@@ -55,7 +55,6 @@ export function App() {
                     <GlobalPlayer />
                     <FloatingChatTab />
                     <AppTour />
-                    <Toaster />
                     <BackToTopButton />
                     <BottomNav />
                   </div>
@@ -63,6 +62,7 @@ export function App() {
               }
             />
           </Routes>
+          <Toaster />
         </PlayerProvider>
       </AuthProvider>
     </BrowserRouter>

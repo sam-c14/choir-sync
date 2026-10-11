@@ -131,7 +131,7 @@ export function AvatarUpload({
           variant="default"
           size="icon"
           aria-label="Remove avatar"
-          className="absolute bottom-0 right-0 rounded-full bg-destructive text-destructive-foreground shadow-md hover:bg-destructive/90 transition-colors z-10 flex items-center justify-center border-transparent"
+          className="absolute bottom-0 right-0 rounded-full bg-destructive text-destructive-foreground shadow-md hover:bg-destructive/90 transition-colors z-4 flex items-center justify-center border-transparent"
           onClick={handleDelete}
         >
           <Trash2 className="w-4 h-4" />

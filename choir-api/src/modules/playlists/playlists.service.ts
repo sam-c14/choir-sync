@@ -60,15 +60,47 @@ export const playlistsService = {
     });
   },
 
-  async getPlaylists() {
-    return prisma.playlist.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        createdBy: {
-          select: { id: true, email: true }
-        }
-      }
-    });
+  async getPlaylists(options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  } = {}) {
+    const page = Math.max(1, options.page || 1);
+    const limit = Math.max(1, options.limit || 12);
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (options.search) {
+      where.OR = [
+        { title: { contains: options.search, mode: 'insensitive' } },
+        { description: { contains: options.search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.playlist.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          createdBy: {
+            select: { id: true, email: true },
+          },
+          _count: {
+            select: { songs: true },
+          },
+        },
+      }),
+      prisma.playlist.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   },
 
   async getPlaylistById(id: string) {

@@ -13,8 +13,8 @@ export function GlobalPlayer() {
 
   return (
     <div 
-      className={`fixed z-50 bg-card border shadow-2xl rounded-t-xl sm:rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-        bottom-0 left-0 right-0 sm:left-auto sm:right-6 sm:bottom-6 sm:w-80
+      className={`fixed z-50 bg-card border shadow-2xl rounded-xl overflow-hidden transition-all duration-300 ease-in-out
+        bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+0.5rem)] left-2 right-2 md:left-auto md:right-6 md:bottom-6 md:w-80
         ${isMinimized ? 'h-12' : 'h-auto'}
       `}
     >

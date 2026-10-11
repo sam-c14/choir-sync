@@ -30,7 +30,8 @@ export default function SongFormPage() {
   const { data: song, isLoading: isSongLoading, isError: isSongError } = useSong(id || '');
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>(playlistId || 'none');
   const { data: selectedPlaylistData } = usePlaylist(selectedPlaylistId !== 'none' ? selectedPlaylistId : '');
-  const { data: allPlaylists } = usePlaylists();
+  const { data: playlistsData } = usePlaylists({ limit: 100 });
+  const allPlaylists = Array.isArray(playlistsData) ? playlistsData : playlistsData?.data ?? [];
   const createSong = useCreateSong();
   const updateSong = useUpdateSong();
   const setPlaylistSongs = useSetPlaylistSongs();

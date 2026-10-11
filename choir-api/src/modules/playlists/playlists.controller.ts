@@ -22,7 +22,12 @@ export const playlistsController = {
 
   async getPlaylists(req: Request, res: Response) {
     try {
-      const playlists = await playlistsService.getPlaylists();
+      const options = {
+        page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+        search: req.query.search as string | undefined,
+      };
+      const playlists = await playlistsService.getPlaylists(options);
       res.json(playlists);
     } catch (error) {
       console.error(error);

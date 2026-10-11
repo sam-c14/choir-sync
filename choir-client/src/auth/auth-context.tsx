@@ -3,6 +3,7 @@ import { jwtDecode } from 'jwt-decode';
 import { UserRoleEnum, VoicePartTypeEnum } from '@choir-workspace/shared-validation';
 import { z } from 'zod';
 import { apiClient } from '../lib/api-client';
+import { toast } from 'sonner';
 
 export interface JwtPayload {
   id: string;
@@ -65,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = (token: string, refreshToken: string) => {
+    toast.dismiss();
     localStorage.setItem('token', token);
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.removeItem(PROFILE_STORAGE_KEY);
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    toast.dismiss();
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken) {
       try {

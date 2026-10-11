@@ -58,9 +58,14 @@ export type UpdateSongPartDto = z.infer<typeof UpdateSongPartSchema>;
 
 export const AuthProviderEnum = z.enum(["LOCAL", "GOOGLE"]);
 
-export const GoogleAuthSchema = z.object({
-  idToken: z.string().min(1, "ID token is required"),
-});
+export const GoogleAuthSchema = z
+  .object({
+    idToken: z.string().optional(),
+    accessToken: z.string().optional(),
+  })
+  .refine((data) => !!(data.idToken || data.accessToken), {
+    message: "Either idToken or accessToken is required",
+  });
 export type GoogleAuthDto = z.infer<typeof GoogleAuthSchema>;
 
 export const RefreshTokenSchema = z.object({

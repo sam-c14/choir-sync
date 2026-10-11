@@ -106,7 +106,16 @@ export const swaggerPaths = {
     delete: { tags: ['Voice Snippets'], summary: 'Delete snippet', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 204: { description: 'No Content' } } }
   },
   '/api/v1/playlists': {
-    get: { tags: ['Playlists'], summary: 'List playlists', responses: { 200: { description: 'Success' } } },
+    get: {
+      tags: ['Playlists'],
+      summary: 'List playlists with pagination',
+      parameters: [
+        { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+        { name: 'limit', in: 'query', schema: { type: 'integer', default: 12 } },
+        { name: 'search', in: 'query', schema: { type: 'string' } }
+      ],
+      responses: { 200: { description: 'Success' } }
+    },
     post: { tags: ['Playlists'], summary: 'Create playlist', requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { title: { type: 'string' }, serviceDate: { type: 'string' }, key: { type: 'string' } } } } } }, responses: { 201: { description: 'Created' } } }
   },
   '/api/v1/playlists/{id}': {

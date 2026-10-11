@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { GoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../auth/auth-context";
 import { useNavigate, useLocation } from "react-router-dom";
 import { apiClient } from "../lib/api-client";
@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { Button } from "../components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { trackChoirEvent } from "../lib/analytics";
 import { Loader2, Headphones, ListMusic, CalendarCheck, AlertCircle, Smartphone } from "lucide-react";
@@ -22,12 +23,50 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setError(null);
+      setIsGoogleLoading(true);
+      try {
+        const res = await apiClient.post<{
+          token: string;
+          refreshToken: string;
+          user?: { createdAt: string };
+        }>("/auth/google", {
+          accessToken: tokenResponse.access_token,
+        });
+        login(res.data.token, res.data.refreshToken);
+        trackChoirEvent({ action: "login_success", params: { method: "google" } });
+
+        let nextUrl = from;
+        if (res.data.user && res.data.user.createdAt) {
+          const createdTime = new Date(res.data.user.createdAt).getTime();
+          // If account was created less than 2 minutes ago, consider it a new signup
+          if (Date.now() - createdTime < 2 * 60 * 1000) {
+            nextUrl = "/profile";
+          }
+        }
+        navigate(nextUrl, { replace: true });
+      } catch (err: unknown) {
+        setIsGoogleLoading(false);
+        const message =
+          (err as { response?: { data?: { error?: string } } })
+            ?.response?.data?.error ?? "Google sign in failed. Please try again.";
+        setError(message);
+      }
+    },
+    onError: () => {
+      setIsGoogleLoading(false);
+      setError("Google sign in failed. Please try again.");
+    },
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="border-b bg-background shadow-sm sticky top-0 z-10 transition-colors">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="/dgc_logo.png" alt="DGC Crest" className="w-8 h-8 object-contain shrink-0" />
+          <div className="flex items-center gap-2">
+           <div className="bg-black rounded-full p-0.5">  <img src="/dgc_logo.png" alt="DGC Crest" className="w-8 h-8 object-contain shrink-0" /></div>
             <h1 className="text-xl font-bold tracking-tight text-primary">
               DGC Resound
             </h1>
@@ -74,49 +113,38 @@ export default function LoginPage() {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3 py-2 animate-in fade-in zoom-in-95">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-sm font-medium text-muted-foreground mb-2">
                   Sign in with your Google account to continue
                 </p>
-                <GoogleLogin
-                  size="large"
-                  theme="outline"
-                  shape="pill"
-                  text="continue_with"
-                  onSuccess={async (credentialResponse) => {
+                <Button
+                  type="button"
+                  onClick={() => {
                     setError(null);
-                    setIsGoogleLoading(true);
-                    try {
-                      const res = await apiClient.post<{
-                        token: string;
-                        refreshToken: string;
-                        user?: { createdAt: string };
-                      }>("/auth/google", {
-                        idToken: credentialResponse.credential,
-                      });
-                      login(res.data.token, res.data.refreshToken);
-                      trackChoirEvent({ action: "login_success", params: { method: "google" } });
-                      
-                      let nextUrl = from;
-                      if (res.data.user && res.data.user.createdAt) {
-                        const createdTime = new Date(res.data.user.createdAt).getTime();
-                        // If account was created less than 2 minutes ago, consider it a new signup
-                        if (Date.now() - createdTime < 2 * 60 * 1000) {
-                          nextUrl = "/profile";
-                        }
-                      }
-                      navigate(nextUrl, { replace: true });
-                    } catch (err: unknown) {
-                      setIsGoogleLoading(false);
-                      const message =
-                        (err as { response?: { data?: { error?: string } } })
-                          ?.response?.data?.error ?? "Google sign in failed. Please try again.";
-                      setError(message);
-                    }
+                    handleGoogleLogin();
                   }}
-                  onError={() => {
-                    setError("Google sign in failed. Please try again.");
-                  }}
-                />
+                  variant="outline"
+                  className="w-full sm:w-auto min-w-[240px] h-11 rounded-full font-medium shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-3 border-input hover:bg-accent/80 active:scale-[0.98]"
+                >
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.33 24 12 24z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.92 0 12s.45 3.85 1.24 5.42l4.04-3.15z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.93 6.72-4.93z"
+                    />
+                  </svg>
+                  <span className="text-sm font-medium">Continue with Google</span>
+                </Button>
               </div>
             )}
 
@@ -160,13 +188,13 @@ export default function LoginPage() {
 
             <div className="pt-2 border-t border-border/50 text-center">
               <a
-                href="https://github.com/Samuel-Affah/choir-sync/releases/latest/download/ChoirSync-Latest.apk"
+                href="https://github.com/sam-c14/choir-sync/releases/latest/download/ChoirSync-Latest.apk"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1"
               >
                 <Smartphone className="w-3.5 h-3.5" />
-                <span>Prefer Android native app? Download .apk</span>
+                <span>Prefer Android native app? Click here to download</span>
               </a>
             </div>
           </CardContent>

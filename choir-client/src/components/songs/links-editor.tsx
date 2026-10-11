@@ -327,18 +327,36 @@ function ManualUrlInput({ songId, platform, onAdded }: ManualUrlInputProps) {
 // ---------------------------------------------------------------------------
 export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
   const { user } = useAuth();
-  const { playTrack, currentTrack, setActivePreviewUrls } = usePlayer();
+  const { playTrack, closePlayer, currentTrack, setActivePreviewUrls } = usePlayer();
   const isDirector = user?.role === "DIRECTOR" || user?.role === "ADMIN" || user?.role === "SECTION_LEADER";
   const deleteLink = useDeleteSongLink();
 
   const [platform, setPlatform] = useState<CreateSongLinkDto["platform"]>("YOUTUBE");
   const [addKey, setAddKey] = useState(0); // bump to reset child panels after add
+  const [inlinePlayingUrl, setInlinePlayingUrl] = useState<string | null>(null);
 
   // Update global player context so it knows which links are currently on screen
   useEffect(() => {
     setActivePreviewUrls(links.map(l => l.url));
     return () => setActivePreviewUrls([]);
   }, [links, setActivePreviewUrls]);
+
+  // If user clicks directly into the iframe (focus shift), auto-kill the background player
+  useEffect(() => {
+    if (!currentTrack) return;
+    const handleWindowBlur = () => {
+      setTimeout(() => {
+        if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
+          const matchingLink = links.find(l => l.url === currentTrack.url);
+          if (matchingLink) {
+            closePlayer();
+          }
+        }
+      }, 50);
+    };
+    window.addEventListener('blur', handleWindowBlur);
+    return () => window.removeEventListener('blur', handleWindowBlur);
+  }, [currentTrack, links, closePlayer]);
 
   return (
     <div className="space-y-3">
@@ -354,6 +372,8 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
       <div className="space-y-4">
         {links.map((link) => {
           const embedUrl = getEmbedUrl(link.platform, link.url);
+          const isPlayingInBackground = currentTrack?.url === link.url;
+
           return (
             <div
               key={link.id}
@@ -395,14 +415,30 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
               {embedUrl && link.platform === "YOUTUBE" && (
                 <div className="w-full mt-2 rounded-md overflow-hidden bg-slate-100 dark:bg-slate-800">
                   <div className="relative w-full aspect-video">
-                    {/* The key forces the iframe to reload (and thus pause) when the background player takes over this track */}
+                    {/* The key forces the iframe to reload when switching modes */}
                     <iframe
-                      key={`iframe-${link.id}-${currentTrack?.url === link.url ? 'bg' : 'inline'}`}
+                      key={`iframe-${link.id}-${isPlayingInBackground ? 'bg' : 'inline'}-${inlinePlayingUrl === link.url ? 'auto' : 'norm'}`}
                       className="absolute top-0 left-0 w-full h-full border-0"
-                      src={embedUrl}
+                      src={inlinePlayingUrl === link.url ? `${embedUrl}${embedUrl.includes('?') ? '&' : '?'}autoplay=1` : embedUrl}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
+
+                    {/* Interactive overlay when video is playing in background */}
+                    {isPlayingInBackground && (
+                      <div
+                        className="absolute inset-0 z-10 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-black/50 group"
+                        onClick={() => {
+                          closePlayer();
+                          setInlinePlayingUrl(link.url);
+                        }}
+                      >
+                        <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-primary text-primary-foreground text-xs font-semibold shadow-lg group-hover:scale-105 transition-transform">
+                          <PlayCircle className="w-4 h-4 text-primary-foreground" />
+                          <span>Playing in background · Click to switch here</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -414,10 +450,14 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
                     variant="secondary"
                     size="sm"
                     className="w-full sm:w-auto h-8 text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-foreground"
-                    id="tour-floating-player" onClick={() => playTrack({ platform: link.platform, url: link.url, embedUrl, title: songTitle })}
+                    id="tour-floating-player" 
+                    onClick={() => {
+                      setInlinePlayingUrl(null);
+                      playTrack({ platform: link.platform, url: link.url, embedUrl, title: songTitle });
+                    }}
                   >
                     <PlayCircle className="w-3.5 h-3.5 mr-2 text-primary" />
-                    {currentTrack?.url === link.url ? 'Playing in Background' : 'Play in Background'}
+                    {isPlayingInBackground ? 'Playing in Background' : 'Play in Background'}
                   </Button>
                 </div>
               )}

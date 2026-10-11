@@ -93,7 +93,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+      <DialogTrigger asChild className="w-full">
         {trigger}
       </DialogTrigger>
       <DialogContent className="w-[95vw] sm:max-w-2xl h-[85dvh] sm:h-auto max-h-[85dvh] sm:max-h-[90vh] flex flex-col p-0 overflow-hidden">

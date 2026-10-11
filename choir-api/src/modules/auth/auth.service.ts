@@ -31,6 +31,7 @@ export class AuthService {
         comfortableKey: user.comfortableKey,
         participationType: user.participationType,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
+        avatarUrl: user.avatarUrl,
       },
       JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
@@ -73,22 +74,51 @@ export class AuthService {
   }
 
   async googleLogin(dto: GoogleAuthDto) {
-    const ticket = await googleClient.verifyIdToken({
-      idToken: dto.idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    
-    const payload = ticket.getPayload();
-    if (!payload || !payload.email) {
-      throw new Error('Invalid Google token or no email found');
-    }
-    
-    if (!payload.email_verified) {
-      throw new Error('Email must be verified by Google');
-    }
+    let email: string;
+    let googleId: string;
+    let name: string | undefined;
+    let avatarUrl: string | undefined;
 
-    const email = payload.email;
-    const googleId = payload.sub;
+    if (dto.accessToken) {
+      const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${dto.accessToken}` },
+      });
+      if (!res.ok) {
+        throw new Error('Invalid Google access token');
+      }
+      const profile = await res.json();
+      if (!profile.email) {
+        throw new Error('No email found in Google profile');
+      }
+      if (!profile.email_verified) {
+        throw new Error('Email must be verified by Google');
+      }
+      email = profile.email;
+      googleId = profile.sub;
+      name = profile.name;
+      avatarUrl = profile.picture;
+    } else if (dto.idToken) {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: dto.idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        throw new Error('Invalid Google token or no email found');
+      }
+
+      if (!payload.email_verified) {
+        throw new Error('Email must be verified by Google');
+      }
+
+      email = payload.email;
+      googleId = payload.sub;
+      name = payload.name;
+      avatarUrl = payload.picture;
+    } else {
+      throw new Error('No Google token provided');
+    }
 
     let user = await prisma.user.findUnique({ where: { email } });
 
@@ -98,13 +128,21 @@ export class AuthService {
           email,
           provider: 'GOOGLE',
           googleId,
+          name: name || null,
+          avatarUrl: avatarUrl || null,
         },
       });
-    } else if (!user.googleId) {
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: { googleId },
-      });
+    } else {
+      const updates: any = {};
+      if (!user.googleId) updates.googleId = googleId;
+      if (!user.name && name) updates.name = name;
+      if (!user.avatarUrl && avatarUrl) updates.avatarUrl = avatarUrl;
+      if (Object.keys(updates).length > 0) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: updates,
+        });
+      }
     }
 
     return this.createTokenPair(user);

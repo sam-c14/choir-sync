@@ -16,7 +16,7 @@ import { AvatarUpload } from '../components/AvatarUpload';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Download, Smartphone } from 'lucide-react';
 
-const APK_DOWNLOAD_URL = 'https://github.com/Samuel-Affah/choir-sync/releases/latest/download/ChoirSync-Latest.apk';
+const APK_DOWNLOAD_URL = 'https://github.com/sam-c14/choir-sync/releases/latest/download/ChoirSync-Latest.apk';
 
 const MUSICAL_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
