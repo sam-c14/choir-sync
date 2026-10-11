@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-android:
     name: Build & Package Android APK
@@ -62,10 +65,36 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "34.0.0"
 
-      - name: Upload Signed APK
+      - name: Prepare Release Asset
+        run: |
+          SIGNED_FILE="${{ steps.sign_apk.outputs.signedReleaseFile }}"
+          if [ -z "$SIGNED_FILE" ] || [ ! -f "$SIGNED_FILE" ]; then
+            SIGNED_FILE=$(find choir-client/android/app/build/outputs/apk/release -name "*signed*.apk" | head -n 1)
+          fi
+          if [ -z "$SIGNED_FILE" ] || [ ! -f "$SIGNED_FILE" ]; then
+            SIGNED_FILE=$(find choir-client/android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          fi
+          echo "Using signed APK: $SIGNED_FILE"
+          cp "$SIGNED_FILE" ChoirSync-Latest.apk
+
+      - name: Upload Signed APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ChoirSync-Latest.apk
-          path: ${{ steps.sign_apk.outputs.signedReleaseFile || 'choir-client/android/app/build/outputs/apk/release/*.apk' }}
+          path: ChoirSync-Latest.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: ChoirSync Latest Release
+          body: "Automated build of the latest ChoirSync Android APK."
+          draft: false
+          prerelease: false
+          make_latest: "true"
+          files: ChoirSync-Latest.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
