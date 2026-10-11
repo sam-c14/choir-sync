@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.choirsync.app',
-  appName: 'ChoirSync',
+  appName: 'DGC Resound',
   webDir: '../dist/choir-client',
   bundledWebRuntime: false,
   server: {

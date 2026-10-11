@@ -56,7 +56,7 @@ export function GlobalSearch() {
         className="relative w-32 h-10 md:h-9 justify-start text-sm text-muted-foreground sm:pr-12 md:w-40 lg:w-64 border-muted/60 bg-muted/20"
         onClick={() => setOpen(true)}
       >
-        <span className="hidden lg:inline-flex">Search CSync...</span>
+        <span className="hidden lg:inline-flex">Search DGC Resound...</span>
         <span className="inline-flex lg:hidden">Search...</span>
         <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
           <span className="text-xs">⌘</span>K

@@ -11,7 +11,7 @@ import {
 } from "../components/ui/card";
 import { ModeToggle } from "@/components/mode-toggle";
 import { trackChoirEvent } from "../lib/analytics";
-import { Loader2, Music2, Headphones, ListMusic, CalendarCheck, AlertCircle, Smartphone } from "lucide-react";
+import { Loader2, Headphones, ListMusic, CalendarCheck, AlertCircle, Smartphone } from "lucide-react";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -26,12 +26,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <header className="border-b bg-background shadow-sm sticky top-0 z-10 transition-colors">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-primary/10 rounded-md">
-              <Music2 className="w-5 h-5 text-primary" />
-            </div>
+          <div className="flex items-center gap-2.5">
+            <img src="/dgc_logo.png" alt="DGC Crest" className="w-8 h-8 object-contain shrink-0" />
             <h1 className="text-xl font-bold tracking-tight text-primary">
-              CSync
+              DGC Resound
             </h1>
             <span className="hidden sm:inline-flex ml-2 items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
               Choir Portal
@@ -49,7 +47,7 @@ export default function LoginPage() {
           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
           
           <CardHeader className="space-y-3 pt-8 pb-4 text-center">
-            <CardTitle className="text-3xl font-bold tracking-tight">Welcome to CSync</CardTitle>
+            <CardTitle className="text-3xl font-bold tracking-tight">Welcome to DGC Resound</CardTitle>
             <p className="text-muted-foreground text-sm">
               Your choir's rehearsal parts, Sunday setlists, and schedules in one place.
             </p>

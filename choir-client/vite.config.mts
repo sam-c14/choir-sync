@@ -33,10 +33,10 @@ export default defineConfig(() => ({
       devOptions: {
         enabled: true
       },
-      includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'screenshot-mobile.png', 'screenshot-desktop.png'],
+      includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'apple-touch-icon.png', 'favicon.png', 'dgc_logo.png', 'screenshot-mobile.png', 'screenshot-desktop.png'],
       manifest: {
-        name: 'CSync',
-        short_name: 'CSync',
+        name: 'DGC Resound',
+        short_name: 'DGC Resound',
         description: 'Choir management app for songs, parts, and rehearsals',
         theme_color: '#850bc4',
         background_color: '#1a0a2e',

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">ChoirSync</string>
-    <string name="title_activity_main">ChoirSync</string>
+    <string name="app_name">DGC Resound</string>
+    <string name="title_activity_main">DGC Resound</string>
     <string name="package_name">com.choirsync.app</string>
     <string name="custom_url_scheme">com.choirsync.app</string>
 </resources>

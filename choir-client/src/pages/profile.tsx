@@ -85,7 +85,7 @@ export function ProfilePage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.info('Downloading ChoirSync Android APK...');
+    toast.info('Downloading DGC Resound Android APK...');
   };
 
   const onSubmit = (data: UpdateProfileDto) => {
@@ -218,7 +218,7 @@ export function ProfilePage() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Log out of Choir Sync?</DialogTitle>
+                <DialogTitle>Log out of DGC Resound?</DialogTitle>
                 <DialogDescription>
                   You will need to sign in again to access your team and playlists.
                 </DialogDescription>
@@ -245,7 +245,7 @@ export function ProfilePage() {
             <Smartphone className="h-5 w-5 text-primary" />
             <CardTitle>App & Devices</CardTitle>
           </div>
-          <CardDescription>Install ChoirSync directly on your Android phone</CardDescription>
+          <CardDescription>Install DGC Resound directly on your Android phone</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Button 

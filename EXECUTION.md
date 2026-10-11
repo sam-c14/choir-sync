@@ -1534,3 +1534,28 @@ Tasks:
 Verification:
 Run `nx-workspace-verify` to ensure the new dependencies don't break the web build. Review the GitHub Actions YAML syntax for accuracy.
 ```
+
+## Milestone 25 — Global App Branding & Icon Generation
+**Goal:** Apply the DGC crest as the universal logo across the Web (Favicon), PWA (manifest icons), and Android APK (Launcher icons) using an automated asset pipeline.
+**Do:**
+1. Save the master high-res logo as `logo.png` (ensure it has a solid background, as Android 8+ adaptive icons do not support transparent backgrounds for the base layer).
+2. In `choir-client/`, install `@capacitor/assets` as a dev dependency.
+3. Place the master `logo.png` inside an `assets/` folder at the root of `choir-client/`.
+4. Run the Capacitor asset generator to automatically create all required Android `mipmap` files, Web favicons, and PWA manifest icons.
+5. Update `index.html` to point to the newly generated favicon and apple-touch-icon.
+6. Update `manifest.json` (or your Vite PWA config) to reference the newly generated 192x192 and 512x512 icons, and update the `name` and `short_name` to the finalized app name.
+**Verify with:** Running `nx serve choir-client` to check the browser tab favicon, and inspecting the `choir-client/android/app/src/main/res/` folder to ensure the Android launcher icons were successfully generated.
+
+## Followup Prompt
+```bash
+## Milestone 25 — Global App Branding & Icon Generation
+**Goal:** Apply the DGC crest as the universal logo across the Web (Favicon), PWA (manifest icons), and Android APK (Launcher icons) using an automated asset pipeline.
+**Do:**
+1. Save the master high-res logo as `logo.png` (ensure it has a solid background, as Android 8+ adaptive icons do not support transparent backgrounds for the base layer).
+2. In `choir-client/`, install `@capacitor/assets` as a dev dependency.
+3. Place the master `logo.png` inside an `assets/` folder at the root of `choir-client/`.
+4. Run the Capacitor asset generator to automatically create all required Android `mipmap` files, Web favicons, and PWA manifest icons.
+5. Update `index.html` to point to the newly generated favicon and apple-touch-icon.
+6. Update `manifest.json` (or your Vite PWA config) to reference the newly generated 192x192 and 512x512 icons, and update the `name` and `short_name` to the finalized app name.
+**Verify with:** Running `nx serve choir-client` to check the browser tab favicon, and inspecting the `choir-client/android/app/src/main/res/` folder to ensure the Android launcher icons were successfully generated.
+```

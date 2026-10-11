@@ -12,6 +12,8 @@ export function Navbar() {
 
   if (!user) return null;
 
+  const userGreetingName = user.name?.trim() || user.email?.split('@')[0] || '';
+
   const getLinkClass = (path: string, altPath?: string) => {
     const isActive = path === '/' ? pathname === '/' || (altPath && pathname.startsWith(altPath)) : pathname.startsWith(path) || (altPath && pathname.startsWith(altPath));
     return `text-sm font-medium transition-all rounded-md py-1 pb-1.5 px-3 whitespace-nowrap border ${
@@ -26,7 +28,14 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-4 md:gap-6 overflow-x-auto no-scrollbar flex-1 mask-edges py-1">
           <div className="flex items-center gap-2 flex-shrink-0">
-            <h1 className="text-xl font-bold tracking-tight text-primary truncate">CSync</h1>
+            <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+              <img src="/dgc_logo.png" alt="DGC Resound" className="h-8 w-8 object-contain shrink-0" />
+              {userGreetingName && (
+                <span className="text-sm font-semibold tracking-tight text-foreground truncate max-w-[130px] sm:max-w-[200px]">
+                  Hi {userGreetingName}
+                </span>
+              )}
+            </Link>
             <Badge variant="outline" className="hidden md:inline-flex capitalize">
               {user.role.toLowerCase().replace('_', ' ')}
             </Badge>
