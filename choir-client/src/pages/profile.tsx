@@ -64,7 +64,12 @@ export function ProfilePage() {
     },
     onSuccess: (data) => {
       toast.success('Profile updated successfully');
-      updateLocalUser({ name: data.name, comfortableKey: data.comfortableKey, participationType: data.participationType });
+      updateLocalUser({
+        name: data.name,
+        comfortableKey: data.comfortableKey,
+        participationType: data.participationType,
+        ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
+      });
       
       // Explicitly refetch the profile and any user lists
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });

@@ -116,7 +116,14 @@ export function UniformDialog({
       }
       
       const finalImageUrls = [...keptUrls, ...uploadedUrls];
-      const payload = { ...data, imageUrls: finalImageUrls };
+      const serviceDateObj = new Date(data.serviceDate);
+      const normalizedServiceDate = new Date(Date.UTC(
+        serviceDateObj.getFullYear(),
+        serviceDateObj.getMonth(),
+        serviceDateObj.getDate(),
+        12, 0, 0
+      ));
+      const payload = { ...data, serviceDate: normalizedServiceDate, imageUrls: finalImageUrls };
 
       if (editingUniform) {
         await updateMutation.mutateAsync({ id: editingUniform.id, data: payload });
@@ -184,7 +191,12 @@ export function UniformDialog({
                 <Calendar
                   mode="single"
                   selected={serviceDate}
-                  onSelect={(date) => date && setValue('serviceDate', date)}
+                  onSelect={(date) => {
+                    if (date) {
+                      const normalized = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0));
+                      setValue('serviceDate', normalized);
+                    }
+                  }}
                   autoFocus
                 />
               </PopoverContent>

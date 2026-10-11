@@ -40,7 +40,8 @@ export class UniformsController {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const fromDate = req.query.from as string | undefined;
       const toDate = req.query.to as string | undefined;
-      const uniforms = await uniformsService.getUniforms(filter, page, limit, fromDate, toDate);
+      const clientToday = req.query.clientToday as string | undefined;
+      const uniforms = await uniformsService.getUniforms(filter, page, limit, fromDate, toDate, clientToday);
       res.json(uniforms);
     } catch (error: any) {
       logger.error(error);

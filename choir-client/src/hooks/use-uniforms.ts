@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api-client';
 import type { CreateUniformDto, UpdateUniformDto } from '@choir-workspace/shared-validation';
+import { startOfDay } from 'date-fns';
 
 interface UniformSchedule {
   id: string;
@@ -24,15 +25,19 @@ export function useUniforms(options: {
   limit?: number;
   from?: string;
   to?: string;
+  clientToday?: string;
 } = {}) {
   const { filter = 'current', page = 1, limit = 20, from, to } = options;
+  const clientToday = options.clientToday || startOfDay(new Date()).toISOString();
+
   return useQuery({
-    queryKey: ['uniforms', filter, page, limit, from, to],
+    queryKey: ['uniforms', filter, page, limit, from, to, clientToday],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('filter', filter);
       params.append('page', page.toString());
       params.append('limit', limit.toString());
+      params.append('clientToday', clientToday);
       if (from) params.append('from', from);
       if (to) params.append('to', to);
       

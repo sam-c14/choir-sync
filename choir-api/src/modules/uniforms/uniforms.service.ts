@@ -5,8 +5,17 @@ import { logger } from '../../lib/logger';
 import { startOfDay } from 'date-fns';
 
 export class UniformsService {
-  async getUniforms(filter: string, page: number = 1, limit: number = 20, fromDate?: string, toDate?: string) {
-    const today = startOfDay(new Date());
+  async getUniforms(filter: string, page: number = 1, limit: number = 20, fromDate?: string, toDate?: string, clientToday?: string) {
+    let today: Date;
+    if (clientToday) {
+      // Tolerate up to 2 hours of timezone offset (e.g. UTC server vs UTC+1 WAT)
+      // so any uniform scheduled for today (even if saved at 23:00Z the previous day) is included in current
+      const parsed = new Date(clientToday);
+      today = new Date(parsed.getTime() - 2 * 60 * 60 * 1000);
+    } else {
+      // Fallback: 12 hours before UTC start of day covers positive timezones (including UTC+1 WAT)
+      today = new Date(startOfDay(new Date()).getTime() - 12 * 60 * 60 * 1000);
+    }
 
     let whereClause: any = {};
     if (filter === 'current') {

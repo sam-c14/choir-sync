@@ -48,7 +48,7 @@ export function BottomNav() {
               id={id}
               to={item.path}
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full space-y-1 text-muted-foreground hover:text-foreground transition-colors",
+                "flex flex-col items-center justify-center w-full h-full space-y-2 text-muted-foreground hover:text-foreground transition-colors",
                 isActive && "text-primary"
               )}
             >
@@ -59,7 +59,7 @@ export function BottomNav() {
               ) : (
                 <Icon className={cn("w-5 h-5", isActive && "fill-primary/20")} strokeWidth={isActive ? 2.5 : 2} />
               )}
-              <span className="text-[10px] font-medium leading-none">{item.name}</span>
+              <span className="text-[11px] font-medium leading-none">{item.name}</span>
             </Link>
           );
         })}
