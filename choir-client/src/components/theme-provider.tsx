@@ -23,7 +23,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
-  storageKey = 'vite-ui-theme',
+  storageKey = 'choir-sync-theme',
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
@@ -32,17 +32,25 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const applyTheme = (currentTheme: Theme) => {
+      const isDark =
+        currentTheme === 'dark' ||
+        (currentTheme === 'system' && mediaQuery.matches);
+
+      root.classList.toggle('dark', isDark);
+      root.classList.toggle('light', !isDark);
+      root.style.colorScheme = isDark ? 'dark' : 'light';
+    };
+
+    applyTheme(theme);
 
     if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
-      root.classList.add(systemTheme);
-      return;
+      const listener = () => applyTheme('system');
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
     }
-
-    root.classList.add(theme);
   }, [theme]);
 
   const value = {

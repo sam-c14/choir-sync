@@ -5,6 +5,50 @@
     <title>DGC Resound</title>
     <base href="/" />
 
+    <!-- Synchronous theme resolver to prevent theme flash (FOUT) before first paint -->
+    <script>
+      (function () {
+        try {
+          var storageKey = 'choir-sync-theme';
+          var stored = localStorage.getItem(storageKey);
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = stored === 'dark' || ((!stored || stored === 'system') && prefersDark);
+          var root = document.documentElement;
+          if (isDark) {
+            root.classList.add('dark');
+            root.classList.remove('light');
+            root.style.colorScheme = 'dark';
+          } else {
+            root.classList.add('light');
+            root.classList.remove('dark');
+            root.style.colorScheme = 'light';
+          }
+        } catch (e) {}
+      })();
+    </script>
+
+    <!-- Critical background styles matching Tailwind base theme -->
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      :root.dark {
+        color-scheme: dark;
+      }
+      html {
+        background-color: #ffffff;
+      }
+      html.dark {
+        background-color: #171717;
+        background-color: oklch(0.145 0 0);
+      }
+      body {
+        margin: 0;
+        background-color: inherit;
+        color: inherit;
+      }
+    </style>
+
     <!-- Viewport & PWA basics -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#850bc4" />
@@ -25,12 +69,8 @@
 
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
-  <body style="margin: 0; background-color: #1a0a2e;">
-    <div id="root">
-      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #1a0a2e;">
-        <img src="/dgc_logo.png" alt="DGC Resound" style="width: 80px; height: 80px; object-fit: contain;" />
-      </div>
-    </div>
+  <body class="bg-background text-foreground antialiased">
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
