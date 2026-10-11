@@ -81,6 +81,7 @@
     "@base-ui/react": "^1.8.0",
     "@capacitor/android": "^8.5.3",
     "@capacitor/core": "^8.5.3",
+    "@capawesome/capacitor-google-sign-in": "^0.1.4",
     "@fontsource-variable/geist": "^5.3.0",
     "@google/genai": "^2.24.0",
     "@hookform/resolvers": "^5.9.1",

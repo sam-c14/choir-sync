@@ -13,6 +13,8 @@ import { Button } from "../components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { trackChoirEvent } from "../lib/analytics";
 import { Loader2, Headphones, ListMusic, CalendarCheck, AlertCircle, Smartphone } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { GoogleSignIn } from "@capawesome/capacitor-google-sign-in";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -22,6 +24,23 @@ export default function LoginPage() {
 
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleAuthSuccess = (
+    resData: { token: string; refreshToken: string; user?: { createdAt: string } }
+  ) => {
+    login(resData.token, resData.refreshToken);
+    trackChoirEvent({ action: "login_success", params: { method: "google" } });
+
+    let nextUrl = from;
+    if (resData.user && resData.user.createdAt) {
+      const createdTime = new Date(resData.user.createdAt).getTime();
+      // If account was created less than 2 minutes ago, consider it a new signup
+      if (Date.now() - createdTime < 2 * 60 * 1000) {
+        nextUrl = "/profile";
+      }
+    }
+    navigate(nextUrl, { replace: true });
+  };
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -35,18 +54,7 @@ export default function LoginPage() {
         }>("/auth/google", {
           accessToken: tokenResponse.access_token,
         });
-        login(res.data.token, res.data.refreshToken);
-        trackChoirEvent({ action: "login_success", params: { method: "google" } });
-
-        let nextUrl = from;
-        if (res.data.user && res.data.user.createdAt) {
-          const createdTime = new Date(res.data.user.createdAt).getTime();
-          // If account was created less than 2 minutes ago, consider it a new signup
-          if (Date.now() - createdTime < 2 * 60 * 1000) {
-            nextUrl = "/profile";
-          }
-        }
-        navigate(nextUrl, { replace: true });
+        handleAuthSuccess(res.data);
       } catch (err: unknown) {
         setIsGoogleLoading(false);
         const message =
@@ -60,6 +68,49 @@ export default function LoginPage() {
       setError("Google sign in failed. Please try again.");
     },
   });
+
+  const handleNativeGoogleLogin = async () => {
+    setError(null);
+    setIsGoogleLoading(true);
+    try {
+      const clientId =
+        import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+        '899614270215-orv5fv8rfh96h1oj0cmbbdviktv4u0ql.apps.googleusercontent.com';
+
+      await GoogleSignIn.initialize({ clientId });
+      const result = await GoogleSignIn.signIn();
+
+      if (!result?.idToken) {
+        throw new Error("No ID token returned from Google Sign-In.");
+      }
+
+      const res = await apiClient.post<{
+        token: string;
+        refreshToken: string;
+        user?: { createdAt: string };
+      }>("/auth/google", {
+        idToken: result.idToken,
+      });
+
+      handleAuthSuccess(res.data);
+    } catch (err: unknown) {
+      setIsGoogleLoading(false);
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+        (err as { message?: string })?.message ??
+        "Google sign in failed. Please try again.";
+      setError(message);
+    }
+  };
+
+  const onLoginButtonClick = () => {
+    setError(null);
+    if (Capacitor.isNativePlatform()) {
+      handleNativeGoogleLogin();
+    } else {
+      handleGoogleLogin();
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -118,10 +169,7 @@ export default function LoginPage() {
                 </p>
                 <Button
                   type="button"
-                  onClick={() => {
-                    setError(null);
-                    handleGoogleLogin();
-                  }}
+                  onClick={onLoginButtonClick}
                   variant="outline"
                   className="w-full sm:w-auto min-w-[240px] h-11 rounded-full font-medium shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-3 border-input hover:bg-accent/80 active:scale-[0.98]"
                 >
