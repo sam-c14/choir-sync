@@ -1,8 +1,20 @@
 import axios from 'axios';
 import { trackException } from './analytics';
+import { Capacitor } from '@capacitor/core';
+
+export const getApiBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
+    return envUrl;
+  }
+  if (Capacitor.isNativePlatform()) {
+    return 'https://choir-sync.onrender.com/api/v1';
+  }
+  return '/api/v1';
+};
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -82,7 +94,7 @@ apiClient.interceptors.response.use(
       }
 
       try {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL || '/api/v1'}/auth/refresh`, {
+        const res = await axios.post(`${getApiBaseUrl()}/auth/refresh`, {
           token: refreshToken,
         });
 
