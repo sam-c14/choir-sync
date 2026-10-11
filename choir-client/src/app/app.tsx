@@ -23,6 +23,49 @@ import { AnalyticsTracker } from '../lib/analytics';
 import { FloatingChatTab } from '../components/chat/FloatingChatTab';
 import { AppTour } from '../components/onboarding/app-tour';
 
+import { useAuth } from '../auth/auth-context';
+
+function AppContent() {
+  const { user } = useAuth();
+
+  return (
+    <Routes>
+      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route
+        path="/*"
+        element={
+          user ? (
+            <div className="min-h-screen bg-background pb-20 md:pb-0">
+              <Navbar />
+              <main>
+                <Routes>
+                  <Route path="/" element={<SongsPage />} />
+                  <Route path="/songs/new" element={<SongFormPage />} />
+                  <Route path="/songs/:id/edit" element={<SongFormPage />} />
+                  <Route path="/songs/:id" element={<SongDetailPage />} />
+                  <Route path="/uniforms" element={<UniformsPage />} />
+                  <Route path="/playlists" element={<PlaylistsPage />} />
+                  <Route path="/playlists/:id" element={<PlaylistDetailsPage />} />
+                  <Route path="/admin/users" element={<AdminUsersPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </main>
+              <GlobalPlayer />
+              <FloatingChatTab />
+              <AppTour />
+              <BackToTopButton />
+              <BottomNav />
+            </div>
+          ) : (
+            <LoginPage />
+          )
+        }
+      />
+    </Routes>
+  );
+}
+
 export function App() {
   return (
     <BrowserRouter>
@@ -30,38 +73,7 @@ export function App() {
       <ScrollToTop />
       <AuthProvider>
         <PlayerProvider>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route
-              path="/*"
-              element={
-                <RequireAuth>
-                  <div className="min-h-screen bg-background pb-20 md:pb-0">
-                    <Navbar />
-                    <main>
-                      <Routes>
-                        <Route path="/" element={<SongsPage />} />
-                        <Route path="/songs/new" element={<SongFormPage />} />
-                        <Route path="/songs/:id/edit" element={<SongFormPage />} />
-                        <Route path="/songs/:id" element={<SongDetailPage />} />
-                        <Route path="/uniforms" element={<UniformsPage />} />
-                        <Route path="/playlists" element={<PlaylistsPage />} />
-                        <Route path="/playlists/:id" element={<PlaylistDetailsPage />} />
-                        <Route path="/admin/users" element={<AdminUsersPage />} />
-                        <Route path="/profile" element={<ProfilePage />} />
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                      </Routes>
-                    </main>
-                    <GlobalPlayer />
-                    <FloatingChatTab />
-                    <AppTour />
-                    <BackToTopButton />
-                    <BottomNav />
-                  </div>
-                </RequireAuth>
-              }
-            />
-          </Routes>
+          <AppContent />
           <Toaster />
         </PlayerProvider>
       </AuthProvider>
