@@ -196,6 +196,9 @@ export default function LoginPage() {
                 <Smartphone className="w-3.5 h-3.5" />
                 <span>Prefer Android native app? Click here to download</span>
               </a>
+               <p className="text-xs text-muted-foreground">
+                This is for Android users only. iOS users can use the web app in Safari/Chrome.
+              </p>
             </div>
           </CardContent>
         </Card>

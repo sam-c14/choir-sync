@@ -341,22 +341,6 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
     return () => setActivePreviewUrls([]);
   }, [links, setActivePreviewUrls]);
 
-  // If user clicks directly into the iframe (focus shift), auto-kill the background player
-  useEffect(() => {
-    if (!currentTrack) return;
-    const handleWindowBlur = () => {
-      setTimeout(() => {
-        if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
-          const matchingLink = links.find(l => l.url === currentTrack.url);
-          if (matchingLink) {
-            closePlayer();
-          }
-        }
-      }, 50);
-    };
-    window.addEventListener('blur', handleWindowBlur);
-    return () => window.removeEventListener('blur', handleWindowBlur);
-  }, [currentTrack, links, closePlayer]);
 
   return (
     <div className="space-y-3">
