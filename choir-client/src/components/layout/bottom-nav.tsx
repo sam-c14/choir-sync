@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/auth-context';
 import { Music, ListMusic, Shirt, Users, CircleUser } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { UserAvatar } from '../ui/user-avatar';
 
 export function BottomNav() {
   const { user } = useAuth();
@@ -65,7 +66,12 @@ export function BottomNav() {
                     isActive ? "border-primary ring-2 ring-primary/20 scale-105" : "border-border/60"
                   )}
                 >
-                  <img src={(user as any).avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                  <UserAvatar
+                    src={(user as any).avatarUrl}
+                    name={user.name}
+                    email={user.email}
+                    textClassName="text-[9px]"
+                  />
                 </div>
               ) : (
                 <div className={cn("transition-transform duration-150", isActive && "scale-105")}>

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import imageCompression from "browser-image-compression";
 import { Camera, Loader2, Trash2 } from "lucide-react";
 import { apiClient, getErrorMessage } from "../lib/api-client";
@@ -17,7 +17,12 @@ export function AvatarUpload({
   onUploadSuccess,
 }: AvatarUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [hasImgError, setHasImgError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setHasImgError(false);
+  }, [currentUrl]);
 
   const getInitials = (name?: string | null) => {
     if (!name) return "U";
@@ -95,11 +100,13 @@ export function AvatarUpload({
         onClick={() => fileInputRef.current?.click()}
       >
         <div className="w-24 h-24 rounded-full overflow-hidden bg-muted flex items-center justify-center border-2 border-primary/20">
-          {currentUrl ? (
+          {currentUrl && !hasImgError ? (
             <img
               src={currentUrl}
               alt="Avatar"
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
+              onError={() => setHasImgError(true)}
             />
           ) : (
             <span className="text-3xl font-bold text-muted-foreground">

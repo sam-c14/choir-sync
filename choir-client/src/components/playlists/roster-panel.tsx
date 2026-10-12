@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { cn } from '../../lib/utils';
 
 import { RosterAssignmentDialog } from './RosterAssignmentDialog';
+import { UserAvatar } from '../ui/user-avatar';
 
 interface UserNode {
   id: string;
@@ -191,14 +192,13 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
                   <div className="flex flex-wrap gap-4">
                     {mappedUsers.map(u => (
                       <div key={u.id} className="flex flex-col items-center gap-1.5 w-14">
-                        <div className="relative w-10 h-10 rounded-full border-2 border-background bg-muted flex items-center justify-center overflow-hidden shadow-sm">
-                          {u.avatarUrl ? (
-                            <img src={u.avatarUrl} alt={u.name || ''} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-xs font-bold text-muted-foreground uppercase">
-                              {(u.name || u.email || 'U').charAt(0)}
-                            </span>
-                          )}
+                        <div className="relative w-10 h-10 rounded-full border-2 border-background overflow-hidden shadow-sm shrink-0">
+                          <UserAvatar
+                            src={u.avatarUrl}
+                            name={u.name}
+                            email={u.email}
+                            textClassName="text-xs uppercase"
+                          />
                         </div>
                         <span className="text-[10px] font-medium text-muted-foreground truncate w-full text-center" title={u.name || u.email}>
                           {u.name ? u.name.split(' ').slice(0, 2).join(' ') : u.email?.split('@')[0]}

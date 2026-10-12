@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
+import { UserAvatar } from './user-avatar';
 
 interface FacePileProps {
   users: { id: string; name?: string | null; email?: string; avatarUrl?: string | null }[];
@@ -26,13 +27,12 @@ export function FacePile({ users, max = 5, className, avatarClassName }: FacePil
                 )}
                 style={{ zIndex: displayUsers.length - i }}
               >
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name || ''} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase">
-                    {(user.name || user.email || 'U').charAt(0)}
-                  </span>
-                )}
+                <UserAvatar
+                  src={user.avatarUrl}
+                  name={user.name}
+                  email={user.email}
+                  textClassName="text-[10px]"
+                />
               </div>
             </TooltipTrigger>
             <TooltipContent>

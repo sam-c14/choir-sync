@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, getErrorMessage } from '../lib/api-client';
 
-import { AvatarUpload } from '../components/AvatarUpload';
+import { AvatarUpload } from '../components/avatar-upload';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Download, Smartphone } from 'lucide-react';
 

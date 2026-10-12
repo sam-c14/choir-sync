@@ -5,6 +5,7 @@ import { Input } from '../ui/input';
 import { Search, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Badge } from '../ui/badge';
+import { UserAvatar } from '../ui/user-avatar';
 
 interface RosterAssignmentDialogProps {
   open: boolean;
@@ -69,14 +70,13 @@ export function RosterAssignmentDialog({ open, onOpenChange, users, assignments,
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-muted overflow-hidden border">
-                      {u.avatarUrl ? (
-                        <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center font-bold text-muted-foreground text-sm">
-                          {(u.name || u.email || 'U').charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                    <div className="w-10 h-10 rounded-full overflow-hidden border shrink-0">
+                      <UserAvatar
+                        src={u.avatarUrl}
+                        name={u.name}
+                        email={u.email}
+                        textClassName="text-sm"
+                      />
                     </div>
                     <div>
                       <p className="text-sm font-medium leading-none">{u.name || u.email.split('@')[0]}</p>

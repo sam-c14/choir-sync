@@ -5,6 +5,7 @@ import { Badge } from '../ui/badge';
 import { ModeToggle } from '../mode-toggle';
 import { NotificationsPopover } from './notifications-popover';
 import { GlobalSearch } from './global-search';
+import { UserAvatar } from '../ui/user-avatar';
 
 export function Navbar() {
   const { user } = useAuth();
@@ -72,17 +73,14 @@ export function Navbar() {
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-4">
             <Link to="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              {((user as any)?.avatarUrl) ? (
-                <div className="w-8 h-8 rounded-full overflow-hidden border border-primary/20">
-                  <img src={(user as any).avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border border-primary/20">
-                  <span className="text-xs font-bold text-muted-foreground">
-                    {(user.name || user.email || 'U').charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-primary/20 shrink-0">
+                <UserAvatar
+                  src={(user as any)?.avatarUrl}
+                  name={user.name}
+                  email={user.email}
+                  textClassName="text-xs"
+                />
+              </div>
               <span className="text-sm font-medium text-foreground max-w-[160px] truncate" title={user.name || user.email}>
                 {user.name || (user.email?.length > 15 ? `${user.email.slice(0, 15)}...` : user.email)}
               </span>
