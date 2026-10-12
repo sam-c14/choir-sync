@@ -16,6 +16,6 @@ export const searchExternalMusic = async (req: Request, res: Response) => {
       : await searchSpotifyTracks(q);
     res.json(results);
   } catch (error) {
-    return handleControllerError(res, error, 'Failed to search external music');
+    return handleControllerError(res, error, 'Failed to search external music', req);
   }
 };

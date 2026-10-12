@@ -15,7 +15,7 @@ export const playlistsController = {
       const playlist = await playlistsService.setActivePlaylist(id, isActive);
       res.json(playlist);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to set active playlist');
+      return handleControllerError(res, error, 'Failed to set active playlist', req);
     }
   },
 
@@ -29,7 +29,7 @@ export const playlistsController = {
       const playlists = await playlistsService.getPlaylists(options);
       res.json(playlists);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to fetch playlists');
+      return handleControllerError(res, error, 'Failed to fetch playlists', req);
     }
   },
 
@@ -42,7 +42,7 @@ export const playlistsController = {
       }
       res.json(playlist);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to fetch playlist');
+      return handleControllerError(res, error, 'Failed to fetch playlist', req);
     }
   },
 
@@ -52,7 +52,7 @@ export const playlistsController = {
       const playlist = await playlistsService.createPlaylist(data, req.user!.id);
       res.status(201).json(playlist);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to create playlist');
+      return handleControllerError(res, error, 'Failed to create playlist', req);
     }
   },
 
@@ -63,7 +63,7 @@ export const playlistsController = {
       const playlist = await playlistsService.updatePlaylist(id, data);
       res.json(playlist);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to update playlist');
+      return handleControllerError(res, error, 'Failed to update playlist', req);
     }
   },
 
@@ -73,7 +73,7 @@ export const playlistsController = {
       await playlistsService.deletePlaylist(id);
       res.status(204).send();
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to delete playlist');
+      return handleControllerError(res, error, 'Failed to delete playlist', req);
     }
   },
 
@@ -84,7 +84,7 @@ export const playlistsController = {
       const songs = await playlistsService.setPlaylistSongs(id, data);
       res.json(songs);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to update playlist songs');
+      return handleControllerError(res, error, 'Failed to update playlist songs', req);
     }
   },
 
@@ -101,7 +101,7 @@ export const playlistsController = {
       });
       res.json(roster || { members: [] });
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to fetch roster');
+      return handleControllerError(res, error, 'Failed to fetch roster', req);
     }
   },
 
@@ -153,7 +153,7 @@ export const playlistsController = {
 
       res.json(result);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to save roster');
+      return handleControllerError(res, error, 'Failed to save roster', req);
     }
   },
 
@@ -235,7 +235,7 @@ export const playlistsController = {
         emailsSentCount
       });
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to dispatch roster');
+      return handleControllerError(res, error, 'Failed to dispatch roster', req);
     }
   }
 };

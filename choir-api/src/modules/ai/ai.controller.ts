@@ -36,7 +36,7 @@ class AiController {
 
       res.status(200).json({ reply: responseText });
     } catch (error: any) {
-      return handleControllerError(res, error, 'AI assistant is currently unavailable. Please try again.');
+      return handleControllerError(res, error, 'AI assistant is currently unavailable. Please try again.', req);
     }
   }
 
@@ -116,7 +116,7 @@ ${JSON.stringify(songs, null, 2)}
       res.json(result);
 
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to curate setlist with AI. Please try again.');
+      return handleControllerError(res, error, 'Failed to curate setlist with AI. Please try again.', req);
     }
   }
 }

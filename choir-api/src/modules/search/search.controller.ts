@@ -27,7 +27,7 @@ export class SearchController {
 
       res.json({ songs, playlists });
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to perform search');
+      return handleControllerError(res, error, 'Failed to perform search', req);
     }
   }
 }

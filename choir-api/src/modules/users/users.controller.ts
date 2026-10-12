@@ -35,7 +35,7 @@ export class UsersController {
         publicUrl: publicUrlData.publicUrl,
       });
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to generate upload URL');
+      return handleControllerError(res, error, 'Failed to generate upload URL', req);
     }
   }
 
@@ -47,7 +47,7 @@ export class UsersController {
       const result = await usersService.getUsers(page, limit, assignable);
       res.json(result);
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to fetch users');
+      return handleControllerError(res, error, 'Failed to fetch users', req);
     }
   }
 
@@ -57,7 +57,7 @@ export class UsersController {
       const user = await usersService.updateUserRole(req.params.id as string, dto);
       res.json(user);
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to update user role');
+      return handleControllerError(res, error, 'Failed to update user role', req);
     }
   }
 
@@ -66,7 +66,7 @@ export class UsersController {
       await usersService.deleteUser(req.params.id as string);
       res.status(204).send();
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to delete user');
+      return handleControllerError(res, error, 'Failed to delete user', req);
     }
   }
 
@@ -76,7 +76,7 @@ export class UsersController {
       const user = await usersService.updateProfile((req as any).user.id, dto);
       res.json(user);
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to update profile');
+      return handleControllerError(res, error, 'Failed to update profile', req);
     }
   }
 
@@ -85,7 +85,7 @@ export class UsersController {
       const user = await usersService.getProfile((req as any).user.id);
       res.json(user);
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to fetch profile');
+      return handleControllerError(res, error, 'Failed to fetch profile', req);
     }
   }
 }

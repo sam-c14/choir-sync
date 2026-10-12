@@ -13,7 +13,7 @@ class NotificationsController {
       });
       res.json(notifications);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to fetch notifications');
+      return handleControllerError(res, error, 'Failed to fetch notifications', req);
     }
   }
 
@@ -29,7 +29,7 @@ class NotificationsController {
       
       res.json(notification);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to mark notification as read');
+      return handleControllerError(res, error, 'Failed to mark notification as read', req);
     }
   }
 
@@ -44,7 +44,7 @@ class NotificationsController {
       
       res.json({ updated: result.count });
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to mark all as read');
+      return handleControllerError(res, error, 'Failed to mark all as read', req);
     }
   }
 }

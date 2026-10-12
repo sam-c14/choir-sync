@@ -38,7 +38,7 @@ class SnippetsController {
         publicUrl: publicUrlData.publicUrl
       });
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to generate upload URL');
+      return handleControllerError(res, error, 'Failed to generate upload URL', req);
     }
   }
 
@@ -66,7 +66,7 @@ class SnippetsController {
 
       res.status(201).json(snippet);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to create voice snippet');
+      return handleControllerError(res, error, 'Failed to create voice snippet', req);
     }
   }
 
@@ -98,7 +98,7 @@ class SnippetsController {
 
       res.json(updated);
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to update snippet');
+      return handleControllerError(res, error, 'Failed to update snippet', req);
     }
   }
 
@@ -143,7 +143,7 @@ class SnippetsController {
 
       res.json({ message: 'Snippet deleted' });
     } catch (error) {
-      return handleControllerError(res, error, 'Failed to delete snippet');
+      return handleControllerError(res, error, 'Failed to delete snippet', req);
     }
   }
 }

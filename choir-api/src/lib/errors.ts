@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { ZodError } from 'zod';
 import { logger } from './logger';
 
@@ -124,32 +124,45 @@ export function sendError(
 /**
  * Centralized error dispatcher for controller catch blocks.
  * Automatically handles ZodErrors, Prisma errors, custom service error objects, and standard Errors.
+ *
+ * Pass `req` as the third argument to get user-enriched log lines in Render logs.
  */
 export function handleControllerError(
   res: Response,
   error: any,
-  fallbackMessage = 'An unexpected error occurred'
+  fallbackMessage = 'An unexpected error occurred',
+  req?: Request
 ): Response {
+  const user = req?.user?.email ?? req?.user?.id ?? 'anonymous';
+  const context = req
+    ? { user, method: req.method, path: req.originalUrl }
+    : {};
+
   // Zod Validation Error
   if (error?.name === 'ZodError' || error instanceof ZodError) {
     const { message, details } = formatZodError(error);
+    logger.warn({ message: 'Validation error', ...context, validationMessage: message, details });
     return sendError(res, 400, message, details, 'VALIDATION_ERROR');
   }
 
   // Prisma Database Error
   if (error?.code && typeof error.code === 'string' && error.code.startsWith('P2')) {
     const { statusCode, message, code } = formatPrismaError(error);
+    logger.error({ message: 'Database error', ...context, prismaCode: error.code, dbMessage: message });
     return sendError(res, statusCode, message, undefined, code);
   }
 
   // Custom application error objects (e.g. { code: 'NOT_FOUND', message: '...' })
   if (error?.code === 'NOT_FOUND') {
+    logger.warn({ message: 'Not found', ...context, detail: error.message });
     return sendError(res, 404, error.message || 'Not found', undefined, 'NOT_FOUND');
   }
   if (error?.code === 'FORBIDDEN') {
+    logger.warn({ message: 'Forbidden', ...context, detail: error.message });
     return sendError(res, 403, error.message || 'Forbidden', undefined, 'FORBIDDEN');
   }
   if (error?.code === 'CONFLICT') {
+    logger.warn({ message: 'Conflict', ...context, detail: error.message });
     return sendError(res, 409, error.message || 'Conflict', undefined, 'CONFLICT');
   }
 
@@ -159,6 +172,7 @@ export function handleControllerError(
     // Do not leak stack traces or internal filenames
     if (!msg.includes('\n') && msg.length < 150) {
       if (msg.toLowerCase().includes('not found')) {
+        logger.warn({ message: 'Not found (error)', ...context, detail: msg });
         return sendError(res, 404, msg, undefined, 'NOT_FOUND');
       }
       if (
@@ -166,16 +180,18 @@ export function handleControllerError(
         msg.toLowerCase().includes('token') ||
         msg.toLowerCase().includes('unauthorized')
       ) {
+        logger.warn({ message: 'Unauthorized', ...context, detail: msg });
         return sendError(res, 401, msg, undefined, 'UNAUTHORIZED');
       }
       if (msg.toLowerCase().includes('forbidden') || msg.toLowerCase().includes('not authorized')) {
+        logger.warn({ message: 'Forbidden (error)', ...context, detail: msg });
         return sendError(res, 403, msg, undefined, 'FORBIDDEN');
       }
-      logger.error(error);
+      logger.error({ message: 'Internal error', ...context, errorMessage: msg, stack: error.stack });
       return sendError(res, 500, msg, undefined, 'INTERNAL_ERROR');
     }
   }
 
-  logger.error(error);
+  logger.error({ message: 'Unclassified error', ...context, errorMessage: error?.message ?? String(error), stack: error?.stack });
   return sendError(res, 500, fallbackMessage, undefined, 'INTERNAL_ERROR');
 }

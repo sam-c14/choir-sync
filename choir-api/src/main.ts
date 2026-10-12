@@ -34,11 +34,24 @@ app.use((_req, res, next) => {
   next();
 });
 
+// Custom Morgan token: stamps every HTTP log line with the authenticated user (set by requireAuth).
+// Falls back to 'anonymous' for unauthenticated routes (e.g. /auth/login, /auth/google).
+morgan.token('user', (req: express.Request) => {
+  if (req.user?.email) return req.user.email;
+  if (req.user?.id) return `uid:${req.user.id}`;
+  return 'anonymous';
+});
+
 // Use morgan for HTTP request logging. Pipe its output to winston info level.
 const stream = {
   write: (message: string) => logger.info(message.trim()),
 };
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', { stream }));
+// Production: combined format + user identity; dev: compact dev format + user
+const morganFormat = process.env.NODE_ENV === 'production'
+  ? 'combined :user'
+  : ':method :url :status :response-time ms - :user';
+app.use(morgan(morganFormat, { stream }));
+
 
 const configuredOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
@@ -141,8 +154,17 @@ app.use((req, res) => {
 });
 
 // Global unhandled error handler middleware
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  logger.error('Unhandled API Error:', err);
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const user = req.user?.email ?? req.user?.id ?? 'anonymous';
+  logger.error({
+    message: 'Unhandled API Error',
+    user,
+    method: req.method,
+    path: req.originalUrl,
+    errorMessage: err?.message ?? String(err),
+    stack: err?.stack,
+    errorCode: err?.code,
+  });
   handleControllerError(res, err, 'An unexpected server error occurred');
 });
 

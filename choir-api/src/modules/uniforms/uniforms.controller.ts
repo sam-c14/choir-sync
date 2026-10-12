@@ -30,7 +30,7 @@ export class UniformsController {
         publicUrl: publicUrlData.publicUrl,
       });
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to generate upload URL');
+      return handleControllerError(res, error, 'Failed to generate upload URL', req);
     }
   }
 
@@ -45,7 +45,7 @@ export class UniformsController {
       const uniforms = await uniformsService.getUniforms(filter, page, limit, fromDate, toDate, clientToday);
       res.json(uniforms);
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to fetch uniforms');
+      return handleControllerError(res, error, 'Failed to fetch uniforms', req);
     }
   }
 
@@ -55,7 +55,7 @@ export class UniformsController {
       const uniform = await uniformsService.createUniform(dto);
       res.status(201).json(uniform);
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to create uniform');
+      return handleControllerError(res, error, 'Failed to create uniform', req);
     }
   }
 
@@ -65,7 +65,7 @@ export class UniformsController {
       const uniform = await uniformsService.updateUniform(req.params.id as string, dto);
       res.status(200).json(uniform);
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to update uniform');
+      return handleControllerError(res, error, 'Failed to update uniform', req);
     }
   }
 
@@ -74,7 +74,7 @@ export class UniformsController {
       await uniformsService.deleteUniform(req.params.id as string);
       res.status(204).send();
     } catch (error: any) {
-      return handleControllerError(res, error, 'Failed to delete uniform');
+      return handleControllerError(res, error, 'Failed to delete uniform', req);
     }
   }
 }

@@ -17,7 +17,7 @@ export class SongsController {
       const result = await songsService.clearActiveLineup();
       res.status(200).json(result);
     } catch (error: any) {
-      handleControllerError(res, error, 'Failed to clear active lineup');
+      handleControllerError(res, error, 'Failed to clear active lineup', req);
     }
   }
   async getSongs(req: Request, res: Response) {
@@ -36,7 +36,7 @@ export class SongsController {
       const songs = await songsService.getSongs(options);
       res.json(songs);
     } catch (error) {
-      handleControllerError(res, error, 'Failed to fetch songs');
+      handleControllerError(res, error, 'Failed to fetch songs', req);
     }
   }
 
@@ -45,7 +45,7 @@ export class SongsController {
       const song = await songsService.getSongById(req.params.id as string);
       res.json(song);
     } catch (error) {
-      handleControllerError(res, error, 'Song not found');
+      handleControllerError(res, error, 'Song not found', req);
     }
   }
 
@@ -55,7 +55,7 @@ export class SongsController {
       const song = await songsService.createSong(dto);
       res.status(201).json(song);
     } catch (error: any) {
-      handleControllerError(res, error, 'Failed to create song');
+      handleControllerError(res, error, 'Failed to create song', req);
     }
   }
 
@@ -65,7 +65,7 @@ export class SongsController {
       const song = await songsService.updateSong(req.params.id as string, dto);
       res.status(200).json(song);
     } catch (error: any) {
-      handleControllerError(res, error, 'Failed to update song');
+      handleControllerError(res, error, 'Failed to update song', req);
     }
   }
 
@@ -79,7 +79,7 @@ export class SongsController {
       const song = await songsService.updateSong(req.params.id as string, dto as any);
       res.status(200).json(song);
     } catch (error: any) {
-      handleControllerError(res, error, 'Failed to update lyrics');
+      handleControllerError(res, error, 'Failed to update lyrics', req);
     }
   }
 
@@ -88,7 +88,7 @@ export class SongsController {
       await songsService.deleteSong(req.params.id as string);
       res.status(204).send();
     } catch (error: any) {
-      handleControllerError(res, error, 'Failed to delete song');
+      handleControllerError(res, error, 'Failed to delete song', req);
     }
   }
 
@@ -99,7 +99,7 @@ export class SongsController {
       const result = await songsService.updateAllParts(req.params.id as string, dto);
       res.status(200).json(result);
     } catch (error: any) {
-      handleControllerError(res, error, 'Failed to update song parts');
+      handleControllerError(res, error, 'Failed to update song parts', req);
     }
   }
 
@@ -109,7 +109,7 @@ export class SongsController {
       const result = await songsService.updatePart(req.params.id as string, req.params.part as string, dto);
       res.status(200).json(result);
     } catch (error: any) {
-      handleControllerError(res, error, 'Failed to update voice part notes');
+      handleControllerError(res, error, 'Failed to update voice part notes', req);
     }
   }
 
@@ -119,7 +119,7 @@ export class SongsController {
       const result = await songsService.createLink(req.params.id as string, dto);
       res.status(201).json(result);
     } catch (error: any) {
-      handleControllerError(res, error, 'Failed to add reference link');
+      handleControllerError(res, error, 'Failed to add reference link', req);
     }
   }
 
@@ -129,7 +129,7 @@ export class SongsController {
       if (result.count === 0) return sendError(res, 404, 'Reference link not found', undefined, 'NOT_FOUND');
       res.status(204).send();
     } catch (error: any) {
-      handleControllerError(res, error, 'Failed to delete reference link');
+      handleControllerError(res, error, 'Failed to delete reference link', req);
     }
   }
 }

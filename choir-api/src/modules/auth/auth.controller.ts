@@ -10,7 +10,7 @@ export class AuthController {
       const result = await authService.login(dto);
       res.status(200).json(result);
     } catch (error: any) {
-      return handleControllerError(res, error, 'Invalid credentials');
+      return handleControllerError(res, error, 'Invalid credentials', req);
     }
   }
 
@@ -20,7 +20,7 @@ export class AuthController {
       const result = await authService.googleLogin(dto);
       res.status(200).json(result);
     } catch (error: any) {
-      return handleControllerError(res, error, 'Google authentication failed');
+      return handleControllerError(res, error, 'Google authentication failed', req);
     }
   }
 
@@ -30,7 +30,7 @@ export class AuthController {
       const result = await authService.refreshToken(dto.token);
       res.status(200).json(result);
     } catch (error: any) {
-      return handleControllerError(res, error, 'Session expired. Please log in again.');
+      return handleControllerError(res, error, 'Session expired. Please log in again.', req);
     }
   }
 
@@ -40,7 +40,7 @@ export class AuthController {
       await authService.logout(dto.token);
       res.status(200).json({ message: 'Logged out successfully' });
     } catch (error: any) {
-      return handleControllerError(res, error, 'Logout failed');
+      return handleControllerError(res, error, 'Logout failed', req);
     }
   }
 }
