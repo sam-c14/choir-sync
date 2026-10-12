@@ -17,8 +17,21 @@ import songPartsRoutes from './modules/snippets/song-parts.routes';
 import snippetsRoutes from './modules/snippets/snippets.routes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
+import { apiLimiter } from './middleware/rateLimiter';
 
 const app = express();
+app.disable('x-powered-by');
+
+// Security Headers middleware
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
 
 // Use morgan for HTTP request logging. Pipe its output to winston info level.
 const stream = {
@@ -29,7 +42,7 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', { str
 const configuredOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
   .map((o) => o.trim())
-  .filter(Boolean);
+  .filter((o) => Boolean(o) && o !== '*');
 
 const allowedOrigins = [
   ...configuredOrigins,
@@ -39,19 +52,24 @@ const allowedOrigins = [
   'http://localhost',
   'http://localhost:4200',
   'http://localhost:5173',
+  'http://localhost:3000',
 ];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (allowedOrigins.includes(origin)) return true;
+  // Allow local development ports for web and emulators
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  // Allow Vercel preview environments for choir-sync
+  if (/^https:\/\/choir-sync[a-z0-9-]*\.vercel\.app$/.test(origin)) return true;
+  return false;
+}
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, server-to-server)
+      // Allow requests with no origin (like native mobile apps, Capacitor native HTTP, curl, server-to-server)
       if (!origin) return callback(null, true);
-      if (
-        process.env.CORS_ORIGIN === '*' ||
-        allowedOrigins.includes(origin) ||
-        origin.startsWith('http://localhost:') ||
-        origin.startsWith('https://localhost:')
-      ) {
+      if (isAllowedOrigin(origin)) {
         return callback(null, true);
       }
       return callback(null, false);
@@ -60,7 +78,8 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+app.use('/api/v1', apiLimiter);
 
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
@@ -95,11 +114,19 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-app.get('/api/docs.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
-});
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: "CSync API Docs", explorer: true }));
+const isSwaggerEnabled = process.env.NODE_ENV !== 'production' || process.env.ENABLE_SWAGGER === 'true';
+
+if (isSwaggerEnabled) {
+  app.get('/api/docs.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: "CSync API Docs", explorer: true }));
+} else {
+  app.use(['/api/docs', '/api/docs.json'], (req, res) => {
+    res.status(404).json({ error: 'API documentation is disabled in production' });
+  });
+}
 app.use('/api/v1/song-parts', songPartsRoutes);
 app.use('/api/v1/snippets', snippetsRoutes);
 

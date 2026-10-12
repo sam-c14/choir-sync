@@ -12,6 +12,28 @@ export interface RosterEmailParams {
   songs: { title: string; key?: string | null; leadSinger?: string | null }[];
 }
 
+function escapeHtml(str: unknown): string {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function sanitizeUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.toString();
+    }
+  } catch {
+    // Ignore invalid url format
+  }
+  return '#';
+}
+
 export class EmailService {
   private static readonly API_URL = "https://api.brevo.com/v3/smtp/email";
 
@@ -49,7 +71,15 @@ export class EmailService {
     const dateStr = serviceDate
       ? format(new Date(serviceDate), "MMMM d, yyyy")
       : "Upcoming Service";
-    const safeName = recipientName || recipientEmail.split("@")[0];
+    const rawSafeName = recipientName || recipientEmail.split("@")[0];
+
+    // SEC-05 FIX: HTML-encode all user-supplied variables to prevent email HTML injection / stored XSS
+    const safeName = escapeHtml(rawSafeName);
+    const safeTitle = escapeHtml(playlistTitle);
+    const safeDate = escapeHtml(dateStr);
+    const safeRole = escapeHtml(assignedRole.toUpperCase());
+    const safeNotes = notes ? escapeHtml(notes) : "";
+    const safePlaylistUrl = sanitizeUrl(playlistUrl);
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -84,13 +114,13 @@ export class EmailService {
           <p>You have been scheduled for an upcoming service.</p>
           
           <div class="title-block">
-            <h2>${playlistTitle}</h2>
-            <p>${dateStr}</p>
+            <h2>${safeTitle}</h2>
+            <p>${safeDate}</p>
           </div>
           
-          <div class="badge">Assigned Part: ${assignedRole.toUpperCase()}</div>
+          <div class="badge">Assigned Part: ${safeRole}</div>
           
-          ${notes ? `<div class="notes"><strong>Director's Note:</strong> ${notes}</div>` : ""}
+          ${safeNotes ? `<div class="notes"><strong>Director's Note:</strong> ${safeNotes}</div>` : ""}
           
           <div class="songs">
             <h3>Setlist</h3>
@@ -100,10 +130,10 @@ export class EmailService {
                     .map(
                       (song, i) => `
               <div class="song-item">
-                <p class="song-title">${i + 1}. ${song.title}</p>
+                <p class="song-title">${i + 1}. ${escapeHtml(song.title)}</p>
                 <p class="song-meta">
-                  ${song.key ? `Key: ${song.key}` : "Key: TBD"} 
-                  ${song.leadSinger ? `&nbsp;|&nbsp; Lead: ${song.leadSinger}` : ""}
+                  ${song.key ? `Key: ${escapeHtml(song.key)}` : "Key: TBD"} 
+                  ${song.leadSinger ? `&nbsp;|&nbsp; Lead: ${escapeHtml(song.leadSinger)}` : ""}
                 </p>
               </div>
             `,
@@ -114,7 +144,7 @@ export class EmailService {
           </div>
           
           <div class="button-container">
-            <a href="${playlistUrl}" class="button">Open Rehearsal Setlist</a>
+            <a href="${safePlaylistUrl}" class="button">Open Rehearsal Setlist</a>
           </div>
         </div>
       </body>

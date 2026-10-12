@@ -109,11 +109,18 @@ export class UsersService {
           // Remove any query parameters like ?t=... from the storage path and decode URI components
           const rawStoragePath = pathParts[1].split('?')[0];
           const storagePath = decodeURIComponent(rawStoragePath);
-          const { error } = await supabaseAdmin.storage.from('avatars').remove([storagePath]);
-          if (error) {
-            logger.error(`Supabase remove error for ${storagePath}: ${error.message}`);
+
+          // SEC-04 FIX: Enforce that users can ONLY delete storage items located under their own user ID folder
+          const userPrefix = `${id}/`;
+          if (storagePath.startsWith(userPrefix) && !storagePath.includes('..')) {
+            const { error } = await supabaseAdmin.storage.from('avatars').remove([storagePath]);
+            if (error) {
+              logger.error(`Supabase remove error for ${storagePath}: ${error.message}`);
+            } else {
+              logger.info(`Deleted old avatar from storage: ${storagePath} for user ${id}`);
+            }
           } else {
-            logger.info(`Deleted old avatar from storage: ${storagePath} for user ${id}`);
+            logger.warn(`Blocked unauthorized avatar deletion: storage path '${storagePath}' does not belong to user '${id}'`);
           }
         }
       } catch (error) {

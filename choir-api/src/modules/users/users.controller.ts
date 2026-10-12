@@ -4,17 +4,21 @@ import { usersService } from './users.service';
 import { UpdateUserRoleSchema, UpdateProfileSchema } from '@choir-workspace/shared-validation';
 import { supabaseAdmin } from '../../lib/supabase';
 import crypto from 'crypto';
+import path from 'path';
 
 export class UsersController {
   async getAvatarUploadUrl(req: Request, res: Response) {
     try {
-      const filename = req.body.filename || 'avatar.jpg';
       const userId = (req as any).user.id;
-      const path = `${userId}/${Date.now()}-${crypto.randomUUID()}-${filename}`;
+      // Sanitize extension and enforce safe image types to prevent path traversal or unsafe file types
+      const rawExt = path.extname(req.body.filename || '').toLowerCase();
+      const allowedExts = ['.jpg', '.jpeg', '.png', '.webp', '.heif'];
+      const ext = allowedExts.includes(rawExt) ? rawExt : '.jpg';
+      const storagePath = `${userId}/${Date.now()}-${crypto.randomUUID()}${ext}`;
       
       const { data, error } = await supabaseAdmin.storage
         .from('avatars')
-        .createSignedUploadUrl(path);
+        .createSignedUploadUrl(storagePath);
 
       if (error || !data) {
         logger.error('Supabase signed URL error:', error);
@@ -23,7 +27,7 @@ export class UsersController {
 
       const { data: publicUrlData } = supabaseAdmin.storage
         .from('avatars')
-        .getPublicUrl(path);
+        .getPublicUrl(storagePath);
 
       res.status(200).json({
         signedUrl: data.signedUrl,

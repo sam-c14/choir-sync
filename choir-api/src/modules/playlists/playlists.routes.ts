@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../../middleware/requireAuth';
 import { requireRole } from '../../middleware/requireRole';
 import { playlistsController } from './playlists.controller';
+import { dispatchLimiter } from '../../middleware/rateLimiter';
 
 const router = Router();
 
@@ -22,6 +23,6 @@ router.get('/:id', playlistsController.getPlaylistById.bind(playlistsController)
 // Roster Routes
 router.get('/:id/roster', playlistsController.getRoster.bind(playlistsController));
 router.post('/:id/roster', requireRole(['DIRECTOR', 'SECTION_LEADER']), playlistsController.saveRoster.bind(playlistsController));
-router.post('/:id/roster/dispatch', requireRole(['DIRECTOR', 'SECTION_LEADER']), playlistsController.dispatchRoster.bind(playlistsController));
+router.post('/:id/roster/dispatch', requireRole(['DIRECTOR', 'SECTION_LEADER']), dispatchLimiter, playlistsController.dispatchRoster.bind(playlistsController));
 
 export default router;
