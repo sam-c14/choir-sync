@@ -15,7 +15,8 @@ import { apiClient, getErrorMessage } from '../lib/api-client';
 import { AvatarUpload } from '../components/avatar-upload';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Download, Smartphone } from 'lucide-react';
-import { ANDROID_APK_DOWNLOAD_URL } from '../lib/constants';
+import { Capacitor } from '@capacitor/core';
+import { ANDROID_APK_DOWNLOAD_URL, isAndroidDevice } from '../lib/constants';
 
 const MUSICAL_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -247,7 +248,7 @@ export function ProfilePage() {
         </CardContent>
       </Card>
 
-      {ANDROID_APK_DOWNLOAD_URL && (
+      {ANDROID_APK_DOWNLOAD_URL && isAndroidDevice() && !Capacitor.isNativePlatform() && (
         <Card className="max-w-full mx-auto mt-6">
           <CardHeader>
             <div className="flex items-center gap-2">

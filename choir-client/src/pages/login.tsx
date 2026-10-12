@@ -15,7 +15,7 @@ import { trackChoirEvent } from "../lib/analytics";
 import { Loader2, Headphones, ListMusic, CalendarCheck, AlertCircle, Smartphone } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { GoogleSignIn } from "@capawesome/capacitor-google-sign-in";
-import { ANDROID_APK_DOWNLOAD_URL } from "../lib/constants";
+import { ANDROID_APK_DOWNLOAD_URL, isAndroidDevice } from "../lib/constants";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -228,7 +228,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {ANDROID_APK_DOWNLOAD_URL && (
+            {ANDROID_APK_DOWNLOAD_URL && isAndroidDevice() && !Capacitor.isNativePlatform() && (
               <div className="pt-2 border-t border-border/50 text-center">
                 <a
                   href={ANDROID_APK_DOWNLOAD_URL}
@@ -237,11 +237,8 @@ export default function LoginPage() {
                   className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
-                  <span>Prefer Android native app? Click here to download</span>
+                  <span>Download Android App (.apk)</span>
                 </a>
-                <p className="text-xs text-muted-foreground">
-                  This is for Android users only. iOS users can use the web app in Safari/Chrome.
-                </p>
               </div>
             )}
           </CardContent>
