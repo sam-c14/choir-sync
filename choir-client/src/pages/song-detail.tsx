@@ -9,6 +9,8 @@ import { Trash2, ArrowLeft } from 'lucide-react';
 import { LinksEditor } from '../components/songs/links-editor';
 import { DeleteSongDialog } from '../components/songs/delete-song-dialog';
 import { RehearsalReader } from '../components/songs/rehearsal-reader';
+import { trackChoirEvent } from '../lib/analytics';
+
 
 const COMPLEXITY_COLORS: Record<string, string> = {
   EASY: 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900',
@@ -28,6 +30,17 @@ export default function SongDetailPage() {
   const isDirector = user?.role === 'DIRECTOR' || user?.role === 'ADMIN' || user?.role === 'SECTION_LEADER';
   const { data: song, isLoading, isError } = useSong(songId!);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+
+  // Track song view once data resolves
+  React.useEffect(() => {
+    if (song?.id) {
+      trackChoirEvent({
+        action: 'song_viewed',
+        params: { songId: song.id, title: song.title, userId: user?.id },
+      });
+    }
+  }, [song?.id]);
+
 
   if (isLoading) {
     return (

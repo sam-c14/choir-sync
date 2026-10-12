@@ -111,8 +111,9 @@ export default function PlaylistDetailsPage() {
       await setActivePlaylist.mutateAsync({ id: playlist.id, isActive: true });
       trackChoirEvent({
         action: "playlist_activated",
-        params: { playlistId: playlist.id, title: playlist.title },
+        params: { playlistId: playlist.id, title: playlist.title, userId: user?.id },
       });
+
     } catch (error) {
       console.error("Failed to set active lineup", error);
     }

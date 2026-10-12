@@ -69,9 +69,9 @@ function AppContent() {
 export function App() {
   return (
     <BrowserRouter>
-      <AnalyticsTracker />
-      <ScrollToTop />
       <AuthProvider>
+        <AnalyticsTracker />
+        <ScrollToTop />
         <PlayerProvider>
           <AppContent />
           <Toaster />
@@ -80,5 +80,6 @@ export function App() {
     </BrowserRouter>
   );
 }
+
 
 export default App;

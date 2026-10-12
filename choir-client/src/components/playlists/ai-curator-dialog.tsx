@@ -16,6 +16,8 @@ import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 import { trackChoirEvent } from '../../lib/analytics';
 import { getErrorMessage } from '../../lib/api-client';
+import { useAuth } from '../../auth/auth-context';
+
 
 export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -31,6 +33,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
   const createSong = useCreateSong();
   const setSongs = useSetPlaylistSongs();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleCurate = async () => {
     if (!theme) {
@@ -40,11 +43,16 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
     try {
       const res = await curate.mutateAsync({ theme, serviceType, targetCount });
       setSuggestion(res);
+      trackChoirEvent({
+        action: 'ai_setlist_curated',
+        params: { theme, songCount: res.songs?.length ?? targetCount, userId: user?.id },
+      });
       toast.success('Setlist curated successfully!');
     } catch (error: any) {
       toast.error(getErrorMessage(error, 'Failed to curate setlist'));
     }
   };
+
 
   const handleCreatePlaylist = async () => {
     if (!suggestion) return;

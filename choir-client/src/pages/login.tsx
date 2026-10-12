@@ -16,6 +16,10 @@ import { Loader2, Headphones, ListMusic, CalendarCheck, AlertCircle, Smartphone 
 import { Capacitor } from "@capacitor/core";
 import { GoogleSignIn } from "@capawesome/capacitor-google-sign-in";
 import { ANDROID_APK_DOWNLOAD_URL, isAndroidDevice } from "../lib/constants";
+import { jwtDecode } from "jwt-decode";
+import { identifyUser } from "../lib/analytics";
+import type { JwtPayload } from "../auth/auth-context";
+
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -30,7 +34,19 @@ export default function LoginPage() {
     resData: { token: string; refreshToken: string; user?: { createdAt: string } }
   ) => {
     login(resData.token, resData.refreshToken);
-    trackChoirEvent({ action: "login_success", params: { method: "google" } });
+
+    // Decode token to get user identity for analytics
+    try {
+      const decoded = jwtDecode<JwtPayload>(resData.token);
+      identifyUser(decoded.id, decoded.email, decoded.role);
+      trackChoirEvent({
+        action: "login_success",
+        params: { method: "google", userId: decoded.id, email: decoded.email, role: decoded.role },
+      });
+    } catch {
+      // Don't block navigation if analytics fails
+      trackChoirEvent({ action: "login_success", params: { method: "google", userId: '' } });
+    }
 
     let nextUrl = from;
     if (resData.user && resData.user.createdAt) {
@@ -42,6 +58,7 @@ export default function LoginPage() {
     }
     navigate(nextUrl, { replace: true });
   };
+
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -234,6 +251,7 @@ export default function LoginPage() {
                   href={ANDROID_APK_DOWNLOAD_URL}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackChoirEvent({ action: 'apk_download_clicked', params: { source: 'login' } })}
                   className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
@@ -241,6 +259,7 @@ export default function LoginPage() {
                 </a>
               </div>
             )}
+
           </CardContent>
         </Card>
       </main>

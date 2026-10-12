@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { trackChoirEvent } from '../../lib/analytics';
 import { formatBroadcastMessage, FormatterInputs } from '../../lib/broadcast-formatter';
 import { useUniforms } from '../../hooks/use-uniforms';
+import { useAuth } from '../../auth/auth-context';
 
 export function BroadcastDialog({ 
   playlist, 
@@ -17,6 +18,7 @@ export function BroadcastDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [formattedText, setFormattedText] = useState('');
+  const { user } = useAuth();
 
   // Fetch uniform for the playlist's service date
   // Since uniform serviceDate might have time, we can fetch all or just use the filter
@@ -76,6 +78,10 @@ export function BroadcastDialog({
     try {
       await navigator.clipboard.writeText(formattedText);
       toast.success('Copied to clipboard!');
+      trackChoirEvent({
+        action: 'whatsapp_broadcast_copied',
+        params: { playlistId: playlist.id, userId: user?.id },
+      });
     } catch (error) {
       toast.error('Failed to copy text');
     }
@@ -84,7 +90,12 @@ export function BroadcastDialog({
   const handleWhatsApp = () => {
     const url = `https://wa.me/?text=\${encodeURIComponent(formattedText)}`;
     window.open(url, '_blank');
+    trackChoirEvent({
+      action: 'whatsapp_broadcast_sent',
+      params: { playlistId: playlist.id, userId: user?.id },
+    });
   };
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

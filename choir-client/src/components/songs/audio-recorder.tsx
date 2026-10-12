@@ -2,13 +2,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Mic, Square, Play, Pause, Save, Loader2, RotateCcw } from 'lucide-react';
 import { Input } from '../ui/input';
+import { trackChoirEvent } from '../../lib/analytics';
 
 interface AudioRecorderProps {
   onSave: (blob: Blob, duration: number, title?: string) => Promise<void>;
   onCancel: () => void;
+  /** The voice part being recorded (e.g. 'SOPRANO', 'ALTO', 'TENOR') */
+  partType?: string;
+  /** userId of the person recording, for analytics */
+  userId?: string;
 }
 
-export function AudioRecorder({ onSave, onCancel }: AudioRecorderProps) {
+export function AudioRecorder({ onSave, onCancel, partType, userId }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -108,10 +113,15 @@ export function AudioRecorder({ onSave, onCancel }: AudioRecorderProps) {
     setIsSaving(true);
     try {
       await onSave(recordedBlob, timeElapsed, title);
+      trackChoirEvent({
+        action: 'voice_snippet_recorded',
+        params: { partType: partType ?? 'unknown', durationSec: timeElapsed, userId },
+      });
     } finally {
       setIsSaving(false);
     }
   };
+
 
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60);

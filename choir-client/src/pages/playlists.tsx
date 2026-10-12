@@ -16,6 +16,7 @@ import { cn } from '../lib/utils';
 import { Skeleton } from '../components/ui/skeleton';
 import { Badge } from '../components/ui/badge';
 import { CheckCircle2 } from 'lucide-react';
+import { trackChoirEvent } from '../lib/analytics';
 
 export default function PlaylistsPage() {
   const [page, setPage] = useState(1);
@@ -53,8 +54,13 @@ export default function PlaylistsPage() {
         payload.serviceDate = serviceDate;
       }
       const res = await createPlaylist.mutateAsync(payload);
+      trackChoirEvent({
+        action: 'playlist_created',
+        params: { playlistId: res.id, title: res.title, userId: user?.id },
+      });
       setIsCreateOpen(false);
       navigate(`/playlists/${res.id}`);
+
     } catch (err) {
       console.error(err);
     }

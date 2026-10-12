@@ -21,6 +21,8 @@ import { Label } from "../ui/label";
 import { Music, PlayCircle, Trash2, Link as LinkIcon, Search, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { getErrorMessage } from "../../lib/api-client";
+import { trackChoirEvent } from "../../lib/analytics";
+
 
 const PLATFORM_ICONS: Record<string, React.ReactNode> = {
   SPOTIFY: <Music className="w-4 h-4 text-green-500" />,
@@ -438,8 +440,13 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
                     id="tour-floating-player" 
                     onClick={() => {
                       setInlinePlayingUrl(null);
+                      trackChoirEvent({
+                        action: 'reference_track_played',
+                        params: { platform: link.platform, title: songTitle, userId: user?.id },
+                      });
                       playTrack({ platform: link.platform, url: link.url, embedUrl, title: songTitle });
                     }}
+
                   >
                     <PlayCircle className="w-3.5 h-3.5 mr-2 text-primary" />
                     {isPlayingInBackground ? 'Playing in Background' : 'Play in Background'}

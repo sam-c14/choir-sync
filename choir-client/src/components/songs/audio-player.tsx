@@ -22,9 +22,14 @@ interface AudioPlayerProps {
   canDelete?: boolean;
   onEditTitle?: (id: string, newTitle: string) => Promise<void>;
   canEdit?: boolean;
+  /** Voice part type (e.g. 'SOPRANO') for analytics context */
+  partType?: string;
+  /** userId of the current listener, for analytics */
+  userId?: string;
 }
 
-export function AudioPlayer({ snippet, onDelete, canDelete, onEditTitle, canEdit }: AudioPlayerProps) {
+export function AudioPlayer({ snippet, onDelete, canDelete, onEditTitle, canEdit, partType, userId }: AudioPlayerProps) {
+
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -70,7 +75,7 @@ export function AudioPlayer({ snippet, onDelete, canDelete, onEditTitle, canEdit
   const togglePlay = () => {
     if (!isPlaying) {
       try {
-        trackChoirEvent({ action: 'voice_snippet_played', params: { partType: 'unknown', songId: snippet.id } });
+        trackChoirEvent({ action: 'voice_snippet_played', params: { partType: partType ?? 'unknown', songId: snippet.id, userId } });
       } catch (e) {}
     }
     if (!audioRef.current) {

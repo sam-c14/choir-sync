@@ -9,9 +9,10 @@ import { toast } from 'sonner';
 import { Users, Send, Loader2, Save, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { cn } from '../../lib/utils';
-
+import { trackChoirEvent } from '../../lib/analytics';
 import { RosterAssignmentDialog } from './RosterAssignmentDialog';
 import { UserAvatar } from '../ui/user-avatar';
+
 
 interface UserNode {
   id: string;
@@ -117,11 +118,16 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
       } else {
         toast.success(`Notified ${totalCount} choristers (${emailCount} emails sent!)`);
       }
+      trackChoirEvent({
+        action: 'roster_dispatched',
+        params: { playlistId, notifiedCount: totalCount, userId: user?.id },
+      });
       setDispatchOpen(false);
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to notify team'));
     }
   };
+
 
   const hasChanges = () => {
     if (!roster?.members) return assignments.length > 0;

@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Download, Smartphone } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { ANDROID_APK_DOWNLOAD_URL, isAndroidDevice } from '../lib/constants';
+import { trackChoirEvent } from '../lib/analytics';
 
 const MUSICAL_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -86,6 +87,10 @@ export function ProfilePage() {
       toast.error('Android APK download link is not configured.');
       return;
     }
+    trackChoirEvent({
+      action: 'apk_download_clicked',
+      params: { source: 'profile', userId: user?.id },
+    });
     const link = document.createElement('a');
     link.href = ANDROID_APK_DOWNLOAD_URL;
     link.download = 'ChoirSync-Latest.apk';
@@ -96,6 +101,7 @@ export function ProfilePage() {
     document.body.removeChild(link);
     toast.info('Downloading DGC Resound Android APK...');
   };
+
 
   const onSubmit = (data: UpdateProfileDto) => {
     updateProfileMutation.mutate(data);

@@ -236,7 +236,13 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
                   <DialogHeader>
                     <DialogTitle>Add Audio Reference</DialogTitle>
                   </DialogHeader>
-                  <AudioRecorder onSave={handleSaveSnippet} onCancel={() => setIsRecordOpen(false)} />
+                  <AudioRecorder
+                    onSave={handleSaveSnippet}
+                    onCancel={() => setIsRecordOpen(false)}
+                    partType={activeTab}
+                    userId={user?.id}
+                  />
+
                 </DialogContent>
               </Dialog>
             )}
@@ -305,8 +311,11 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
                         canDelete={isDirector || snippet.user.id === user?.id}
                         onEditTitle={handleEditSnippetTitle}
                         canEdit={isDirector || snippet.user.id === user?.id}
+                        partType={activeTab}
+                        userId={user?.id}
                       />
                     ))}
+
                   </div>
                 </div>
               )}
