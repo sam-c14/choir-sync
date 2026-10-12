@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
+import { handleControllerError } from '../../lib/errors';
 
 class NotificationsController {
   async getNotifications(req: Request, res: Response) {
@@ -12,8 +13,7 @@ class NotificationsController {
       });
       res.json(notifications);
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to fetch notifications' });
+      return handleControllerError(res, error, 'Failed to fetch notifications');
     }
   }
 
@@ -29,8 +29,7 @@ class NotificationsController {
       
       res.json(notification);
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to mark notification as read' });
+      return handleControllerError(res, error, 'Failed to mark notification as read');
     }
   }
 
@@ -45,8 +44,7 @@ class NotificationsController {
       
       res.json({ updated: result.count });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to mark all as read' });
+      return handleControllerError(res, error, 'Failed to mark all as read');
     }
   }
 }

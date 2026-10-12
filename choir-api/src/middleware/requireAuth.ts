@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRoleEnum, VoicePartTypeEnum } from '@choir-workspace/shared-validation';
+import { sendError } from '../lib/errors';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -24,7 +25,7 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized: No token provided' });
+    return sendError(res, 401, 'Unauthorized: No token provided', undefined, 'UNAUTHORIZED');
   }
 
   const token = authHeader.split(' ')[1];
@@ -34,6 +35,6 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
     req.user = payload;
     next();
   } catch (_err) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    return sendError(res, 401, 'Unauthorized: Invalid token', undefined, 'UNAUTHORIZED');
   }
 };

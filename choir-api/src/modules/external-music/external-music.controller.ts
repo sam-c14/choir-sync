@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { searchSpotifyTracks, searchYouTubeVideos } from './external-music.service';
+import { handleControllerError } from '../../lib/errors';
 
 const SearchQuerySchema = z.object({
   q: z.string().min(1, "Query is required"),
@@ -15,10 +16,6 @@ export const searchExternalMusic = async (req: Request, res: Response) => {
       : await searchSpotifyTracks(q);
     res.json(results);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: (error as z.ZodError).issues });
-    }
-    console.error('External music search error:', error);
-    res.status(500).json({ error: 'Failed to search external music' });
+    return handleControllerError(res, error, 'Failed to search external music');
   }
 };

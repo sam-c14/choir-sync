@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { usersService } from './users.service';
 import { UpdateUserRoleSchema, UpdateProfileSchema } from '@choir-workspace/shared-validation';
 import { supabaseAdmin } from '../../lib/supabase';
+import { handleControllerError, sendError } from '../../lib/errors';
 import crypto from 'crypto';
 import path from 'path';
 
@@ -22,7 +23,7 @@ export class UsersController {
 
       if (error || !data) {
         logger.error('Supabase signed URL error:', error);
-        return res.status(500).json({ error: 'Failed to generate upload URL' });
+        return sendError(res, 500, 'Failed to generate upload URL');
       }
 
       const { data: publicUrlData } = supabaseAdmin.storage
@@ -34,10 +35,10 @@ export class UsersController {
         publicUrl: publicUrlData.publicUrl,
       });
     } catch (error: any) {
-      logger.error('Get Upload URL Error:', error);
-      res.status(500).json({ error: error.message || 'Internal Server Error' });
+      return handleControllerError(res, error, 'Failed to generate upload URL');
     }
   }
+
   async getUsers(req: Request, res: Response) {
     try {
       const page = parseInt(req.query.page as string) || 1;
@@ -46,8 +47,7 @@ export class UsersController {
       const result = await usersService.getUsers(page, limit, assignable);
       res.json(result);
     } catch (error: any) {
-      logger.error(error);
-      res.status(500).json({ error: 'Failed to fetch users' });
+      return handleControllerError(res, error, 'Failed to fetch users');
     }
   }
 
@@ -57,11 +57,7 @@ export class UsersController {
       const user = await usersService.updateUserRole(req.params.id as string, dto);
       res.json(user);
     } catch (error: any) {
-      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      if (error.code === 'NOT_FOUND') return res.status(404).json({ error: error.message });
-      if (error.code === 'CONFLICT') return res.status(409).json({ error: error.message });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      return handleControllerError(res, error, 'Failed to update user role');
     }
   }
 
@@ -70,10 +66,7 @@ export class UsersController {
       await usersService.deleteUser(req.params.id as string);
       res.status(204).send();
     } catch (error: any) {
-      if (error.code === 'NOT_FOUND') return res.status(404).json({ error: error.message });
-      if (error.code === 'FORBIDDEN') return res.status(403).json({ error: error.message });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      return handleControllerError(res, error, 'Failed to delete user');
     }
   }
 
@@ -83,9 +76,7 @@ export class UsersController {
       const user = await usersService.updateProfile((req as any).user.id, dto);
       res.json(user);
     } catch (error: any) {
-      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      return handleControllerError(res, error, 'Failed to update profile');
     }
   }
 
@@ -94,9 +85,7 @@ export class UsersController {
       const user = await usersService.getProfile((req as any).user.id);
       res.json(user);
     } catch (error: any) {
-      if (error.code === 'NOT_FOUND') return res.status(404).json({ error: error.message });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      return handleControllerError(res, error, 'Failed to fetch profile');
     }
   }
 }

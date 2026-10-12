@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
 import { supabaseAdmin } from '../../lib/supabase';
 import { CreateVoiceSnippetSchema } from '@choir-workspace/shared-validation';
+import { handleControllerError, sendError } from '../../lib/errors';
 
 const BUCKET_NAME = process.env.SUPABASE_BUCKET_STORAGE_NAME || 'choir-tracker-dev-bucket';
 
@@ -14,7 +14,7 @@ class SnippetsController {
       
       const songPart = await prisma.songPart.findUnique({ where: { id: partId } });
       if (!songPart) {
-        return res.status(404).json({ error: 'Song part not found' });
+        return sendError(res, 404, 'Song part not found');
       }
 
       const filePath = `snippets/${partId}/${Date.now()}-${userId}.webm`;
@@ -25,7 +25,7 @@ class SnippetsController {
 
       if (error || !data) {
         console.error('Supabase signed URL error:', error);
-        return res.status(500).json({ error: 'Failed to generate upload URL' });
+        return sendError(res, 500, 'Failed to generate upload URL');
       }
 
       const { data: publicUrlData } = supabaseAdmin.storage
@@ -38,8 +38,7 @@ class SnippetsController {
         publicUrl: publicUrlData.publicUrl
       });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Internal server error' });
+      return handleControllerError(res, error, 'Failed to generate upload URL');
     }
   }
 
@@ -51,7 +50,7 @@ class SnippetsController {
 
       const songPart = await prisma.songPart.findUnique({ where: { id: partId } });
       if (!songPart) {
-        return res.status(404).json({ error: 'Song part not found' });
+        return sendError(res, 404, 'Song part not found');
       }
 
       const snippet = await prisma.voiceSnippet.create({
@@ -67,15 +66,10 @@ class SnippetsController {
 
       res.status(201).json(snippet);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.issues });
-      }
-      console.error(error);
-      res.status(500).json({ error: 'Internal server error' });
+      return handleControllerError(res, error, 'Failed to create voice snippet');
     }
   }
 
-  
   async updateSnippet(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
@@ -84,16 +78,16 @@ class SnippetsController {
       const { title } = req.body;
 
       if (!title || typeof title !== 'string') {
-        return res.status(400).json({ error: 'Valid title is required' });
+        return sendError(res, 400, 'Valid title is required');
       }
 
       const snippet = await prisma.voiceSnippet.findUnique({ where: { id } });
       if (!snippet) {
-        return res.status(404).json({ error: 'Snippet not found' });
+        return sendError(res, 404, 'Snippet not found');
       }
 
       if (snippet.userId !== userId && userRole !== 'DIRECTOR') {
-        return res.status(403).json({ error: 'Not authorized to edit this snippet' });
+        return sendError(res, 403, 'You do not have permission to edit this snippet');
       }
 
       const updated = await prisma.voiceSnippet.update({
@@ -104,8 +98,7 @@ class SnippetsController {
 
       res.json(updated);
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Internal server error' });
+      return handleControllerError(res, error, 'Failed to update snippet');
     }
   }
 
@@ -117,12 +110,12 @@ class SnippetsController {
 
       const snippet = await prisma.voiceSnippet.findUnique({ where: { id } });
       if (!snippet) {
-        return res.status(404).json({ error: 'Snippet not found' });
+        return sendError(res, 404, 'Snippet not found');
       }
 
       // Only creator or DIRECTOR can delete
       if (snippet.userId !== userId && userRole !== 'DIRECTOR') {
-        return res.status(403).json({ error: 'Not authorized to delete this snippet' });
+        return sendError(res, 403, 'You do not have permission to delete this snippet');
       }
 
       // Delete from Supabase Storage
@@ -138,7 +131,6 @@ class SnippetsController {
         // Continue to delete from DB even if storage cleanup fails
       }
 
-      
       await prisma.voiceSnippet.delete({ where: { id } });
 
       const parentPart = await prisma.songPart.findUnique({
@@ -149,11 +141,9 @@ class SnippetsController {
         await prisma.songPart.delete({ where: { id: parentPart.id } });
       }
 
-
       res.json({ message: 'Snippet deleted' });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Internal server error' });
+      return handleControllerError(res, error, 'Failed to delete snippet');
     }
   }
 }

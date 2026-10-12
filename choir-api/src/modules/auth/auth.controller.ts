@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { LoginSchema, GoogleAuthSchema, RefreshTokenSchema } from '@choir-workspace/shared-validation';
 import { authService } from './auth.service';
+import { handleControllerError } from '../../lib/errors';
 
 export class AuthController {
   async login(req: Request, res: Response) {
@@ -9,10 +10,7 @@ export class AuthController {
       const result = await authService.login(dto);
       res.status(200).json(result);
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: error.errors });
-      }
-      return res.status(401).json({ error: error.message });
+      return handleControllerError(res, error, 'Invalid credentials');
     }
   }
 
@@ -22,10 +20,7 @@ export class AuthController {
       const result = await authService.googleLogin(dto);
       res.status(200).json(result);
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: error.errors });
-      }
-      return res.status(401).json({ error: error.message });
+      return handleControllerError(res, error, 'Google authentication failed');
     }
   }
 
@@ -35,10 +30,7 @@ export class AuthController {
       const result = await authService.refreshToken(dto.token);
       res.status(200).json(result);
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: error.errors });
-      }
-      return res.status(401).json({ error: error.message });
+      return handleControllerError(res, error, 'Session expired. Please log in again.');
     }
   }
 
@@ -48,10 +40,7 @@ export class AuthController {
       await authService.logout(dto.token);
       res.status(200).json({ message: 'Logged out successfully' });
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: error.errors });
-      }
-      return res.status(500).json({ error: error.message });
+      return handleControllerError(res, error, 'Logout failed');
     }
   }
 }

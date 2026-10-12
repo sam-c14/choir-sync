@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { CreateUniformSchema, UpdateUniformSchema } from '@choir-workspace/shared-validation';
 import { uniformsService } from './uniforms.service';
 import { supabaseAdmin } from '../../lib/supabase';
+import { handleControllerError, sendError } from '../../lib/errors';
 import crypto from 'crypto';
 
 export class UniformsController {
@@ -17,7 +18,7 @@ export class UniformsController {
 
       if (error || !data) {
         logger.error('Supabase signed URL error:', error);
-        return res.status(500).json({ error: 'Failed to generate upload URL' });
+        return sendError(res, 500, 'Failed to generate upload URL');
       }
 
       const { data: publicUrlData } = supabaseAdmin.storage
@@ -29,10 +30,10 @@ export class UniformsController {
         publicUrl: publicUrlData.publicUrl,
       });
     } catch (error: any) {
-      logger.error('Get Upload URL Error:', error);
-      res.status(500).json({ error: error.message || 'Internal Server Error' });
+      return handleControllerError(res, error, 'Failed to generate upload URL');
     }
   }
+
   async getUniforms(req: Request, res: Response) {
     try {
       const filter = (req.query.filter as string) || 'current';
@@ -44,8 +45,7 @@ export class UniformsController {
       const uniforms = await uniformsService.getUniforms(filter, page, limit, fromDate, toDate, clientToday);
       res.json(uniforms);
     } catch (error: any) {
-      logger.error(error);
-      res.status(500).json({ message: 'Failed to fetch uniforms' });
+      return handleControllerError(res, error, 'Failed to fetch uniforms');
     }
   }
 
@@ -55,9 +55,7 @@ export class UniformsController {
       const uniform = await uniformsService.createUniform(dto);
       res.status(201).json(uniform);
     } catch (error: any) {
-      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      return handleControllerError(res, error, 'Failed to create uniform');
     }
   }
 
@@ -67,10 +65,7 @@ export class UniformsController {
       const uniform = await uniformsService.updateUniform(req.params.id as string, dto);
       res.status(200).json(uniform);
     } catch (error: any) {
-      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      if (error.code === 'P2025') return res.status(404).json({ error: 'Uniform not found' });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      return handleControllerError(res, error, 'Failed to update uniform');
     }
   }
 
@@ -79,9 +74,7 @@ export class UniformsController {
       await uniformsService.deleteUniform(req.params.id as string);
       res.status(204).send();
     } catch (error: any) {
-      if (error.code === 'P2025') return res.status(404).json({ error: 'Uniform not found' });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      return handleControllerError(res, error, 'Failed to delete uniform');
     }
   }
 }

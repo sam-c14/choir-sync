@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Request, Response, NextFunction } from 'express';
 import { UserRoleEnum } from '@choir-workspace/shared-validation';
+import { sendError } from '../lib/errors';
 
 type Role = z.infer<typeof UserRoleEnum>;
 
@@ -9,7 +10,7 @@ export const requireRole = (allowedRoles: Role | Role[]) => {
 
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
+      return sendError(res, 401, 'Unauthorized: User not authenticated', undefined, 'UNAUTHORIZED');
     }
 
     // ADMIN automatically passes any DIRECTOR checks
@@ -18,7 +19,7 @@ export const requireRole = (allowedRoles: Role | Role[]) => {
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Forbidden: Insufficient role' });
+      return sendError(res, 403, 'Forbidden: Insufficient permissions for this action', undefined, 'FORBIDDEN');
     }
 
     next();
@@ -27,7 +28,7 @@ export const requireRole = (allowedRoles: Role | Role[]) => {
 
 export const requirePartLeadOrDirector = (req: Request, res: Response, next: NextFunction) => {
   if (!req.user) {
-    return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
+    return sendError(res, 401, 'Unauthorized: User not authenticated', undefined, 'UNAUTHORIZED');
   }
 
   if (req.user.role === 'DIRECTOR' || req.user.role === 'ADMIN') {
@@ -40,5 +41,5 @@ export const requirePartLeadOrDirector = (req: Request, res: Response, next: Nex
     return next();
   }
 
-  return res.status(403).json({ error: 'Forbidden: Not authorized to edit this part' });
+  return sendError(res, 403, 'Forbidden: Not authorized to edit this voice part', undefined, 'FORBIDDEN');
 };

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
-import { logger } from '../../lib/logger';
+import { handleControllerError } from '../../lib/errors';
 
 export class SearchController {
   async search(req: Request, res: Response) {
@@ -16,7 +16,7 @@ export class SearchController {
         prisma.song.findMany({
           where: { title: { contains: query, mode: 'insensitive' } },
           take: 5,
-          select: { id: true, title: true, composer: true, key: true }
+          select: { id: true, title: true, composer: true, originalKey: true }
         }),
         prisma.playlist.findMany({
           where: { title: { contains: query, mode: 'insensitive' } },
@@ -27,8 +27,7 @@ export class SearchController {
 
       res.json({ songs, playlists });
     } catch (error) {
-      logger.error('Search error:', error);
-      res.status(500).json({ error: 'Failed to perform search' });
+      return handleControllerError(res, error, 'Failed to perform search');
     }
   }
 }

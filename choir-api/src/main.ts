@@ -18,6 +18,7 @@ import snippetsRoutes from './modules/snippets/snippets.routes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import { apiLimiter } from './middleware/rateLimiter';
+import { sendError, handleControllerError } from './lib/errors';
 
 const app = express();
 app.disable('x-powered-by');
@@ -124,7 +125,7 @@ if (isSwaggerEnabled) {
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: "CSync API Docs", explorer: true }));
 } else {
   app.use(['/api/docs', '/api/docs.json'], (req, res) => {
-    res.status(404).json({ error: 'API documentation is disabled in production' });
+    return sendError(res, 404, 'API documentation is disabled in production', undefined, 'NOT_FOUND');
   });
 }
 app.use('/api/v1/song-parts', songPartsRoutes);
@@ -132,6 +133,17 @@ app.use('/api/v1/snippets', snippetsRoutes);
 
 app.get('/api', (req, res) => {
   res.send({ message: 'Welcome to choir-api!' });
+});
+
+// 404 handler for unmapped routes
+app.use((req, res) => {
+  sendError(res, 404, `Endpoint not found: ${req.method} ${req.originalUrl}`, undefined, 'NOT_FOUND');
+});
+
+// Global unhandled error handler middleware
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error('Unhandled API Error:', err);
+  handleControllerError(res, err, 'An unexpected server error occurred');
 });
 
 const port = process.env.PORT || 3333;

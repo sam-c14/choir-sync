@@ -4,7 +4,7 @@ import { CreatePlaylistSchema, UpdatePlaylistSchema, CreatePlaylistSongSchema, C
 import { z } from 'zod';
 import { EmailService } from '../../lib/email.service';
 import { prisma } from '../../lib/prisma';
-
+import { handleControllerError, sendError } from '../../lib/errors';
 
 export const playlistsController = {
   async setActivePlaylist(req: Request, res: Response) {
@@ -15,8 +15,7 @@ export const playlistsController = {
       const playlist = await playlistsService.setActivePlaylist(id, isActive);
       res.json(playlist);
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to set active playlist', details: error.message || String(error) });
+      return handleControllerError(res, error, 'Failed to set active playlist');
     }
   },
 
@@ -30,8 +29,7 @@ export const playlistsController = {
       const playlists = await playlistsService.getPlaylists(options);
       res.json(playlists);
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to fetch playlists' });
+      return handleControllerError(res, error, 'Failed to fetch playlists');
     }
   },
 
@@ -40,12 +38,11 @@ export const playlistsController = {
       const id = req.params.id as string;
       const playlist = await playlistsService.getPlaylistById(id);
       if (!playlist) {
-        return res.status(404).json({ error: 'Playlist not found' });
+        return sendError(res, 404, 'Playlist not found');
       }
       res.json(playlist);
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to fetch playlist' });
+      return handleControllerError(res, error, 'Failed to fetch playlist');
     }
   },
 
@@ -55,11 +52,7 @@ export const playlistsController = {
       const playlist = await playlistsService.createPlaylist(data, req.user!.id);
       res.status(201).json(playlist);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: (error as z.ZodError).issues });
-      }
-      console.error(error);
-      res.status(500).json({ error: 'Failed to create playlist' });
+      return handleControllerError(res, error, 'Failed to create playlist');
     }
   },
 
@@ -70,11 +63,7 @@ export const playlistsController = {
       const playlist = await playlistsService.updatePlaylist(id, data);
       res.json(playlist);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: (error as z.ZodError).issues });
-      }
-      console.error(error);
-      res.status(500).json({ error: 'Failed to update playlist' });
+      return handleControllerError(res, error, 'Failed to update playlist');
     }
   },
 
@@ -84,8 +73,7 @@ export const playlistsController = {
       await playlistsService.deletePlaylist(id);
       res.status(204).send();
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to delete playlist' });
+      return handleControllerError(res, error, 'Failed to delete playlist');
     }
   },
 
@@ -96,14 +84,9 @@ export const playlistsController = {
       const songs = await playlistsService.setPlaylistSongs(id, data);
       res.json(songs);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: (error as z.ZodError).issues });
-      }
-      console.error(error);
-      res.status(500).json({ error: 'Failed to update playlist songs' });
+      return handleControllerError(res, error, 'Failed to update playlist songs');
     }
-  }
-,
+  },
 
   async getRoster(req: Request, res: Response) {
     try {
@@ -118,8 +101,7 @@ export const playlistsController = {
       });
       res.json(roster || { members: [] });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to fetch roster' });
+      return handleControllerError(res, error, 'Failed to fetch roster');
     }
   },
 
@@ -129,7 +111,7 @@ export const playlistsController = {
       const parsed = CreateRosterSchema.parse(req.body);
 
       const playlist = await prisma.playlist.findUnique({ where: { id } });
-      if (!playlist) return res.status(404).json({ error: 'Playlist not found' });
+      if (!playlist) return sendError(res, 404, 'Playlist not found');
 
       const result = await prisma.$transaction(async (tx) => {
         let roster = await tx.serviceRoster.findUnique({ where: { playlistId: id } });
@@ -171,11 +153,7 @@ export const playlistsController = {
 
       res.json(result);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: 'Validation failed', details: error.issues });
-      }
-      console.error(error);
-      res.status(500).json({ error: 'Failed to save roster', details: error.message || String(error) });
+      return handleControllerError(res, error, 'Failed to save roster');
     }
   },
 
@@ -200,8 +178,8 @@ export const playlistsController = {
         }
       });
 
-      if (!roster) return res.status(404).json({ error: 'Roster not found' });
-      if (roster.members.length === 0) return res.status(400).json({ error: 'Roster is empty' });
+      if (!roster) return sendError(res, 404, 'Roster not found');
+      if (roster.members.length === 0) return sendError(res, 400, 'Roster is empty. Please assign members before dispatching.');
 
       const unnotifiedMembers = roster.members.filter((m: any) => !m.notified);
       
@@ -257,8 +235,7 @@ export const playlistsController = {
         emailsSentCount
       });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to dispatch roster', details: error.message || String(error) });
+      return handleControllerError(res, error, 'Failed to dispatch roster');
     }
   }
 };

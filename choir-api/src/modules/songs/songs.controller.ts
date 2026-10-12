@@ -9,6 +9,7 @@ import {
   CreateSongLinkSchema,
 } from '@choir-workspace/shared-validation';
 import { songsService } from './songs.service';
+import { handleControllerError, sendError } from '../../lib/errors';
 
 export class SongsController {
   async clearActiveLineup(req: Request, res: Response) {
@@ -16,8 +17,7 @@ export class SongsController {
       const result = await songsService.clearActiveLineup();
       res.status(200).json(result);
     } catch (error: any) {
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      handleControllerError(res, error, 'Failed to clear active lineup');
     }
   }
   async getSongs(req: Request, res: Response) {
@@ -36,8 +36,7 @@ export class SongsController {
       const songs = await songsService.getSongs(options);
       res.json(songs);
     } catch (error) {
-      logger.error(error);
-      res.status(500).json({ message: 'Failed to fetch songs' });
+      handleControllerError(res, error, 'Failed to fetch songs');
     }
   }
 
@@ -46,8 +45,7 @@ export class SongsController {
       const song = await songsService.getSongById(req.params.id as string);
       res.json(song);
     } catch (error) {
-      logger.error(error);
-      res.status(404).json({ message: 'Song not found' });
+      handleControllerError(res, error, 'Song not found');
     }
   }
 
@@ -57,9 +55,7 @@ export class SongsController {
       const song = await songsService.createSong(dto);
       res.status(201).json(song);
     } catch (error: any) {
-      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      handleControllerError(res, error, 'Failed to create song');
     }
   }
 
@@ -69,10 +65,7 @@ export class SongsController {
       const song = await songsService.updateSong(req.params.id as string, dto);
       res.status(200).json(song);
     } catch (error: any) {
-      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      if (error.code === 'P2025') return res.status(404).json({ error: 'Song not found' });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      handleControllerError(res, error, 'Failed to update song');
     }
   }
 
@@ -86,10 +79,7 @@ export class SongsController {
       const song = await songsService.updateSong(req.params.id as string, dto as any);
       res.status(200).json(song);
     } catch (error: any) {
-      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      if (error.code === 'P2025') return res.status(404).json({ error: 'Song not found' });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      handleControllerError(res, error, 'Failed to update lyrics');
     }
   }
 
@@ -98,23 +88,18 @@ export class SongsController {
       await songsService.deleteSong(req.params.id as string);
       res.status(204).send();
     } catch (error: any) {
-      if (error.code === 'P2025') return res.status(404).json({ error: 'Song not found' });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      handleControllerError(res, error, 'Failed to delete song');
     }
   }
 
   async updateAllParts(req: Request, res: Response) {
     try {
-      // Expects an array of parts
       const schema = z.array(CreateSongPartSchema);
       const dto = schema.parse(req.body);
       const result = await songsService.updateAllParts(req.params.id as string, dto);
       res.status(200).json(result);
     } catch (error: any) {
-      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      handleControllerError(res, error, 'Failed to update song parts');
     }
   }
 
@@ -124,9 +109,7 @@ export class SongsController {
       const result = await songsService.updatePart(req.params.id as string, req.params.part as string, dto);
       res.status(200).json(result);
     } catch (error: any) {
-      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      handleControllerError(res, error, 'Failed to update voice part notes');
     }
   }
 
@@ -136,20 +119,17 @@ export class SongsController {
       const result = await songsService.createLink(req.params.id as string, dto);
       res.status(201).json(result);
     } catch (error: any) {
-      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      handleControllerError(res, error, 'Failed to add reference link');
     }
   }
 
   async deleteLink(req: Request, res: Response) {
     try {
       const result = await songsService.deleteLink(req.params.id as string, req.params.linkId as string);
-      if (result.count === 0) return res.status(404).json({ error: 'Link not found' });
+      if (result.count === 0) return sendError(res, 404, 'Reference link not found', undefined, 'NOT_FOUND');
       res.status(204).send();
     } catch (error: any) {
-      logger.error(error);
-      res.status(500).json({ error: error.message });
+      handleControllerError(res, error, 'Failed to delete reference link');
     }
   }
 }
