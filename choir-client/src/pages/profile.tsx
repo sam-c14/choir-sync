@@ -15,8 +15,7 @@ import { apiClient, getErrorMessage } from '../lib/api-client';
 import { AvatarUpload } from '../components/avatar-upload';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Download, Smartphone } from 'lucide-react';
-
-const APK_DOWNLOAD_URL = 'https://github.com/sam-c14/choir-sync/releases/latest/download/ChoirSync-Latest.apk';
+import { ANDROID_APK_DOWNLOAD_URL } from '../lib/constants';
 
 const MUSICAL_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -82,8 +81,12 @@ export function ProfilePage() {
   });
 
   const handleDownloadApk = () => {
+    if (!ANDROID_APK_DOWNLOAD_URL) {
+      toast.error('Android APK download link is not configured.');
+      return;
+    }
     const link = document.createElement('a');
-    link.href = APK_DOWNLOAD_URL;
+    link.href = ANDROID_APK_DOWNLOAD_URL;
     link.download = 'ChoirSync-Latest.apk';
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
@@ -244,27 +247,29 @@ export function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Card className="max-w-full mx-auto mt-6">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5 text-primary" />
-            <CardTitle>App & Devices</CardTitle>
-          </div>
-          <CardDescription>Install DGC Resound directly on your Android phone</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Button 
-            className="w-full py-4 gap-2 font-medium" 
-            onClick={handleDownloadApk}
-          >
-            <Download className="h-4 w-4" />
-            Install Android App (.apk)
-          </Button>
-          <p className="text-xs text-muted-foreground text-center">
-            Note: You may need to allow &quot;Install from Unknown Sources&quot; in your Android settings to install this app directly.
-          </p>
-        </CardContent>
-      </Card>
+      {ANDROID_APK_DOWNLOAD_URL && (
+        <Card className="max-w-full mx-auto mt-6">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-primary" />
+              <CardTitle>App & Devices</CardTitle>
+            </div>
+            <CardDescription>Install DGC Resound directly on your Android phone</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button 
+              className="w-full py-4 gap-2 font-medium" 
+              onClick={handleDownloadApk}
+            >
+              <Download className="h-4 w-4" />
+              Install Android App (.apk)
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              Note: You may need to allow &quot;Install from Unknown Sources&quot; in your Android settings to install this app directly.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

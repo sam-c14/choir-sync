@@ -15,6 +15,7 @@ import { trackChoirEvent } from "../lib/analytics";
 import { Loader2, Headphones, ListMusic, CalendarCheck, AlertCircle, Smartphone } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { GoogleSignIn } from "@capawesome/capacitor-google-sign-in";
+import { ANDROID_APK_DOWNLOAD_URL } from "../lib/constants";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -227,20 +228,22 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-border/50 text-center">
-              <a
-                href="https://github.com/sam-c14/choir-sync/releases/latest/download/ChoirSync-Latest.apk"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1"
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>Prefer Android native app? Click here to download</span>
-              </a>
-               <p className="text-xs text-muted-foreground">
-                This is for Android users only. iOS users can use the web app in Safari/Chrome.
-              </p>
-            </div>
+            {ANDROID_APK_DOWNLOAD_URL && (
+              <div className="pt-2 border-t border-border/50 text-center">
+                <a
+                  href={ANDROID_APK_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>Prefer Android native app? Click here to download</span>
+                </a>
+                <p className="text-xs text-muted-foreground">
+                  This is for Android users only. iOS users can use the web app in Safari/Chrome.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
