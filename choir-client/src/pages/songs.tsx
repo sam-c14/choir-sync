@@ -27,7 +27,7 @@ import {
   AlertDialogTrigger,
 } from "../components/ui/alert-dialog";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../lib/api-client';
+import { apiClient, getErrorMessage } from '../lib/api-client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -76,8 +76,7 @@ function ClearLineupButton() {
       toast.success(`Sunday lineup cleared (${data.clearedSongsCount} songs removed)`);
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.error || 'Failed to clear lineup';
-      toast.error(msg);
+      toast.error(getErrorMessage(err, 'Failed to clear lineup'));
     }
   });
 

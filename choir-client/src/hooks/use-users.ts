@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../lib/api-client';
+import { apiClient, getErrorMessage } from '../lib/api-client';
 import type { UpdateUserRoleDto } from '@choir-workspace/shared-validation';
 import { toast } from 'sonner';
 
@@ -43,9 +43,7 @@ export function useUpdateUserRole() {
       toast.success('Role updated successfully');
     },
     onError: (error: any) => {
-      const errData = error.response?.data?.error;
-      const msg = Array.isArray(errData) ? errData[0]?.message : errData;
-      toast.error(msg || 'Failed to update role');
+      toast.error(getErrorMessage(error, 'Failed to update role'));
     }
   });
 }
@@ -61,7 +59,7 @@ export function useDeleteUser() {
       toast.success('User deleted successfully');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to delete user');
+      toast.error(getErrorMessage(error, 'Failed to delete user'));
     }
   });
 }

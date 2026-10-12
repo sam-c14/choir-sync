@@ -3,6 +3,7 @@ import { useDeleteSong } from '../../hooks/use-songs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
+import { getErrorMessage } from '../../lib/api-client';
 
 export function DeleteSongDialog({
   song,
@@ -38,8 +39,8 @@ export function DeleteSongDialog({
                 toast.success('Song deleted successfully.');
                 onOpenChange(false);
                 onDeleted?.();
-              } catch {
-                toast.error('Failed to delete song.');
+              } catch (err) {
+                toast.error(getErrorMessage(err, 'Failed to delete song.'));
               }
             }}
           >

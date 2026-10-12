@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { apiClient } from '../lib/api-client';
+import { apiClient, getErrorMessage } from '../lib/api-client';
 import { toast } from 'sonner';
 import { CreatePlaylistDto, UpdatePlaylistDto, CreatePlaylistSongDto } from '@choir-workspace/shared-validation';
 
@@ -110,8 +110,8 @@ export function useSetActivePlaylist() {
       queryClient.invalidateQueries({ queryKey: ['songs'] });
       toast.success(variables.isActive === false ? 'Playlist deactivated' : 'Playlist set as active Sunday lineup');
     },
-    onError: () => {
-      toast.error('Failed to update active playlist status');
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error, 'Failed to update active playlist status'));
     }
   });
 }

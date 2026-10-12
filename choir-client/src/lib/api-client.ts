@@ -117,3 +117,79 @@ apiClient.interceptors.response.use(
 );
 
 export { apiClient };
+
+/**
+ * Safely extracts a user-friendly error message from any API error, Error object, or unknown exception.
+ * Gracefully unpacks backend standardized payloads, Zod error arrays/details, and HTTP status fallbacks.
+ */
+export function getErrorMessage(error: unknown, fallback = 'An unexpected error occurred. Please try again.'): string {
+  if (!error) return fallback;
+
+  // Axios or HTTP response error
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const axiosError = error as {
+      response?: {
+        status?: number;
+        data?: {
+          message?: string | any;
+          error?: string | any;
+          details?: Array<{ field?: string; message: string }> | any;
+        };
+      };
+      message?: string;
+    };
+
+    const data = axiosError.response?.data;
+    if (data) {
+      // 1. If message is a readable string
+      if (typeof data.message === 'string' && data.message.trim()) {
+        return data.message.trim();
+      }
+      // 2. If error is a readable string
+      if (typeof data.error === 'string' && data.error.trim()) {
+        return data.error.trim();
+      }
+      // 3. If details is an array of issues
+      if (Array.isArray(data.details) && data.details.length > 0) {
+        const first = data.details[0];
+        if (first?.message) return first.message;
+      }
+      // 4. If error was an array (e.g. raw Zod issues array)
+      if (Array.isArray(data.error) && data.error.length > 0) {
+        const first = data.error[0];
+        if (first?.message) return first.message;
+      }
+    }
+
+    // HTTP Status code heuristics if no server body message
+    const status = axiosError.response?.status;
+    if (status === 400) return 'Invalid request. Please check your input.';
+    if (status === 401) return 'Your session has expired. Please log in again.';
+    if (status === 403) return 'You do not have permission to perform this action.';
+    if (status === 404) return 'The requested item could not be found.';
+    if (status === 409) return 'A conflict occurred. The item may already exist.';
+    if (status === 429) return 'Too many requests. Please wait a moment and try again.';
+    if (status && status >= 500) return 'Server error. Please try again later.';
+
+    if (axiosError.message && typeof axiosError.message === 'string') {
+      if (axiosError.message.toLowerCase().includes('network error')) {
+        return 'Network error. Please check your internet connection.';
+      }
+      if (axiosError.message.toLowerCase().includes('timeout')) {
+        return 'Request timed out. Please check your connection and try again.';
+      }
+    }
+  }
+
+  // Standard Error instance
+  if (error instanceof Error && typeof error.message === 'string' && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  // String error
+  if (typeof error === 'string' && error.trim()) {
+    return error.trim();
+  }
+
+  return fallback;
+}

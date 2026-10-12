@@ -16,7 +16,7 @@ import { useCreateUniform, useUpdateUniform } from '../../hooks/use-uniforms';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import imageCompression from 'browser-image-compression';
-import { apiClient } from '../../lib/api-client';
+import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { toast } from 'sonner';
 
 export function UniformDialog({
@@ -133,7 +133,7 @@ export function UniformDialog({
       onOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast.error('Failed to save uniform details');
+      toast.error(getErrorMessage(error, 'Failed to save uniform details'));
     } finally {
       setIsUploading(false);
     }

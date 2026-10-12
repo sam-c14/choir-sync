@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import imageCompression from "browser-image-compression";
 import { Camera, Loader2, Trash2 } from "lucide-react";
-import { apiClient } from "../lib/api-client";
+import { apiClient, getErrorMessage } from "../lib/api-client";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 
@@ -64,7 +64,7 @@ export function AvatarUpload({
       toast.success("Avatar updated successfully");
     } catch (error: any) {
       console.error(error);
-      toast.error("Failed to upload avatar");
+      toast.error(getErrorMessage(error, "Failed to upload avatar"));
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -82,7 +82,7 @@ export function AvatarUpload({
       toast.success("Avatar removed successfully");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to remove avatar");
+      toast.error(getErrorMessage(error, "Failed to remove avatar"));
     } finally {
       setIsUploading(false);
     }

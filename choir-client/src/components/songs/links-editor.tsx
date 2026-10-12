@@ -20,6 +20,7 @@ import {
 import { Label } from "../ui/label";
 import { Music, PlayCircle, Trash2, Link as LinkIcon, Search, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
+import { getErrorMessage } from "../../lib/api-client";
 
 const PLATFORM_ICONS: Record<string, React.ReactNode> = {
   SPOTIFY: <Music className="w-4 h-4 text-green-500" />,
@@ -128,8 +129,8 @@ function SearchAddPanel({ platform, songId, onAdded }: SearchAddPanelProps) {
       setQuery("");
       setSelectedUrl("");
       onAdded();
-    } catch {
-      toast.error("Failed to add link.");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to add link."));
     }
   };
 
@@ -283,8 +284,8 @@ function ManualUrlInput({ songId, platform, onAdded }: ManualUrlInputProps) {
       toast.success("Link added.");
       setUrl("");
       onAdded();
-    } catch {
-      toast.error("Failed to add link.");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to add link."));
     }
   };
 
@@ -386,8 +387,8 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
                       try {
                         await deleteLink.mutateAsync({ songId, linkId: link.id });
                         toast.success("Link deleted.");
-                      } catch {
-                        toast.error("Failed to delete link.");
+                      } catch (err) {
+                        toast.error(getErrorMessage(err, "Failed to delete link."));
                       }
                     }}
                   >

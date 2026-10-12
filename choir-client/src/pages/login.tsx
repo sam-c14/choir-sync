@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../auth/auth-context";
 import { useNavigate, useLocation } from "react-router-dom";
-import { apiClient } from "../lib/api-client";
+import { apiClient, getErrorMessage } from "../lib/api-client";
 import {
   Card,
   CardContent,
@@ -57,10 +57,7 @@ export default function LoginPage() {
         handleAuthSuccess(res.data);
       } catch (err: unknown) {
         setIsGoogleLoading(false);
-        const message =
-          (err as { response?: { data?: { error?: string } } })
-            ?.response?.data?.error ?? "Google sign in failed. Please try again.";
-        setError(message);
+        setError(getErrorMessage(err, "Google sign in failed. Please try again."));
       }
     },
     onError: () => {
@@ -95,11 +92,7 @@ export default function LoginPage() {
       handleAuthSuccess(res.data);
     } catch (err: unknown) {
       setIsGoogleLoading(false);
-      const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        (err as { message?: string })?.message ??
-        "Google sign in failed. Please try again.";
-      setError(message);
+      setError(getErrorMessage(err, "Google sign in failed. Please try again."));
     }
   };
 

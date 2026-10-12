@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useAuth } from '../auth/auth-context';
 import { toast } from 'sonner';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../lib/api-client';
+import { apiClient, getErrorMessage } from '../lib/api-client';
 
 import { AvatarUpload } from '../components/AvatarUpload';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
@@ -77,7 +77,7 @@ export function ProfilePage() {
       queryClient.invalidateQueries({ queryKey: ['playlist-roster'] });
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.error || 'Failed to update profile');
+      toast.error(getErrorMessage(err, 'Failed to update profile'));
     },
   });
 

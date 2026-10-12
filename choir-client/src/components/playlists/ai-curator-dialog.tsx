@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 import { trackChoirEvent } from '../../lib/analytics';
+import { getErrorMessage } from '../../lib/api-client';
 
 export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -41,7 +42,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
       setSuggestion(res);
       toast.success('Setlist curated successfully!');
     } catch (error: any) {
-      toast.error(error.response?.data?.details || error.response?.data?.error || 'Failed to curate setlist');
+      toast.error(getErrorMessage(error, 'Failed to curate setlist'));
     }
   };
 
@@ -85,7 +86,7 @@ export function AiCuratorDialog({ trigger }: { trigger: React.ReactNode }) {
       navigate(`/playlists/${playlist.id}`);
       toast.success('Playlist drafted!');
     } catch (error) {
-      toast.error('Failed to create playlist');
+      toast.error(getErrorMessage(error, 'Failed to create playlist'));
     }
   };
 

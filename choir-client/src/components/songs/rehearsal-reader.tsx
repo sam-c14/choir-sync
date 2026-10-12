@@ -11,6 +11,7 @@ import { AudioPlayer } from './audio-player';
 import { useSnippetUploadUrl, useCreateSnippet, useDeleteSnippet, useUpdateSnippet } from '../../hooks/use-snippets';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Mic } from 'lucide-react';
+import { getErrorMessage } from '../../lib/api-client';
 interface VoiceSnippet {
   id: string;
   audioUrl: string;
@@ -99,7 +100,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
       }
       setIsEditing(false);
     } catch (_e) {
-      toast.error('Failed to save changes');
+      toast.error(getErrorMessage(_e, 'Failed to save changes'));
     }
   };
 
@@ -168,7 +169,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
       setIsRecordOpen(false);
     } catch (_err) {
       console.error(_err);
-      toast.error('Failed to save audio snippet');
+      toast.error(getErrorMessage(_err, 'Failed to save audio snippet'));
     }
   };
 
@@ -177,7 +178,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
       await updateSnippet.mutateAsync({ id, title });
       toast.success('Audio label updated');
     } catch (err) {
-      toast.error('Failed to update audio label');
+      toast.error(getErrorMessage(err, 'Failed to update audio label'));
       throw err;
     }
   };
@@ -187,7 +188,7 @@ export function RehearsalReader({ songId, parts, lyrics: initialLyrics, title, c
       await deleteSnippet.mutateAsync(snippetId);
       toast.success('Snippet deleted');
     } catch (_err) {
-      toast.error('Failed to delete snippet');
+      toast.error(getErrorMessage(_err, 'Failed to delete snippet'));
     }
   };
 

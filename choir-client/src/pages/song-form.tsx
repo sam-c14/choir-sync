@@ -19,6 +19,7 @@ import {
 } from '../components/ui/select';
 import { toast } from 'sonner';
 import { AlertCircle, ArrowLeft, Wand2, Loader2 } from 'lucide-react';
+import { getErrorMessage } from '../lib/api-client';
 
 export default function SongFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -127,7 +128,9 @@ export default function SongFormPage() {
         }
       }
     } catch (err: any) {
-      setError('root', { message: err.message || 'Failed to save song.' });
+      const msg = getErrorMessage(err, 'Failed to save song.');
+      setError('root', { message: msg });
+      toast.error(msg);
     }
   };
 

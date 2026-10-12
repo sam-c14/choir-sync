@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '../../lib/api-client';
+import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { useAuth } from '../../auth/auth-context';
 import { useRoster, useSaveRoster, useDispatchRoster } from '../../hooks/use-rosters';
 import { Button } from '../ui/button';
@@ -101,7 +101,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
       });
       toast.success('Roster saved as draft');
     } catch (error) {
-      toast.error('Failed to save roster');
+      toast.error(getErrorMessage(error, 'Failed to save roster'));
     }
   };
 
@@ -118,7 +118,7 @@ export function RosterPanel({ playlistId, serviceDate }: { playlistId: string, s
       }
       setDispatchOpen(false);
     } catch (error) {
-      toast.error('Failed to notify team');
+      toast.error(getErrorMessage(error, 'Failed to notify team'));
     }
   };
 
