@@ -87,6 +87,8 @@ export default defineConfig(() => ({
         ],
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /\/api\/v1\/songs/,
