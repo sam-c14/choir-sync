@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import {
   usePlaylist,
   useSetPlaylistSongs,
@@ -145,6 +146,34 @@ export default function PlaylistDetailsPage() {
 
   return (
     <div className="container mx-auto p-4 max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <Helmet>
+        <title>{`${playlist.title} | DGC Resound`}</title>
+        <meta
+          name="description"
+          content={[
+            playlist.serviceDate
+              ? `Service: ${new Date(playlist.serviceDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+              : null,
+            playlist.description ?? null,
+            `${(playlist.songs ?? []).length} song${(playlist.songs ?? []).length !== 1 ? 's' : ''}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        />
+        <meta property="og:title" content={`${playlist.title} | DGC Resound`} />
+        <meta
+          property="og:description"
+          content={[
+            playlist.serviceDate
+              ? `Service: ${new Date(playlist.serviceDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+              : null,
+            playlist.description ?? null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || 'Choir playlist on DGC Resound'}
+        />
+        <meta property="og:type" content="article" />
+      </Helmet>
       <Button
         variant="ghost"
         onClick={() => navigate("/playlists")}

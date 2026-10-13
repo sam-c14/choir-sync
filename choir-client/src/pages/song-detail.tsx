@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { useSong } from '../hooks/use-songs';
 import { useAuth } from '../auth/auth-context';
 import { Button } from '../components/ui/button';
@@ -87,6 +88,31 @@ export default function SongDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 pb-24 space-y-8">
+      <Helmet>
+        <title>{`${song.title}${song.composer ? ` — ${song.composer}` : ''} | DGC Resound`}</title>
+        <meta
+          name="description"
+          content={[
+            song.composer ? `By ${song.composer}` : null,
+            song.originalKey ? `Key: ${song.originalKey}` : null,
+            `Complexity: ${song.complexity}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        />
+        <meta property="og:title" content={`${song.title}${song.composer ? ` — ${song.composer}` : ''} | DGC Resound`} />
+        <meta
+          property="og:description"
+          content={[
+            song.composer ? `By ${song.composer}` : null,
+            song.originalKey ? `Key: ${song.originalKey}` : null,
+            `Complexity: ${song.complexity}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        />
+        <meta property="og:type" content="article" />
+      </Helmet>
       <div>
         <Button variant="ghost" onClick={() => navigate('/')} className="mb-4 -ml-4 text-muted-foreground">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Library

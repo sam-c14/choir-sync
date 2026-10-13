@@ -19,6 +19,7 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import { apiLimiter } from './middleware/rateLimiter';
 import { sendError, handleControllerError } from './lib/errors';
+import { seoBotProxy } from './middleware/seo-bot-proxy';
 
 const app = express();
 app.disable('x-powered-by');
@@ -147,6 +148,11 @@ app.use('/api/v1/snippets', snippetsRoutes);
 app.get('/api', (req, res) => {
   res.send({ message: 'Welcome to choir-api!' });
 });
+
+// SEO Bot Proxy: intercept known social-media crawlers on dynamic routes
+// and serve server-rendered HTML with page-specific Open Graph tags.
+// Must be mounted before the 404 catch-all so bots get a 200 response.
+app.use(seoBotProxy);
 
 // 404 handler for unmapped routes
 app.use((req, res) => {

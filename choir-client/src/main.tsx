@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import * as ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 import App from './app/app';
 import { ThemeProvider } from './components/theme-provider';
 
@@ -68,12 +69,14 @@ const googleClientId =
 
 root.render(
   <StrictMode>
-    <GoogleOAuthProvider clientId={googleClientId}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider defaultTheme="system" storageKey="choir-sync-theme">
-          <App />
-        </ThemeProvider>
-      </QueryClientProvider>
-    </GoogleOAuthProvider>
+    <HelmetProvider>
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider defaultTheme="system" storageKey="choir-sync-theme">
+            <App />
+          </ThemeProvider>
+        </QueryClientProvider>
+      </GoogleOAuthProvider>
+    </HelmetProvider>
   </StrictMode>
 );
