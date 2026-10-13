@@ -1559,3 +1559,55 @@ Run `nx-workspace-verify` to ensure the new dependencies don't break the web bui
 6. Update `manifest.json` (or your Vite PWA config) to reference the newly generated 192x192 and 512x512 icons, and update the `name` and `short_name` to the finalized app name.
 **Verify with:** Running `nx serve choir-client` to check the browser tab favicon, and inspecting the `choir-client/android/app/src/main/res/` folder to ensure the Android launcher icons were successfully generated.
 ```
+
+## Milestone 26 — Dynamic SEO & Social Link Previews (Open Graph)
+**Goal:** Ensure that sharing specific app links (like `/playlists/:id` or `/songs/:id`) on WhatsApp, Twitter, and iMessage displays dynamic, page-specific rich previews (Title, Description, Image) instead of the generic app fallback.
+**Do:**
+1. In `choir-client/`, install `react-helmet-async` to manage standard client-side `<title>` and `<meta>` tags for regular browser users and Google Search (which executes JS).
+2. Add placeholder injection tags (e.g., `<!-- __OG_TAGS__ -->`) inside the `<head>` of `choir-client/index.html`.
+3. In `choir-api/`, configure the server to serve the compiled frontend static files (or act as a proxy if deployed separately).
+4. Implement a bot-detection middleware in Express. Intercept requests to specific dynamic routes (e.g., `/playlists/:id`).
+5. If `req.headers['user-agent']` matches known social crawlers (WhatsApp, Facebook, Twitter, Slack), fetch the record from Prisma, dynamically generate the `<meta property="og:...">` tags, replace the placeholder in `index.html`, and return the populated HTML string.
+**Verify with:** `nx-workspace-verify`. Test the endpoint using Postman or `curl` by manually setting the User-Agent to `WhatsApp/2.21.12.21 A` and verifying the raw HTML response contains the dynamic database content in the meta tags.
+
+## Followup Prompt
+```bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 26 — Dynamic SEO & Social Link Previews (Open Graph).
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Context: WhatsApp and social media bots do not execute client-side JavaScript. We must inject Open Graph tags server-side for bots, while relying on `react-helmet-async` for standard browser users.
+
+Tasks:
+
+1. Client-Side SEO (`choir-client/`):
+   - Install `react-helmet-async`.
+   - Wrap the main React tree in `<HelmetProvider>`.
+   - In dynamic pages (e.g., `PlaylistDetails.tsx`, `SongDetails.tsx`), use `<Helmet>` to set the page `<title>` and `<meta name="description">` based on the fetched data.
+   - In `choir-client/index.html`, add a distinct marker inside the `<head>`: `<!-- __OG_TAGS__ -->`. Set the default fallback OG tags just below it.
+
+2. Server-Side Bot Interception (`choir-api/`):
+   - Create a new middleware file: `choir-api/src/middlewares/seo-bot-proxy.ts`.
+   - Create an array or regex of known social bots: `WhatsApp, facebookexternalhit, Twitterbot, LinkedInBot, Slackbot, TelegramBot`.
+   - In the middleware, check `req.headers['user-agent']`. If it is NOT a bot, call `next()` and let the normal static file server or frontend handle it.
+   - If IT IS a bot, and the route matches `/playlists/:id` or `/songs/:id`:
+     1. Extract the `id` from the URL path.
+     2. Await a fast Prisma query (e.g., `prisma.playlist.findUnique({ where: { id } })`).
+     3. Generate an HTML string of OG tags:
+        ```html
+        <meta property="og:title" content="DGC ChoirSync - ${playlist.title}">
+        <meta property="og:description" content="Setlist for ${formatDate(playlist.date)}">
+        <meta property="og:image" content="[https://your-domain.com/social-banner.png](https://your-domain.com/social-banner.png)">
+        <meta name="twitter:card" content="summary_large_image">
+        ```
+     4. Read the raw `index.html` file from the frontend build directory (using `fs.readFileSync`).
+     5. Replace `<!-- __OG_TAGS__ -->` with your generated HTML string.
+     6. `res.send(modifiedHtml)`.
+
+3. Express Routing Setup (`choir-api/`):
+   - Ensure this middleware is mounted in `app.ts` or `main.ts` *before* any static file serving middlewares or catch-all `*` routes.
+
+Verification:
+Run `nx-workspace-verify`. 
+To test, run the backend, then use curl: `curl -A "WhatsApp/2.21.19.21 A" http://localhost:YOUR_PORT/playlists/SOME_ID`. Ensure the terminal output shows the injected OG tags instead of the default `index.html`.
+```

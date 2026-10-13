@@ -45,7 +45,10 @@ export default function PlaylistDetailsPage() {
   const [isAddSongDialogOpen, setIsAddSongDialogOpen] = useState(false);
   const [songToRemove, setSongToRemove] = useState<string | null>(null);
 
-  const canEditPlaylist = user?.role === "DIRECTOR" || user?.role === "ADMIN" || user?.role === "SECTION_LEADER";
+  const canEditPlaylist =
+    user?.role === "DIRECTOR" ||
+    user?.role === "ADMIN" ||
+    user?.role === "SECTION_LEADER";
 
   if (isLoading) {
     return (
@@ -92,18 +95,21 @@ export default function PlaylistDetailsPage() {
     const currentSongs = playlist.songs || [];
     if (currentSongs.find((s: any) => s.songId === songId)) return;
 
-    await setPlaylistSongs.mutateAsync({
-      id: playlist.id,
-      songs: [
-        ...currentSongs.map((s: any) => ({
-          songId: s.songId,
-          orderIndex: s.orderIndex,
-          leadSinger: s.leadSinger,
-          customKey: s.customKey,
-        })),
-        { songId, orderIndex: currentSongs.length },
-      ],
-    });
+    await setPlaylistSongs.mutateAsync(
+      {
+        id: playlist.id,
+        songs: [
+          ...currentSongs.map((s: any) => ({
+            songId: s.songId,
+            orderIndex: s.orderIndex,
+            leadSinger: s.leadSinger,
+            customKey: s.customKey,
+          })),
+          { songId, orderIndex: currentSongs.length },
+        ],
+      },
+      { onSuccess: () => toast.success("Song added to playlist") },
+    );
   };
 
   const handleSetActive = async () => {
@@ -112,9 +118,12 @@ export default function PlaylistDetailsPage() {
       await setActivePlaylist.mutateAsync({ id: playlist.id, isActive: true });
       trackChoirEvent({
         action: "playlist_activated",
-        params: { playlistId: playlist.id, title: playlist.title, userId: user?.id },
+        params: {
+          playlistId: playlist.id,
+          title: playlist.title,
+          userId: user?.id,
+        },
       });
-
     } catch (error) {
       console.error("Failed to set active lineup", error);
     }
@@ -152,25 +161,27 @@ export default function PlaylistDetailsPage() {
           name="description"
           content={[
             playlist.serviceDate
-              ? `Service: ${new Date(playlist.serviceDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+              ? `Service: ${new Date(playlist.serviceDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
               : null,
             playlist.description ?? null,
-            `${(playlist.songs ?? []).length} song${(playlist.songs ?? []).length !== 1 ? 's' : ''}`,
+            `${(playlist.songs ?? []).length} song${(playlist.songs ?? []).length !== 1 ? "s" : ""}`,
           ]
             .filter(Boolean)
-            .join(' · ')}
+            .join(" · ")}
         />
         <meta property="og:title" content={`${playlist.title} | DGC Resound`} />
         <meta
           property="og:description"
-          content={[
-            playlist.serviceDate
-              ? `Service: ${new Date(playlist.serviceDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-              : null,
-            playlist.description ?? null,
-          ]
-            .filter(Boolean)
-            .join(' · ') || 'Choir playlist on DGC Resound'}
+          content={
+            [
+              playlist.serviceDate
+                ? `Service: ${new Date(playlist.serviceDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                : null,
+              playlist.description ?? null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "Choir playlist on DGC Resound"
+          }
         />
         <meta property="og:type" content="article" />
       </Helmet>
