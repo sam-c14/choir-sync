@@ -203,11 +203,13 @@ export default function PlaylistDetailsPage() {
               <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Active Lineup
             </Badge>
           )}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col gap-3 justify-start flex-wrap">
             <h1 className="text-3xl font-bold tracking-tight">
               {playlist.title}
             </h1>
-            <KeyPickerDialog playlist={playlist} isDirector={canEditPlaylist} />
+            <div className="flex items-center gap-2 flex-wrap">
+              <KeyPickerDialog playlist={playlist} isDirector={canEditPlaylist} />
+            </div>
           </div>
           {playlist.description && (
             <p className="text-muted-foreground">{playlist.description}</p>
