@@ -1484,16 +1484,19 @@ Verification:
 ```
 
 ## Milestone 24 — Android APK Web Distribution (Capacitor + Headless CI/CD)
+
 **Goal:** Package the ChoirSync web app into a standalone Android APK using Capacitor, built automatically via GitHub Actions, and distributed directly from the web app (bypassing the Google Play Store).
 **Do:**
+
 1. In `choir-client/`, install `@capacitor/core`, `@capacitor/cli`, and `@capacitor/android`.
 2. Initialize Capacitor (`capacitor.config.ts`) and set the `webDir` to match the frontend build output directory (e.g., `dist`).
 3. Create a GitHub Actions workflow (`.github/workflows/android-build.yml`) that runs on push to `main`. It should build the web app, sync Capacitor, and run Gradle to output a signed release APK using GitHub Secrets for the Keystore.
 4. Configure the GitHub Action to upload the resulting `app-release.apk` as a workflow artifact, or deploy it to the Supabase `public` bucket.
 5. In `choir-client/`, add a prominent "Install Android App (.apk)" button on the `/profile` page (and potentially the Login page) that links to the latest generated APK.
-**Verify with:** Triggering the GitHub Action, downloading the resulting `.apk` on an Android device, installing it, and verifying the app opens full-screen without browser UI.
+   **Verify with:** Triggering the GitHub Action, downloading the resulting `.apk` on an Android device, installing it, and verifying the app opens full-screen without browser UI.
 
 ## Followup Prompt
+
 ```bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 24 — Android APK Web Distribution.
 
@@ -1536,17 +1539,20 @@ Run `nx-workspace-verify` to ensure the new dependencies don't break the web bui
 ```
 
 ## Milestone 25 — Global App Branding & Icon Generation
+
 **Goal:** Apply the DGC crest as the universal logo across the Web (Favicon), PWA (manifest icons), and Android APK (Launcher icons) using an automated asset pipeline.
 **Do:**
+
 1. Save the master high-res logo as `logo.png` (ensure it has a solid background, as Android 8+ adaptive icons do not support transparent backgrounds for the base layer).
 2. In `choir-client/`, install `@capacitor/assets` as a dev dependency.
 3. Place the master `logo.png` inside an `assets/` folder at the root of `choir-client/`.
 4. Run the Capacitor asset generator to automatically create all required Android `mipmap` files, Web favicons, and PWA manifest icons.
 5. Update `index.html` to point to the newly generated favicon and apple-touch-icon.
 6. Update `manifest.json` (or your Vite PWA config) to reference the newly generated 192x192 and 512x512 icons, and update the `name` and `short_name` to the finalized app name.
-**Verify with:** Running `nx serve choir-client` to check the browser tab favicon, and inspecting the `choir-client/android/app/src/main/res/` folder to ensure the Android launcher icons were successfully generated.
+   **Verify with:** Running `nx serve choir-client` to check the browser tab favicon, and inspecting the `choir-client/android/app/src/main/res/` folder to ensure the Android launcher icons were successfully generated.
 
 ## Followup Prompt
+
 ```bash
 ## Milestone 25 — Global App Branding & Icon Generation
 **Goal:** Apply the DGC crest as the universal logo across the Web (Favicon), PWA (manifest icons), and Android APK (Launcher icons) using an automated asset pipeline.
@@ -1561,17 +1567,20 @@ Run `nx-workspace-verify` to ensure the new dependencies don't break the web bui
 ```
 
 ## Milestone 26 — Dynamic SEO & Social Link Previews (Open Graph)
+
 **Goal:** Ensure that sharing specific app links (like `/playlists/:id` or `/songs/:id`) on WhatsApp, Twitter, and iMessage displays dynamic, page-specific rich previews (Title, Description, Image) instead of the generic app fallback.
 **Do:**
+
 1. In `choir-client/`, install `react-helmet-async` to manage standard client-side `<title>` and `<meta>` tags for regular browser users and Google Search (which executes JS).
 2. Add placeholder injection tags (e.g., `<!-- __OG_TAGS__ -->`) inside the `<head>` of `choir-client/index.html`.
 3. In `choir-api/`, configure the server to serve the compiled frontend static files (or act as a proxy if deployed separately).
 4. Implement a bot-detection middleware in Express. Intercept requests to specific dynamic routes (e.g., `/playlists/:id`).
 5. If `req.headers['user-agent']` matches known social crawlers (WhatsApp, Facebook, Twitter, Slack), fetch the record from Prisma, dynamically generate the `<meta property="og:...">` tags, replace the placeholder in `index.html`, and return the populated HTML string.
-**Verify with:** `nx-workspace-verify`. Test the endpoint using Postman or `curl` by manually setting the User-Agent to `WhatsApp/2.21.12.21 A` and verifying the raw HTML response contains the dynamic database content in the meta tags.
+   **Verify with:** `nx-workspace-verify`. Test the endpoint using Postman or `curl` by manually setting the User-Agent to `WhatsApp/2.21.12.21 A` and verifying the raw HTML response contains the dynamic database content in the meta tags.
 
 ## Followup Prompt
-```bash
+
+````bash
 Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 26 — Dynamic SEO & Social Link Previews (Open Graph).
 
 Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/`.
@@ -1608,6 +1617,65 @@ Tasks:
    - Ensure this middleware is mounted in `app.ts` or `main.ts` *before* any static file serving middlewares or catch-all `*` routes.
 
 Verification:
-Run `nx-workspace-verify`. 
+Run `nx-workspace-verify`.
 To test, run the backend, then use curl: `curl -A "WhatsApp/2.21.19.21 A" http://localhost:YOUR_PORT/playlists/SOME_ID`. Ensure the terminal output shows the injected OG tags instead of the default `index.html`.
-```
+````
+
+## Milestone 27 — Advanced Search Engine (PostgreSQL FTS)
+
+**Goal:** Upgrade the global Omni-Search to support natural language phrasing, root stemming, and relevance sorting using PostgreSQL's native Full-Text Search.
+**Do:**
+
+1. Update `schema.prisma` to include the `fullTextSearchPostgres` preview feature in the client generator.
+2. Run `prisma generate` to update the local Prisma Client with the new search capabilities.
+3. In `choir-api/`, update the `GET /api/v1/search` endpoint to parse the incoming query string into a PostgreSQL `tsquery` format (e.g., separating terms with `|` for OR matching, or `&` for AND matching).
+4. Refactor the `prisma.song.findMany` and `prisma.playlist.findMany` calls to use the new `search` filter instead of `contains`, and apply `_relevance` sorting to order results by match accuracy.
+   **Verify with:** `nx-workspace-verify`, searching for a song using out-of-order words (e.g., "mercy lord" for "Lord Have Mercy"), and verifying it successfully returns at the top of the results.
+
+## Followup Prompt
+
+````bash
+Read PRD.md, RULES.md, and EXECUTION.md. Execute Milestone 27 — Advanced Search Engine (PostgreSQL FTS).
+
+Paths reminder: Root-level structure `choir-api/`, `choir-client/`, and `libs/shared/`.
+
+Tasks:
+
+1. Prisma Configuration (`choir-api/`):
+   - Open `choir-api/src/prisma/schema.prisma`.
+   - Update the `generator client` block to enable the preview feature:
+     ```prisma
+     generator client {
+       provider        = "prisma-client-js"
+       previewFeatures = ["fullTextSearchPostgres"]
+     }
+     ```
+   - Run the command to regenerate the Prisma client (e.g., `npx prisma generate`).
+
+2. Backend Search Controller Refactor (`choir-api/`):
+   - Locate the search controller/service powering `GET /api/v1/search` (from Milestone 21).
+   - Update the incoming query `q` to be formatted for PostgreSQL `tsquery`. Strip out special characters to prevent syntax errors, trim whitespace, and join words with the `|` (OR) or `&` (AND) operator:
+     ```typescript
+     // Example sanitization and formatting
+     const sanitized = q.replace(/[^\w\s]/gi, '').trim();
+     const formattedQuery = sanitized.split(/\s+/).join(' | ');
+     ```
+   - Update the `prisma.song.findMany` query:
+     - Replace `title: { contains: q, mode: 'insensitive' }` with `title: { search: formattedQuery }`.
+     - Add the `orderBy` relevance block:
+       ```typescript
+       orderBy: {
+         _relevance: {
+           fields: ['title'],
+           search: formattedQuery,
+           sort: 'desc'
+         }
+       }
+       ```
+   - Repeat the exact same `search` and `_relevance` upgrade for the `prisma.playlist.findMany` query.
+   - *Fallback Note:* If `sanitized` is empty after regex clearing, gracefully return empty arrays instead of passing an empty string to Prisma FTS (which throws an error).
+
+Verification:
+Run `nx-workspace-verify`.
+Start the backend and hit the search endpoint. Search for a song with multiple words out of order to confirm the Lexical Matching is functioning and the relevance sorter does not throw a TypeScript error.
+````

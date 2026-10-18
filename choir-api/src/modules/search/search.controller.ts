@@ -5,24 +5,39 @@ import { handleControllerError } from '../../lib/errors';
 export class SearchController {
   async search(req: Request, res: Response) {
     try {
-      const q = req.query.q as string;
-      if (!q || q.trim() === '') {
+      const rawQ = (req.query.q as string) || '';
+      const sanitized = rawQ.replace(/[^\w\s]/gi, '').trim();
+      if (!sanitized) {
         return res.json({ songs: [], playlists: [] });
       }
 
-      const query = q.trim();
+      const formattedQuery = sanitized.split(/\s+/).join(' | ');
 
       const [songs, playlists] = await Promise.all([
         prisma.song.findMany({
-          where: { title: { contains: query, mode: 'insensitive' } },
+          where: { title: { search: formattedQuery } },
+          orderBy: {
+            _relevance: {
+              fields: ['title'],
+              search: formattedQuery,
+              sort: 'desc',
+            },
+          },
           take: 5,
-          select: { id: true, title: true, composer: true, originalKey: true }
+          select: { id: true, title: true, composer: true, originalKey: true },
         }),
         prisma.playlist.findMany({
-          where: { title: { contains: query, mode: 'insensitive' } },
+          where: { title: { search: formattedQuery } },
+          orderBy: {
+            _relevance: {
+              fields: ['title'],
+              search: formattedQuery,
+              sort: 'desc',
+            },
+          },
           take: 5,
-          select: { id: true, title: true, serviceDate: true, isActive: true }
-        })
+          select: { id: true, title: true, serviceDate: true, isActive: true },
+        }),
       ]);
 
       res.json({ songs, playlists });
