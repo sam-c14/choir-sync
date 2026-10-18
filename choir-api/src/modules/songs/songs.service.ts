@@ -43,10 +43,22 @@ export class SongsService {
     const where: any = {};
     
     if (options.search) {
-      where.OR = [
-        { title: { contains: options.search, mode: 'insensitive' } },
-        { composer: { contains: options.search, mode: 'insensitive' } }
-      ];
+      const sanitized = options.search.replace(/[^\w\s]/gi, '').trim();
+      if (sanitized) {
+        const tokens = sanitized.split(/\s+/).filter(Boolean);
+        const formattedQuery = tokens.map((t) => `${t}:*`).join(' | ');
+        where.OR = [
+          { title: { search: formattedQuery } },
+          { composer: { search: formattedQuery } },
+          { title: { contains: options.search, mode: 'insensitive' } },
+          { composer: { contains: options.search, mode: 'insensitive' } },
+        ];
+      } else {
+        where.OR = [
+          { title: { contains: options.search, mode: 'insensitive' } },
+          { composer: { contains: options.search, mode: 'insensitive' } },
+        ];
+      }
     }
     
     if (options.status) {

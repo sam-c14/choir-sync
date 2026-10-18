@@ -11,11 +11,18 @@ export class SearchController {
         return res.json({ songs: [], playlists: [] });
       }
 
-      const formattedQuery = sanitized.split(/\s+/).join(' | ');
+      const tokens = sanitized.split(/\s+/).filter(Boolean);
+      const formattedQuery = tokens.map((t) => `${t}:*`).join(' | ');
 
       const [songs, playlists] = await Promise.all([
         prisma.song.findMany({
-          where: { title: { search: formattedQuery } },
+          where: {
+            OR: [
+              { title: { search: formattedQuery } },
+              { composer: { search: formattedQuery } },
+              { title: { contains: rawQ.trim(), mode: 'insensitive' } },
+            ],
+          },
           orderBy: {
             _relevance: {
               fields: ['title'],
@@ -27,7 +34,13 @@ export class SearchController {
           select: { id: true, title: true, composer: true, originalKey: true },
         }),
         prisma.playlist.findMany({
-          where: { title: { search: formattedQuery } },
+          where: {
+            OR: [
+              { title: { search: formattedQuery } },
+              { description: { search: formattedQuery } },
+              { title: { contains: rawQ.trim(), mode: 'insensitive' } },
+            ],
+          },
           orderBy: {
             _relevance: {
               fields: ['title'],
