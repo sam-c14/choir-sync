@@ -76,6 +76,7 @@ export function GlobalPlayer() {
               src={`${currentTrack.embedUrl}${currentTrack.embedUrl.includes('?') ? '&' : '?'}autoplay=1`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
             />
           </div>
         )}

@@ -409,6 +409,7 @@ export function LinksEditor({ songId, links, songTitle }: LinksEditorProps) {
                       src={inlinePlayingUrl === link.url ? `${embedUrl}${embedUrl.includes('?') ? '&' : '?'}autoplay=1` : embedUrl}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
+                      referrerPolicy="strict-origin-when-cross-origin"
                     />
 
                     {/* Interactive overlay when video is playing in background */}
