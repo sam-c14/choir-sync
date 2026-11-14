@@ -161,3 +161,44 @@ export const UpdateProfileSchema = z.object({
   avatarUrl: z.string().url().optional().nullable(),
 });
 export type UpdateProfileDto = z.infer<typeof UpdateProfileSchema>;
+
+// Audio Conference Rooms DTOs (Milestone 28)
+export const AudioRoomRoleEnum = z.enum(["host", "speaker", "listener"]);
+export type AudioRoomRole = z.infer<typeof AudioRoomRoleEnum>;
+
+export const AudioRoomStatusEnum = z.enum(["ACTIVE", "ENDED"]);
+export type AudioRoomStatus = z.infer<typeof AudioRoomStatusEnum>;
+
+export const CreateAudioRoomSchema = z.object({
+  title: z.string().min(1, "Title is required").max(100),
+  description: z.string().max(500).optional().nullable(),
+});
+export type CreateAudioRoomDto = z.infer<typeof CreateAudioRoomSchema>;
+
+export const UpdateAudioRoomSchema = CreateAudioRoomSchema.partial().extend({
+  status: AudioRoomStatusEnum.optional(),
+});
+export type UpdateAudioRoomDto = z.infer<typeof UpdateAudioRoomSchema>;
+
+export const UpdateParticipantRoleSchema = z.object({
+  role: AudioRoomRoleEnum.optional(),
+  isMuted: z.boolean().optional(),
+  handRaised: z.boolean().optional(),
+});
+export type UpdateParticipantRoleDto = z.infer<typeof UpdateParticipantRoleSchema>;
+
+export const AudioRoomTrackRequestSchema = z.object({
+  sessionDescription: z.object({
+    type: z.enum(["offer", "answer"]),
+    sdp: z.string().min(1),
+  }),
+  tracks: z.array(
+    z.object({
+      location: z.enum(["local", "remote"]),
+      mid: z.string().optional(),
+      trackName: z.string().optional(),
+      sessionId: z.string().optional(),
+    })
+  ),
+});
+export type AudioRoomTrackRequestDto = z.infer<typeof AudioRoomTrackRequestSchema>;

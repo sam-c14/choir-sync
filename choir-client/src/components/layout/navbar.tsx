@@ -53,6 +53,9 @@ export function Navbar() {
             <Link to="/playlists" className={getLinkClass('/playlists')}>
               Playlists
             </Link>
+            <Link to="/rooms" className={getLinkClass('/rooms')}>
+              Rooms
+            </Link>
             <Link to="/uniforms" className={getLinkClass('/uniforms')}>
               Uniforms
             </Link>

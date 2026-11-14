@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/auth-context';
-import { Music, ListMusic, Shirt, Users, CircleUser } from 'lucide-react';
+import { Music, ListMusic, Shirt, Users, CircleUser, Radio } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { UserAvatar } from '../ui/user-avatar';
 
@@ -16,6 +16,7 @@ export function BottomNav() {
   const navItems = [
     { name: 'Songs', path: '/', altPath: '/songs', icon: Music },
     { name: 'Playlists', path: '/playlists', icon: ListMusic },
+    { name: 'Rooms', path: '/rooms', icon: Radio },
     { name: 'Uniforms', path: '/uniforms', icon: Shirt },
   ];
 

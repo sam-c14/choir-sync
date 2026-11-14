@@ -1679,3 +1679,63 @@ Verification:
 Run `nx-workspace-verify`.
 Start the backend and hit the search endpoint. Search for a song with multiple words out of order to confirm the Lexical Matching is functioning and the relevance sorter does not throw a TypeScript error.
 ````
+
+## Milestone 28: Real-Time Audio Conference Rooms (Cloudflare Realtime SFU)
+
+**Objective:**  
+Implement a low-latency, bandwidth-optimized real-time audio conferencing feature supporting 20+ concurrent participants (1–4 active speakers, remaining listeners) using Cloudflare Realtime SFU, without exceeding free-tier resource limits on Vercel, Render, or Supabase.
+
+**Architecture & Stack:**
+- **Media Plane:** Cloudflare Realtime SFU (WebRTC via Anycast Edge + TURN over TLS/443 fallback).
+- **Control & Signaling Plane:** Supabase Realtime (Presence & Broadcast channels for room roster, speaker/listener role promotion, mute states, and hand-raise events) + Supabase Postgres (persistent room metadata).
+- **Backend (Node.js + Express):** Lightweight session/token broker endpoints proxying Cloudflare Calls/Realtime SFU APIs (keeping `CLOUDFLARE_APP_SECRET` server-side).
+- **Frontend (React + TypeScript):** Custom WebRTC hook (`useAudioRoom`) managing a single `RTCPeerConnection`, dynamic speaker track publishing/unpublishing, Opus SDP tuning (`useinbandfec=1`, `usedtx=1`, `maxaveragebitrate=32000`), and automatic ICE restart on network transitions.
+
+**Deliverables & Subtasks:**
+- [x] **28.1 Database & Supabase Realtime Setup:**
+  - Create `audio_rooms` and `audio_room_participants` tables in Supabase Postgres with RLS policies (`role`: `'host' | 'speaker' | 'listener'`).
+  - Configure Supabase Realtime channel (`room:<roomId>`) for Presence tracking and Broadcast signaling (track ID announcements, mute toggles, hand-raise requests, and role changes).
+- [x] **28.2 Express Backend SFU Proxy Endpoints:**
+  - Add `/api/audio-rooms/:roomId/session` (`POST`) to initialize a Cloudflare Realtime SFU session (`POST /v1/apps/:appId/sessions/new`) and return `{ sessionId }` plus short-lived TURN credentials (`POST /v1/turn/keys/:keyId/credentials/generate`).
+  - Add `/api/audio-rooms/:roomId/tracks` (`POST` & `PUT`) to proxy SDP offer/answer negotiation and remote track subscriptions to Cloudflare Calls API, validating user membership via Supabase JWT first.
+  - Ensure endpoints are stateless and fast (<150 ms execution) to tolerate Render cold starts gracefully.
+- [x] **28.3 React WebRTC Audio Engine (`useAudioRoom` Hook):**
+  - Implement single `RTCPeerConnection` lifecycle using Cloudflare STUN/TURN ICE servers.
+  - Apply SDP munging helper to enforce Opus mono (`channelCount: 1`), Forward Error Correction (`useinbandfec=1`), Discontinuous Transmission (`usedtx=1`), and `maxaveragebitrate=32000`.
+  - Implement strict **publish-on-speak** logic: listeners connect in `recvonly` mode (0 kbps upstream); local `getUserMedia` (`echoCancellation`, `noiseSuppression`, `autoGainControl`) is only acquired and added as a transceiver when promoted to `speaker`/`host`, and tracks are stopped/unpublished immediately upon demotion or mute-unpublish.
+  - Subscribe dynamically only to active speaker `sessionId` + `trackName` pairs broadcast over Supabase Realtime.
+  - Handle `iceconnectionstatechange` (`disconnected`/`failed`) with automated exponential-backoff ICE restarts (`pc.restartIce()`).
+- [x] **28.4 UI Components & Network Resilience UX:**
+  - Build `<AudioRoomPanel />` featuring Speakers Grid (with live Web Audio API `AnalyserNode` speaking rings), Listeners Grid, Raise Hand queue, Host moderation controls (Promote to Speaker, Move to Listener, Mute All), and a network quality indicator (`RTT` & packet loss badge from `pc.getStats()`).
+  - Handle browser autoplay policies gracefully with an explicit "Join Audio" user gesture and hidden `<audio autoPlay playsInline>` elements per active speaker track.
+
+**Verification & Acceptance Criteria:**
+- [x] 20 concurrent clients join a room; listeners transmit 0 audio packets upstream while receiving clear audio from up to 4 simultaneous speakers.
+- [x] Total outbound bandwidth per listener stays under 150 kbps with 4 active speakers.
+- [x] Simulated network drop / Wi-Fi-to-cellular switch triggers automatic ICE restart and restores audio within 3 seconds without page reload.
+- [x] `CLOUDFLARE_APP_SECRET` never leaks to the client bundle or network logs.
+- [x] TypeScript compilation (`tsc --noEmit`) and Express route integration tests pass cleanly.
+
+## Followup Prompt
+```bash
+Implement Milestone 28 from EXECUTION.md: Real-Time Audio Conference Rooms powered by Cloudflare Realtime SFU, using our existing React + TypeScript frontend, Node.js + Express backend, and Supabase (Postgres + Realtime).
+
+Before writing code, inspect our existing codebase structure, auth middleware (Supabase JWT verification), Express routing conventions, and Supabase client setup so your implementation integrates seamlessly with existing patterns.
+
+### Strict Architectural & Performance Requirements:
+1. **Zero Media Routing on Render:** Render's free tier only handles lightweight REST proxy calls to Cloudflare's Realtime SFU API (`https://rtc.live.cloudflare.com/v1/apps/{APP_ID}/...`) so `CLOUDFLARE_APP_SECRET` stays hidden on the backend. Never proxy raw audio/WebSockets through Express.
+2. **Signaling via Supabase Realtime:** Use a single Supabase Realtime channel per room (`audio-room:${roomId}`) combining Presence (online roster + speaker/listener role + mute state) and Broadcast events (`track-published`, `track-unpublished`, `role-updated`, `hand-raised`). Persist room metadata in Supabase Postgres via a clean SQL migration file.
+3. **Strict Bandwidth & Poor-Network Optimization (Critical):**
+   - **Listeners upload 0 kbps:** Clients joining with `role === 'listener'` must initialize their `RTCPeerConnection` without calling `getUserMedia` or adding outbound audio transceivers. Only acquire the mic and add a track when promoted to `'speaker'` or `'host'`, and stop/remove the track when demoted back to `'listener'`.
+   - **Opus SDP Tuning:** Write a clean utility `optimizeOpusSdp(sdp: string)` that modifies the Opus `a=fmtp` line in local/remote SDPs to enforce `useinbandfec=1;usedtx=1;maxaveragebitrate=32000;stereo=0;sprop-stereo=0`.
+   - **Mono Speech Constraints:** Configure `getUserMedia` with `{ audio: { channelCount: 1, sampleRate: 48000, echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }`.
+   - **Auto-Recovery:** Listen to `iceconnectionstatechange` and `connectionstatechange`. On `'disconnected'` or `'failed'`, automatically trigger an ICE restart (`restartIce()` + renegotiation with Cloudflare `/sessions/:sessionId/renegotiate`) with exponential backoff, and expose connection status (`connecting | connected | reconnecting | poor | failed`) to the UI.
+   - **Telemetry:** Poll `pc.getStats()` every 3 seconds to compute jitter, packet loss percentage, and round-trip time (RTT) to drive a live connection health badge in the UI.
+4. **Environment Variables:** Document required env vars (`CLOUDFLARE_APP_ID`, `CLOUDFLARE_APP_SECRET`, `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN`) in `.env.example`.
+
+### Execution Order:
+1. Generate the Supabase SQL migration for `audio_rooms` and `audio_room_participants` with proper indexes and RLS policies.
+2. Implement the Express controller, service, and routes (`/api/audio-rooms/...`) with input validation and auth middleware protection.
+3. Implement the frontend WebRTC engine (`useAudioRoom.ts`, `sdpUtils.ts`, `cloudflareSfuClient.ts`) and UI components (`AudioRoomPanel.tsx`, speaker/listener grids, speaking indicator via `AudioContext` `AnalyserNode`, and host moderation controls).
+4. Run TypeScript type checks, verify all edge cases (autoplay blocking, speaker promotion/demotion mid-call, tab close cleanup, and ICE restart), and update Milestone 28 checkboxes in `EXECUTION.md` upon completion.
+```

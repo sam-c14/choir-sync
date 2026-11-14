@@ -73,6 +73,8 @@ model User {
   voiceSnippets  VoiceSnippet[]
   rosterMembers  RosterMember[]
   notifications  Notification[]
+  audioRoomsHosted AudioRoom[]
+  audioRoomParticipants AudioRoomParticipant[]
 
   @@index([role])
 }
@@ -238,4 +240,39 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, isRead])
+}
+
+// 5. Audio Conference Rooms (Cloudflare Realtime SFU)
+model AudioRoom {
+  id           String                 @id @default(uuid())
+  title        String
+  description  String?
+  hostId       String                 @map("host_id")
+  host         User                   @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  status       String                 @default("ACTIVE") // ACTIVE, ENDED
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+  participants AudioRoomParticipant[]
+
+  @@map("audio_rooms")
+  @@index([status])
+  @@index([hostId])
+}
+
+model AudioRoomParticipant {
+  id         String    @id @default(uuid())
+  roomId     String    @map("room_id")
+  room       AudioRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       String    @default("listener") // host, speaker, listener
+  isMuted    Boolean   @default(true) @map("is_muted")
+  handRaised Boolean   @default(false) @map("hand_raised")
+  joinedAt   DateTime  @default(now()) @map("joined_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@unique([roomId, userId])
+  @@map("audio_room_participants")
+  @@index([roomId])
+  @@index([userId])
 }

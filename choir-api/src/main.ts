@@ -13,6 +13,7 @@ import externalMusicRoutes from './modules/external-music/external-music.routes'
 import searchRoutes from './modules/search/search.routes';
 import { prisma } from "./lib/prisma";
 import playlistsRoutes from './modules/playlists/playlists.routes';
+import audioRoomsRoutes from './modules/audio-rooms/audio-rooms.routes';
 import songPartsRoutes from './modules/snippets/song-parts.routes';
 import snippetsRoutes from './modules/snippets/snippets.routes';
 import swaggerUi from 'swagger-ui-express';
@@ -107,6 +108,8 @@ app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/external-music', externalMusicRoutes);
 app.use('/api/v1/playlists', playlistsRoutes);
 app.use('/api/v1/search', searchRoutes);
+app.use('/api/v1/audio-rooms', audioRoomsRoutes);
+app.use('/api/audio-rooms', audioRoomsRoutes);
 
 app.get('/api/health', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');

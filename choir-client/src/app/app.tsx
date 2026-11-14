@@ -17,6 +17,8 @@ import AdminUsersPage from '../pages/admin/users';
 import PlaylistsPage from '../pages/playlists';
 import PlaylistDetailsPage from '../pages/playlist-details';
 import { ProfilePage } from '../pages/profile';
+import AudioRoomsPage from '../pages/audio-rooms';
+import AudioRoomDetailPage from '../pages/audio-room-detail';
 
 import { Toaster } from '../components/ui/sonner';
 import { AnalyticsTracker } from '../lib/analytics';
@@ -46,6 +48,8 @@ function AppContent() {
                   <Route path="/uniforms" element={<UniformsPage />} />
                   <Route path="/playlists" element={<PlaylistsPage />} />
                   <Route path="/playlists/:id" element={<PlaylistDetailsPage />} />
+                  <Route path="/rooms" element={<AudioRoomsPage />} />
+                  <Route path="/rooms/:id" element={<AudioRoomDetailPage />} />
                   <Route path="/admin/users" element={<AdminUsersPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
