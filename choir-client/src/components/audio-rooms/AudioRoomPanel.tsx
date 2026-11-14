@@ -522,7 +522,7 @@ export function AudioRoomPanel({
   );
 }
 
-// Sub-component to attach WebRTC MediaStream to hidden HTMLAudioElement with voice meter
+// Sub-component to attach WebRTC MediaStream to invisible HTMLAudioElement with voice meter
 function RemoteAudioPlayer({
   remote,
   onSpeakingChange,
@@ -533,10 +533,20 @@ function RemoteAudioPlayer({
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (audioRef.current && remote.stream) {
-      audioRef.current.srcObject = remote.stream;
-      audioRef.current.play().catch((err) => {
-        console.warn('Autoplay audio stream handled:', err);
+    const el = audioRef.current;
+    if (el && remote.stream) {
+      el.srcObject = remote.stream;
+      el.play().catch((err) => {
+        console.warn('Autoplay audio stream handled (awaiting user gesture):', err);
+        const unlock = () => {
+          el?.play().catch(() => {});
+          window.removeEventListener('click', unlock);
+          window.removeEventListener('keydown', unlock);
+          window.removeEventListener('touchstart', unlock);
+        };
+        window.addEventListener('click', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
+        window.addEventListener('touchstart', unlock, { once: true });
       });
     }
 
@@ -549,5 +559,20 @@ function RemoteAudioPlayer({
     };
   }, [remote.stream, onSpeakingChange]);
 
-  return <audio ref={audioRef} autoPlay playsInline className="hidden" />;
+  return (
+    <audio
+      ref={audioRef}
+      autoPlay
+      playsInline
+      style={{
+        position: 'fixed',
+        left: '-9999px',
+        top: '-9999px',
+        width: '1px',
+        height: '1px',
+        opacity: 0.001,
+        pointerEvents: 'none',
+      }}
+    />
+  );
 }

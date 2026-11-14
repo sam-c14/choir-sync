@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { cloudflareSfuClient, SfuSessionResponse } from '../lib/cloudflare-sfu-client';
 import { optimizeOpusSdp } from '../lib/sdp-utils';
+import { AudioRoomSocket } from '../lib/audio-room-socket';
 import { useAuth } from '../auth/auth-context';
 import type { AudioRoomRole } from '@choir-workspace/shared-validation';
 
@@ -45,6 +45,11 @@ interface UseAudioRoomOptions {
   initialRole?: AudioRoomRole;
 }
 
+const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+  { urls: ['stun:stun.cloudflare.com:3478'] },
+];
+
 export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomOptions) {
   const { user } = useAuth();
 
@@ -64,25 +69,27 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
   const [error, setError] = useState<string | null>(null);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const p2pConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const pendingIceCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
+  const socketRef = useRef<AudioRoomSocket | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const localTrackNameRef = useRef<string | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const subscribedTracksRef = useRef<Set<string>>(new Set());
-  const realtimeChannelRef = useRef<any>(null);
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef(0);
   const isJoinedRef = useRef(false);
 
-  // Sync state with refs for listeners
+  // Sync state with refs for event listeners
   const roleRef = useRef<AudioRoomRole>(role);
   roleRef.current = role;
   const isMutedRef = useRef<boolean>(isMuted);
   isMutedRef.current = isMuted;
   const handRaisedRef = useRef<boolean>(handRaised);
   handRaisedRef.current = handRaised;
+  const participantsRef = useRef<RoomParticipantState[]>(participants);
+  participantsRef.current = participants;
 
-  // Clean up WebRTC peer connection
+  // Clean up all WebRTC connections and sockets
   const cleanupPeerConnection = useCallback(() => {
     if (statsIntervalRef.current) {
       clearInterval(statsIntervalRef.current);
@@ -99,144 +106,264 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       setLocalStream(null);
     }
 
+    p2pConnectionsRef.current.forEach((pc) => {
+      pc.ontrack = null;
+      pc.close();
+    });
+    p2pConnectionsRef.current.clear();
+    pendingIceCandidatesRef.current.clear();
+
     if (pcRef.current) {
       pcRef.current.ontrack = null;
-      pcRef.current.oniceconnectionstatechange = null;
-      pcRef.current.onconnectionstatechange = null;
       pcRef.current.close();
       pcRef.current = null;
     }
 
-    subscribedTracksRef.current.clear();
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+
     sessionIdRef.current = null;
     localTrackNameRef.current = null;
     setRemoteStreams(new Map());
     setConnectionStatus('disconnected');
   }, []);
 
-  // Poll RTCPeerConnection statistics every 3 seconds for telemetry
-  const startTelemetryMonitoring = useCallback((pc: RTCPeerConnection) => {
+  // Poll RTCPeerConnection statistics for telemetry
+  const startTelemetryMonitoring = useCallback(() => {
     if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
 
     statsIntervalRef.current = setInterval(async () => {
-      if (!pc || pc.connectionState === 'closed') return;
+      const pcs = [pcRef.current, ...Array.from(p2pConnectionsRef.current.values())].filter(
+        (p): p is RTCPeerConnection => Boolean(p && p.connectionState !== 'closed')
+      );
+
+      if (pcs.length === 0) return;
 
       try {
-        const stats = await pc.getStats();
-        let rtt = 0;
-        let jitter = 0;
-        let packetsLost = 0;
-        let packetsReceived = 0;
+        let maxRtt = 0;
+        let maxJitter = 0;
+        let totalLost = 0;
+        let totalPackets = 0;
 
-        stats.forEach((report) => {
-          if (report.type === 'candidate-pair' && report.state === 'succeeded') {
-            rtt = Math.round((report.currentRoundTripTime || 0) * 1000);
-          }
-          if (report.type === 'inbound-rtp' && report.kind === 'audio') {
-            jitter = Math.round((report.jitter || 0) * 1000);
-            packetsLost += report.packetsLost || 0;
-            packetsReceived += report.packetsReceived || 0;
-          }
-        });
+        for (const pc of pcs) {
+          const stats = await pc.getStats();
+          stats.forEach((report) => {
+            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+              const rtt = Math.round((report.currentRoundTripTime || 0) * 1000);
+              if (rtt > maxRtt) maxRtt = rtt;
+            }
+            if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+              const jitter = Math.round((report.jitter || 0) * 1000);
+              if (jitter > maxJitter) maxJitter = jitter;
+              const lost = report.packetsLost || 0;
+              const received = report.packetsReceived || 0;
+              totalLost += lost;
+              totalPackets += lost + received;
+            }
+          });
+        }
 
-        const totalPackets = packetsReceived + packetsLost;
-        const lossPercent = totalPackets > 0 ? Math.round((packetsLost / totalPackets) * 100) : 0;
-
+        const lossPercent = totalPackets > 0 ? Math.round((totalLost / totalPackets) * 100) : 0;
         let quality: 'excellent' | 'good' | 'poor' = 'excellent';
-        if (rtt > 300 || lossPercent > 5 || jitter > 60) {
+        if (maxRtt > 300 || lossPercent > 5 || maxJitter > 60) {
           quality = 'poor';
-        } else if (rtt > 150 || lossPercent > 2 || jitter > 30) {
+        } else if (maxRtt > 150 || lossPercent > 2 || maxJitter > 30) {
           quality = 'good';
         }
 
         setTelemetry({
-          rttMs: rtt,
-          jitterMs: jitter,
+          rttMs: maxRtt,
+          jitterMs: maxJitter,
           packetLossPercent: lossPercent,
           quality,
         });
-
-        if (quality === 'poor' && pc.connectionState === 'connected') {
-          setConnectionStatus('poor');
-        } else if (pc.connectionState === 'connected') {
-          setConnectionStatus('connected');
-        }
       } catch {
-        // Silently tolerate closed peer connection state
+        // Silently tolerate closed connections
       }
     }, 3000);
   }, []);
 
-  // Subscribe to remote speaker tracks announced via Supabase Realtime
-  const subscribeToRemoteTrack = useCallback(
-    async (speakerSessionId: string, trackName: string, speakerUserId: string) => {
-      const pc = pcRef.current;
-      const sessionId = sessionIdRef.current;
-      if (!pc || !sessionId || !speakerSessionId || !trackName) return;
-
-      const trackKey = `${speakerSessionId}:${trackName}`;
-      if (subscribedTracksRef.current.has(trackKey)) {
-        return;
+  // Flush any pending ICE candidates queued before remote description was ready
+  const flushPendingIceCandidates = useCallback(async (peerId: string, pc: RTCPeerConnection) => {
+    const queue = pendingIceCandidatesRef.current.get(peerId);
+    if (!queue || queue.length === 0) return;
+    for (const cand of queue) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(cand));
+      } catch (err) {
+        console.warn(`Buffered ICE candidate warning for ${peerId}:`, err);
       }
-      subscribedTracksRef.current.add(trackKey);
+    }
+    pendingIceCandidatesRef.current.delete(peerId);
+  }, []);
+
+  // Initiate direct WebRTC P2P audio offer to target peer
+  const sendP2pOffer = useCallback(
+    async (targetUserId: string) => {
+      if (!localStreamRef.current || targetUserId === user?.id) return;
+      const socket = socketRef.current;
+      if (!socket) return;
 
       try {
-        // Create an offer to pull the remote track
+        const existing = p2pConnectionsRef.current.get(targetUserId);
+        if (existing) {
+          existing.close();
+        }
+
+        const pc = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS });
+        p2pConnectionsRef.current.set(targetUserId, pc);
+
+        // Listen for inbound audio from peer on this connection as well
+        pc.ontrack = (event) => {
+          const stream = event.streams[0] || new MediaStream([event.track]);
+          const trackId = event.track.id;
+
+          setRemoteStreams((prev) => {
+            const next = new Map(prev);
+            next.set(targetUserId, {
+              stream,
+              userId: targetUserId,
+              sessionId: '',
+              trackName: trackId,
+            });
+            return next;
+          });
+
+          event.track.onended = () => {
+            setRemoteStreams((prev) => {
+              const next = new Map(prev);
+              next.delete(targetUserId);
+              return next;
+            });
+          };
+        };
+
+        localStreamRef.current.getAudioTracks().forEach((track) => {
+          pc.addTrack(track, localStreamRef.current!);
+        });
+
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            socket.send('webrtc-signal', {
+              targetUserId,
+              signal: { type: 'candidate', candidate: event.candidate },
+            });
+          }
+        };
+
         const offer = await pc.createOffer();
         const optimizedOffer = optimizeOpusSdp(offer.sdp || '');
         await pc.setLocalDescription({ type: 'offer', sdp: optimizedOffer });
 
-        const answerRes = await cloudflareSfuClient.subscribeRemoteTracks(
-          roomId,
-          sessionId,
-          optimizedOffer,
-          [{ sessionId: speakerSessionId, trackName }]
-        );
-
-        if (answerRes.sessionDescription) {
-          await pc.setRemoteDescription(answerRes.sessionDescription);
-        }
-      } catch (err: any) {
-        subscribedTracksRef.current.delete(trackKey);
-        console.warn(`Failed to subscribe to remote track ${trackKey}:`, err);
+        socket.send('webrtc-signal', {
+          targetUserId,
+          signal: { type: 'offer', sdp: optimizedOffer },
+        });
+      } catch (err) {
+        console.warn(`Failed to send P2P offer to ${targetUserId}:`, err);
       }
     },
-    [roomId]
+    [user?.id]
   );
 
-  // Trigger automated ICE restart with exponential backoff on network drop
-  const triggerIceRestart = useCallback(async () => {
-    const pc = pcRef.current;
-    const sessionId = sessionIdRef.current;
-    if (!pc || !sessionId) return;
+  // Handle incoming direct WebRTC P2P audio signal (offer/answer/ice-candidate)
+  const handleP2pSignal = useCallback(
+    async (fromUserId: string, signal: any) => {
+      const socket = socketRef.current;
+      if (!socket || fromUserId === user?.id) return;
 
-    reconnectAttemptsRef.current += 1;
-    setConnectionStatus('reconnecting');
+      try {
+        if (signal.type === 'offer') {
+          const existing = p2pConnectionsRef.current.get(fromUserId);
+          if (existing) {
+            existing.close();
+          }
 
-    try {
-      pc.restartIce();
-      const offer = await pc.createOffer({ iceRestart: true });
-      const optimizedOffer = optimizeOpusSdp(offer.sdp || '');
-      await pc.setLocalDescription({ type: 'offer', sdp: optimizedOffer });
+          const pc = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS });
+          p2pConnectionsRef.current.set(fromUserId, pc);
 
-      const renegotiateRes = await cloudflareSfuClient.renegotiate(roomId, sessionId, optimizedOffer);
-      if (renegotiateRes.sessionDescription) {
-        await pc.setRemoteDescription(renegotiateRes.sessionDescription);
+          // Add our local audio track if microphone is currently active
+          if (localStreamRef.current) {
+            localStreamRef.current.getAudioTracks().forEach((track) => {
+              pc.addTrack(track, localStreamRef.current!);
+            });
+          }
+
+          pc.ontrack = (event) => {
+            const stream = event.streams[0] || new MediaStream([event.track]);
+            const trackId = event.track.id;
+
+            setRemoteStreams((prev) => {
+              const next = new Map(prev);
+              next.set(fromUserId, {
+                stream,
+                userId: fromUserId,
+                sessionId: '',
+                trackName: trackId,
+              });
+              return next;
+            });
+
+            event.track.onended = () => {
+              setRemoteStreams((prev) => {
+                const next = new Map(prev);
+                next.delete(fromUserId);
+                return next;
+              });
+            };
+          };
+
+          pc.onicecandidate = (event) => {
+            if (event.candidate) {
+              socket.send('webrtc-signal', {
+                targetUserId: fromUserId,
+                signal: { type: 'candidate', candidate: event.candidate },
+              });
+            }
+          };
+
+          await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: signal.sdp }));
+          await flushPendingIceCandidates(fromUserId, pc);
+
+          const answer = await pc.createAnswer();
+          const optimizedAnswer = optimizeOpusSdp(answer.sdp || '');
+          await pc.setLocalDescription({ type: 'answer', sdp: optimizedAnswer });
+
+          socket.send('webrtc-signal', {
+            targetUserId: fromUserId,
+            signal: { type: 'answer', sdp: optimizedAnswer },
+          });
+        } else if (signal.type === 'answer') {
+          const pc = p2pConnectionsRef.current.get(fromUserId);
+          if (pc) {
+            await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: signal.sdp }));
+            await flushPendingIceCandidates(fromUserId, pc);
+          }
+        } else if (signal.type === 'candidate' && signal.candidate) {
+          const pc = p2pConnectionsRef.current.get(fromUserId);
+          if (pc && pc.remoteDescription) {
+            await pc.addIceCandidate(new RTCIceCandidate(signal.candidate)).catch(() => {});
+          } else {
+            if (!pendingIceCandidatesRef.current.has(fromUserId)) {
+              pendingIceCandidatesRef.current.set(fromUserId, []);
+            }
+            pendingIceCandidatesRef.current.get(fromUserId)!.push(signal.candidate);
+          }
+        }
+      } catch (err) {
+        console.warn(`P2P signaling error with ${fromUserId}:`, err);
       }
-      reconnectAttemptsRef.current = 0;
-      setConnectionStatus('connected');
-    } catch (err) {
-      console.warn('ICE restart attempt failed:', err);
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 10000);
-      reconnectTimeoutRef.current = setTimeout(triggerIceRestart, delay);
-    }
-  }, [roomId]);
+    },
+    [user?.id, flushPendingIceCandidates]
+  );
 
-  // Publish local microphone track (strict publish-on-speak for speakers/hosts)
+  // Publish local microphone track
   const publishMicrophoneTrack = useCallback(async () => {
     setError(null);
 
-    // 1. Acquire mono audio with speech optimizations and fallback
+    // 1. Acquire microphone audio
     let stream: MediaStream;
     try {
       try {
@@ -250,15 +377,14 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           },
           video: false,
         });
-      } catch (advancedErr) {
-        console.warn('Advanced audio constraints not supported, falling back to standard audio:', advancedErr);
+      } catch {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: false,
         });
       }
     } catch (micErr: any) {
-      console.error('Microphone access denied or unavailable:', micErr);
+      console.error('Microphone access denied:', micErr);
       setError('Could not access microphone. Please check your browser audio permissions.');
       setIsMuted(true);
       return;
@@ -273,14 +399,26 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     }
     setIsMuted(false);
 
-    // Immediately update local participant state so UI updates
     if (user?.id) {
       setParticipants((prev) =>
         prev.map((p) => (p.userId === user.id ? { ...p, isMuted: false } : p))
       );
     }
 
-    // 2. Publish to SFU peer connection if active
+    // 2. Broadcast unmuted state & track announcement through native WebSocket
+    if (socketRef.current) {
+      socketRef.current.send('mute-updated', { isMuted: false });
+      socketRef.current.send('track-published', { trackName: `mic-${user?.id}` });
+    }
+
+    // 3. Send direct WebRTC P2P audio offer to all other participants in the room
+    participantsRef.current.forEach((p) => {
+      if (p.userId !== user?.id) {
+        sendP2pOffer(p.userId);
+      }
+    });
+
+    // 4. Also negotiate with Cloudflare SFU if available
     const pc = pcRef.current;
     const sessionId = sessionIdRef.current;
     if (pc && sessionId && audioTrack) {
@@ -288,7 +426,6 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         const trackName = `mic-${user?.id || 'unknown'}-${Date.now()}`;
         localTrackNameRef.current = trackName;
 
-        // Check if an audio sender already exists on the peer connection
         const senders = pc.getSenders();
         const existingSender = senders.find((s) => s.track?.kind === 'audio');
         let sender: RTCRtpSender;
@@ -299,12 +436,10 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           sender = pc.addTrack(audioTrack, stream);
         }
 
-        // Create offer with Opus bandwidth & FEC tuning
         const offer = await pc.createOffer();
         const optimizedOffer = optimizeOpusSdp(offer.sdp || '');
         await pc.setLocalDescription({ type: 'offer', sdp: optimizedOffer });
 
-        // Negotiate track publishing with Cloudflare Calls via backend proxy
         const answerRes = await cloudflareSfuClient.publishLocalTrack(
           roomId,
           sessionId,
@@ -320,81 +455,32 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
             console.warn('SFU setRemoteDescription warning (non-fatal):', sdpErr);
           }
         }
-
-        // Broadcast track announcement to all listeners via Supabase Realtime
-        if (realtimeChannelRef.current) {
-          realtimeChannelRef.current.send({
-            type: 'broadcast',
-            event: 'track-published',
-            payload: {
-              userId: user?.id,
-              sessionId,
-              trackName,
-            },
-          });
-        }
       } catch (sfuErr) {
-        console.warn('SFU track publishing failed (audio remains active locally):', sfuErr);
+        console.warn('SFU track publishing warning (direct P2P remains active):', sfuErr);
       }
     }
-
-    // Broadcast mute status and track presence
-    if (realtimeChannelRef.current) {
-      realtimeChannelRef.current.send({
-        type: 'broadcast',
-        event: 'mute-updated',
-        payload: {
-          targetUserId: user?.id,
-          isMuted: false,
-        },
-      });
-
-      realtimeChannelRef.current.track({
-        userId: user?.id,
-        name: user?.name || user?.email || 'Chorister',
-        avatarUrl: user?.avatarUrl,
-        role: roleRef.current,
-        isMuted: false,
-        handRaised: handRaisedRef.current,
-        sessionId: sessionIdRef.current,
-        trackName: localTrackNameRef.current,
-      });
-    }
-
-    // Persist mute state in DB
-    if (user?.id) {
-      cloudflareSfuClient
-        .updateParticipantRole(roomId, user.id, { isMuted: false })
-        .catch(() => {});
-    }
-  }, [roomId, user]);
+  }, [roomId, user?.id, sendP2pOffer]);
 
   // Unpublish local microphone track when demoted or muted
   const unpublishMicrophoneTrack = useCallback(async () => {
-    const pc = pcRef.current;
-    const sessionId = sessionIdRef.current;
-    const trackName = localTrackNameRef.current;
-
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
       setLocalStream(null);
     }
 
-    if (pc) {
-      const senders = pc.getSenders();
-      senders.forEach((sender) => {
-        if (sender.track?.kind === 'audio') {
-          pc.removeTrack(sender);
-        }
+    p2pConnectionsRef.current.forEach((pc) => {
+      pc.getSenders().forEach((s) => {
+        if (s.track?.kind === 'audio') pc.removeTrack(s);
+      });
+    });
+
+    if (pcRef.current) {
+      pcRef.current.getSenders().forEach((s) => {
+        if (s.track?.kind === 'audio') pcRef.current?.removeTrack(s);
       });
     }
 
-    if (sessionId && trackName) {
-      await cloudflareSfuClient.closeTracks(roomId, sessionId, [trackName]).catch(() => {});
-    }
-
-    localTrackNameRef.current = null;
     setIsMuted(true);
 
     if (user?.id) {
@@ -403,44 +489,11 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       );
     }
 
-    if (realtimeChannelRef.current) {
-      realtimeChannelRef.current.send({
-        type: 'broadcast',
-        event: 'track-unpublished',
-        payload: {
-          userId: user?.id,
-          sessionId,
-          trackName,
-        },
-      });
-
-      realtimeChannelRef.current.send({
-        type: 'broadcast',
-        event: 'mute-updated',
-        payload: {
-          targetUserId: user?.id,
-          isMuted: true,
-        },
-      });
-
-      realtimeChannelRef.current.track({
-        userId: user?.id,
-        name: user?.name || user?.email || 'Chorister',
-        avatarUrl: user?.avatarUrl,
-        role: roleRef.current,
-        isMuted: true,
-        handRaised: handRaisedRef.current,
-        sessionId,
-        trackName: null,
-      });
+    if (socketRef.current) {
+      socketRef.current.send('mute-updated', { isMuted: true });
+      socketRef.current.send('track-unpublished', { trackName: localTrackNameRef.current });
     }
-
-    if (user?.id) {
-      cloudflareSfuClient
-        .updateParticipantRole(roomId, user.id, { isMuted: true })
-        .catch(() => {});
-    }
-  }, [roomId, user]);
+  }, [user?.id]);
 
   // Initialize and connect to the conference room
   const joinRoom = useCallback(async () => {
@@ -450,15 +503,9 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     setConnectionStatus('connecting');
 
     try {
-      // 1. Register participant in backend database
+      // 1. Register in backend database and fetch initial metadata
       try {
         await cloudflareSfuClient.joinRoom(roomId);
-      } catch (joinErr) {
-        console.warn('Backend joinRoom registration warning:', joinErr);
-      }
-
-      // 2. Seed participants from backend database so initial statuses are present immediately
-      try {
         const roomData = await cloudflareSfuClient.getRoom(roomId);
         if (roomData?.participants) {
           const initialList: RoomParticipantState[] = roomData.participants.map((p: any) => ({
@@ -471,295 +518,182 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           }));
           setParticipants(initialList);
         }
-      } catch (fetchErr) {
-        console.warn('Could not fetch initial room participants:', fetchErr);
+      } catch (dbErr) {
+        console.warn('Database room join warning:', dbErr);
       }
 
-      // 3. Initialize SFU session with Cloudflare via backend proxy
-      const sessionData: SfuSessionResponse = await cloudflareSfuClient.createSession(roomId);
-      sessionIdRef.current = sessionData.sessionId;
+      // 2. Connect to Native WebSocket Signaling Server on choir-api
+      const token = localStorage.getItem('token') || '';
+      const socket = new AudioRoomSocket(roomId, token);
+      socketRef.current = socket;
 
-      // 4. Instantiate single RTCPeerConnection with STUN/TURN servers
-      const pc = new RTCPeerConnection({
-        iceServers: sessionData.iceServers,
-        bundlePolicy: 'max-bundle',
-        rtcpMuxPolicy: 'require',
+      socket.on('connected', () => {
+        setConnectionStatus('connected');
       });
-      pcRef.current = pc;
 
-      // Listen for incoming remote tracks from subscribed speakers
-      pc.ontrack = (event) => {
-        const stream = event.streams[0] || new MediaStream([event.track]);
-        const trackId = event.track.id;
+      socket.on('room-roster', (payload: any) => {
+        if (Array.isArray(payload?.participants)) {
+          setParticipants(payload.participants);
 
-        setRemoteStreams((prev) => {
-          const next = new Map(prev);
-          next.set(trackId, {
-            stream,
-            userId: 'remote-speaker',
-            sessionId: '',
-            trackName: trackId,
+          // If local user has an active microphone, offer audio to remote participants
+          if (localStreamRef.current && (roleRef.current === 'host' || roleRef.current === 'speaker')) {
+            payload.participants.forEach((p: any) => {
+              if (p.userId !== user?.id) {
+                sendP2pOffer(p.userId);
+              }
+            });
+          }
+        }
+      });
+
+      socket.on('participant-joined', (payload: any) => {
+        if (payload?.participant?.userId) {
+          const newP = payload.participant;
+          setParticipants((prev) => {
+            const exists = prev.some((p) => p.userId === newP.userId);
+            if (exists) {
+              return prev.map((p) => (p.userId === newP.userId ? { ...p, ...newP } : p));
+            }
+            return [...prev, newP];
           });
-          return next;
-        });
 
-        event.track.onended = () => {
+          // Offer P2P audio to newly joined attendee if we are speaking
+          if (localStreamRef.current && (roleRef.current === 'host' || roleRef.current === 'speaker')) {
+            sendP2pOffer(newP.userId);
+          }
+        }
+      });
+
+      socket.on('participant-left', (payload: any) => {
+        if (payload?.userId) {
+          setParticipants((prev) => prev.filter((p) => p.userId !== payload.userId));
+
+          const pc = p2pConnectionsRef.current.get(payload.userId);
+          if (pc) {
+            pc.close();
+            p2pConnectionsRef.current.delete(payload.userId);
+          }
           setRemoteStreams((prev) => {
             const next = new Map(prev);
-            next.delete(trackId);
+            next.delete(payload.userId);
+            return next;
+          });
+        }
+      });
+
+      socket.on('hand-raised', (payload: any) => {
+        if (payload?.userId) {
+          setParticipants((prev) =>
+            prev.map((p) =>
+              p.userId === payload.userId ? { ...p, handRaised: payload.handRaised } : p
+            )
+          );
+        }
+      });
+
+      socket.on('mute-updated', (payload: any) => {
+        if (payload?.targetUserId) {
+          setParticipants((prev) =>
+            prev.map((p) =>
+              p.userId === payload.targetUserId ? { ...p, isMuted: payload.isMuted } : p
+            )
+          );
+        }
+        if (payload?.targetUserId === user?.id && payload.isMuted) {
+          if (localStreamRef.current) {
+            localStreamRef.current.getAudioTracks().forEach((track) => {
+              track.enabled = false;
+            });
+          }
+          setIsMuted(true);
+        }
+      });
+
+      socket.on('role-updated', (payload: any) => {
+        if (payload?.targetUserId && payload?.newRole) {
+          setParticipants((prev) =>
+            prev.map((p) =>
+              p.userId === payload.targetUserId
+                ? {
+                    ...p,
+                    role: payload.newRole,
+                    handRaised: payload.newRole === 'speaker' ? false : p.handRaised,
+                  }
+                : p
+            )
+          );
+        }
+        if (payload?.targetUserId === user?.id) {
+          setRole(payload.newRole);
+          if (payload.newRole === 'listener') {
+            unpublishMicrophoneTrack();
+          } else if (payload.newRole === 'speaker') {
+            publishMicrophoneTrack();
+          }
+        }
+      });
+
+      socket.on('mute-all', () => {
+        if (roleRef.current !== 'host') {
+          if (localStreamRef.current) {
+            localStreamRef.current.getAudioTracks().forEach((track) => {
+              track.enabled = false;
+            });
+          }
+          setIsMuted(true);
+        }
+      });
+
+      socket.on('track-published', (payload: any) => {
+        if (payload?.userId && payload.userId !== user?.id) {
+          if (localStreamRef.current && !p2pConnectionsRef.current.has(payload.userId)) {
+            sendP2pOffer(payload.userId);
+          }
+        }
+      });
+
+      socket.on('webrtc-signal', (payload: any) => {
+        if (payload?.fromUserId && payload.signal) {
+          handleP2pSignal(payload.fromUserId, payload.signal);
+        }
+      });
+
+      socket.connect();
+
+      // 3. Initialize Cloudflare Calls SFU session as secondary high-scale router
+      try {
+        const sessionData: SfuSessionResponse = await cloudflareSfuClient.createSession(roomId);
+        sessionIdRef.current = sessionData.sessionId;
+
+        const pc = new RTCPeerConnection({
+          iceServers: sessionData.iceServers?.length ? sessionData.iceServers : DEFAULT_ICE_SERVERS,
+          bundlePolicy: 'max-bundle',
+          rtcpMuxPolicy: 'require',
+        });
+        pcRef.current = pc;
+
+        pc.ontrack = (event) => {
+          const stream = event.streams[0] || new MediaStream([event.track]);
+          const trackId = event.track.id;
+
+          setRemoteStreams((prev) => {
+            const next = new Map(prev);
+            next.set(trackId, {
+              stream,
+              userId: 'sfu-speaker',
+              sessionId: '',
+              trackName: trackId,
+            });
             return next;
           });
         };
-      };
-
-      // Auto-recovery connection state listeners
-      pc.oniceconnectionstatechange = () => {
-        if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-          triggerIceRestart();
-        }
-      };
-
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'connected') {
-          setConnectionStatus('connected');
-        } else if (pc.connectionState === 'failed') {
-          triggerIceRestart();
-        }
-      };
-
-      // Start live telemetry polling
-      startTelemetryMonitoring(pc);
-
-      // 4. Connect to Supabase Realtime channel for presence and signaling
-      if (isSupabaseConfigured) {
-        const channel = supabase.channel(`audio-room:${roomId}`, {
-          config: { presence: { key: user?.id || `anon-${Date.now()}` } },
-        });
-        realtimeChannelRef.current = channel;
-
-        channel
-          .on('presence', { event: 'sync' }, () => {
-            const state = channel.presenceState();
-            const presenceMap = new Map<string, RoomParticipantState>();
-
-            Object.values(state).forEach((presences: any) => {
-              presences.forEach((p: any) => {
-                if (p.userId) {
-                  presenceMap.set(p.userId, {
-                    userId: p.userId,
-                    name: p.name || 'Chorister',
-                    avatarUrl: p.avatarUrl,
-                    role: p.role || 'listener',
-                    isMuted: p.isMuted ?? true,
-                    handRaised: p.handRaised ?? false,
-                    sessionId: p.sessionId,
-                    trackName: p.trackName,
-                  });
-                }
-              });
-            });
-
-            // If active presence exists, presence state is the live ground truth
-            if (presenceMap.size > 0) {
-              setParticipants((prev) => {
-                const nextList: RoomParticipantState[] = [];
-                presenceMap.forEach((pres, uId) => {
-                  const existing = prev.find((p) => p.userId === uId);
-                  nextList.push({
-                    ...existing,
-                    ...pres,
-                    handRaised: pres.handRaised !== undefined ? pres.handRaised : (existing?.handRaised ?? false),
-                  });
-                });
-                return nextList;
-              });
-
-              // Subscribe to any active speaker tracks not yet subscribed to
-              presenceMap.forEach((p) => {
-                if (
-                  (p.role === 'host' || p.role === 'speaker') &&
-                  p.sessionId &&
-                  p.trackName &&
-                  p.userId !== user?.id
-                ) {
-                  subscribeToRemoteTrack(p.sessionId, p.trackName, p.userId);
-                }
-              });
-            }
-          })
-          .on('presence', { event: 'join' }, ({ newPresences }) => {
-            if (!newPresences) return;
-            newPresences.forEach((p: any) => {
-              if (!p?.userId) return;
-              const newParticipant: RoomParticipantState = {
-                userId: p.userId,
-                name: p.name || 'Chorister',
-                avatarUrl: p.avatarUrl,
-                role: p.role || 'listener',
-                isMuted: p.isMuted ?? true,
-                handRaised: p.handRaised ?? false,
-                sessionId: p.sessionId,
-                trackName: p.trackName,
-              };
-
-              setParticipants((prev) => {
-                const exists = prev.some((item) => item.userId === p.userId);
-                if (exists) {
-                  return prev.map((item) => (item.userId === p.userId ? { ...item, ...newParticipant } : item));
-                }
-                return [...prev, newParticipant];
-              });
-
-              if (
-                (p.role === 'host' || p.role === 'speaker') &&
-                p.sessionId &&
-                p.trackName &&
-                p.userId !== user?.id
-              ) {
-                subscribeToRemoteTrack(p.sessionId, p.trackName, p.userId);
-              }
-            });
-          })
-          .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-            if (!leftPresences) return;
-            const leftIds = new Set(leftPresences.map((p: any) => p.userId).filter(Boolean));
-            setParticipants((prev) => prev.filter((p) => !leftIds.has(p.userId)));
-          })
-          .on('broadcast', { event: 'participant-joined' }, ({ payload }) => {
-            if (payload?.participant?.userId) {
-              setParticipants((prev) => {
-                const exists = prev.some((p) => p.userId === payload.participant.userId);
-                if (exists) {
-                  return prev.map((p) =>
-                    p.userId === payload.participant.userId ? { ...p, ...payload.participant } : p
-                  );
-                }
-                return [...prev, payload.participant];
-              });
-
-              if (
-                (payload.participant.role === 'host' || payload.participant.role === 'speaker') &&
-                payload.participant.sessionId &&
-                payload.participant.trackName &&
-                payload.participant.userId !== user?.id
-              ) {
-                subscribeToRemoteTrack(
-                  payload.participant.sessionId,
-                  payload.participant.trackName,
-                  payload.participant.userId
-                );
-              }
-            }
-          })
-          .on('broadcast', { event: 'participant-left' }, ({ payload }) => {
-            if (payload?.userId) {
-              setParticipants((prev) => prev.filter((p) => p.userId !== payload.userId));
-            }
-          })
-          .on('broadcast', { event: 'hand-raised' }, ({ payload }) => {
-            if (payload?.userId) {
-              setParticipants((prev) =>
-                prev.map((p) =>
-                  p.userId === payload.userId ? { ...p, handRaised: payload.handRaised } : p
-                )
-              );
-            }
-          })
-          .on('broadcast', { event: 'track-published' }, ({ payload }) => {
-            if (payload.userId !== user?.id && payload.sessionId && payload.trackName) {
-              subscribeToRemoteTrack(payload.sessionId, payload.trackName, payload.userId);
-            }
-          })
-          .on('broadcast', { event: 'track-unpublished' }, ({ payload }) => {
-            if (payload.trackName) {
-              setRemoteStreams((prev) => {
-                const next = new Map(prev);
-                for (const [key, val] of next.entries()) {
-                  if (val.trackName === payload.trackName) {
-                    next.delete(key);
-                  }
-                }
-                return next;
-              });
-            }
-          })
-          .on('broadcast', { event: 'role-updated' }, ({ payload }) => {
-            if (payload?.targetUserId && payload?.newRole) {
-              setParticipants((prev) =>
-                prev.map((p) =>
-                  p.userId === payload.targetUserId
-                    ? {
-                        ...p,
-                        role: payload.newRole,
-                        handRaised: payload.newRole === 'speaker' ? false : p.handRaised,
-                      }
-                    : p
-                )
-              );
-            }
-            if (payload?.targetUserId === user?.id) {
-              setRole(payload.newRole);
-              if (payload.newRole === 'listener') {
-                unpublishMicrophoneTrack();
-              } else if (payload.newRole === 'speaker') {
-                publishMicrophoneTrack();
-              }
-            }
-          })
-          .on('broadcast', { event: 'mute-updated' }, ({ payload }) => {
-            if (payload?.targetUserId) {
-              setParticipants((prev) =>
-                prev.map((p) =>
-                  p.userId === payload.targetUserId ? { ...p, isMuted: payload.isMuted } : p
-                )
-              );
-            }
-            if (payload?.targetUserId === user?.id && payload.isMuted) {
-              if (localStreamRef.current) {
-                localStreamRef.current.getAudioTracks().forEach((track) => {
-                  track.enabled = false;
-                });
-              }
-              setIsMuted(true);
-            }
-          })
-          .on('broadcast', { event: 'mute-all' }, () => {
-            if (roleRef.current !== 'host') {
-              if (localStreamRef.current) {
-                localStreamRef.current.getAudioTracks().forEach((track) => {
-                  track.enabled = false;
-                });
-              }
-              setIsMuted(true);
-            }
-          })
-          .subscribe(async (status) => {
-            if (status === 'SUBSCRIBED') {
-              const participantData: RoomParticipantState = {
-                userId: user?.id || `anon-${Date.now()}`,
-                name: user?.name || user?.email || 'Chorister',
-                avatarUrl: user?.avatarUrl,
-                role: roleRef.current,
-                isMuted: isMutedRef.current,
-                handRaised: handRaisedRef.current,
-                sessionId: sessionIdRef.current,
-                trackName: localTrackNameRef.current,
-              };
-
-              await channel.track(participantData);
-
-              channel.send({
-                type: 'broadcast',
-                event: 'participant-joined',
-                payload: { participant: participantData },
-              });
-            }
-          });
+      } catch (sfuErr) {
+        console.warn('Cloudflare SFU initialization warning (direct WebSockets P2P active):', sfuErr);
       }
 
-      setConnectionStatus('connected');
+      startTelemetryMonitoring();
 
-      // If user joined directly as host or speaker, publish microphone immediately
+      // If joining directly as host or speaker, activate microphone immediately
       if (role === 'host' || role === 'speaker') {
         publishMicrophoneTrack();
       }
@@ -771,12 +705,12 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     }
   }, [
     roomId,
-    user,
+    user?.id,
     role,
     publishMicrophoneTrack,
     unpublishMicrophoneTrack,
-    subscribeToRemoteTrack,
-    triggerIceRestart,
+    sendP2pOffer,
+    handleP2pSignal,
     startTelemetryMonitoring,
   ]);
 
@@ -784,19 +718,9 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
   const leaveRoom = useCallback(async () => {
     isJoinedRef.current = false;
 
-    if (realtimeChannelRef.current) {
-      try {
-        realtimeChannelRef.current.send({
-          type: 'broadcast',
-          event: 'participant-left',
-          payload: { userId: user?.id },
-        });
-        await realtimeChannelRef.current.untrack();
-      } catch (untrackErr) {
-        console.warn('Presence untrack warning:', untrackErr);
-      }
-      supabase.removeChannel(realtimeChannelRef.current);
-      realtimeChannelRef.current = null;
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
     }
 
     cleanupPeerConnection();
@@ -806,13 +730,12 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     } catch {
       // Ignore exit failure
     }
-  }, [roomId, user?.id, cleanupPeerConnection]);
+  }, [roomId, cleanupPeerConnection]);
 
   // Toggle microphone mute/unmute
   const toggleMute = useCallback(() => {
     if (role === 'listener') return;
 
-    // If active stream already exists, toggle enabled state instantly
     if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
       const nextMuted = !isMuted;
       localStreamRef.current.getAudioTracks().forEach((track) => {
@@ -826,26 +749,16 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         );
       }
 
-      if (realtimeChannelRef.current) {
-        realtimeChannelRef.current.send({
-          type: 'broadcast',
-          event: 'mute-updated',
-          payload: {
-            targetUserId: user?.id,
-            isMuted: nextMuted,
-          },
+      if (!nextMuted) {
+        participantsRef.current.forEach((p) => {
+          if (p.userId !== user?.id && !p2pConnectionsRef.current.has(p.userId)) {
+            sendP2pOffer(p.userId);
+          }
         });
+      }
 
-        realtimeChannelRef.current.track({
-          userId: user?.id,
-          name: user?.name || user?.email || 'Chorister',
-          avatarUrl: user?.avatarUrl,
-          role: roleRef.current,
-          isMuted: nextMuted,
-          handRaised: handRaisedRef.current,
-          sessionId: sessionIdRef.current,
-          trackName: localTrackNameRef.current,
-        });
+      if (socketRef.current) {
+        socketRef.current.send('mute-updated', { isMuted: nextMuted });
       }
 
       if (user?.id) {
@@ -856,49 +769,34 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       return;
     }
 
-    // If no stream exists yet and user wants to unmute, acquire track
     if (isMuted) {
       publishMicrophoneTrack();
     }
-  }, [roomId, role, isMuted, user, publishMicrophoneTrack]);
+  }, [roomId, role, isMuted, user?.id, publishMicrophoneTrack]);
 
   // Hand raise toggle
   const toggleHandRaise = useCallback(() => {
     const nextState = !handRaised;
     setHandRaised(nextState);
 
-    // Update local participant state immediately
+    // Update local state immediately
     if (user?.id) {
       setParticipants((prev) =>
         prev.map((p) => (p.userId === user.id ? { ...p, handRaised: nextState } : p))
       );
     }
 
-    if (realtimeChannelRef.current) {
-      realtimeChannelRef.current.send({
-        type: 'broadcast',
-        event: 'hand-raised',
-        payload: { userId: user?.id, handRaised: nextState },
-      });
-
-      realtimeChannelRef.current.track({
-        userId: user?.id,
-        name: user?.name || user?.email || 'Chorister',
-        avatarUrl: user?.avatarUrl,
-        role: roleRef.current,
-        isMuted: isMutedRef.current,
-        handRaised: nextState,
-        sessionId: sessionIdRef.current,
-        trackName: localTrackNameRef.current,
-      });
+    // Broadcast in real-time over native WebSocket
+    if (socketRef.current) {
+      socketRef.current.send('hand-raised', { handRaised: nextState });
     }
 
     if (user?.id) {
       cloudflareSfuClient
         .updateParticipantRole(roomId, user.id, { handRaised: nextState })
-        .catch((err) => console.warn('Failed to persist hand raise state:', err));
+        .catch(() => {});
     }
-  }, [roomId, handRaised, user]);
+  }, [roomId, handRaised, user?.id]);
 
   // Host moderation: Promote listener to speaker
   const promoteToSpeaker = useCallback(
@@ -909,24 +807,15 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           handRaised: false,
         });
 
-        // Update local state immediately
         setParticipants((prev) =>
           prev.map((p) =>
             p.userId === targetUserId ? { ...p, role: 'speaker', handRaised: false } : p
           )
         );
 
-        if (realtimeChannelRef.current) {
-          realtimeChannelRef.current.send({
-            type: 'broadcast',
-            event: 'role-updated',
-            payload: { targetUserId, newRole: 'speaker' },
-          });
-          realtimeChannelRef.current.send({
-            type: 'broadcast',
-            event: 'hand-raised',
-            payload: { userId: targetUserId, handRaised: false },
-          });
+        if (socketRef.current) {
+          socketRef.current.send('role-updated', { targetUserId, newRole: 'speaker' });
+          socketRef.current.send('hand-raised', { userId: targetUserId, handRaised: false });
         }
       } catch (err: any) {
         console.error('Failed to promote user:', err);
@@ -944,24 +833,15 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           isMuted: true,
         });
 
-        // Update local state immediately
         setParticipants((prev) =>
           prev.map((p) =>
             p.userId === targetUserId ? { ...p, role: 'listener', isMuted: true } : p
           )
         );
 
-        if (realtimeChannelRef.current) {
-          realtimeChannelRef.current.send({
-            type: 'broadcast',
-            event: 'role-updated',
-            payload: { targetUserId, newRole: 'listener' },
-          });
-          realtimeChannelRef.current.send({
-            type: 'broadcast',
-            event: 'mute-updated',
-            payload: { targetUserId, isMuted: true },
-          });
+        if (socketRef.current) {
+          socketRef.current.send('role-updated', { targetUserId, newRole: 'listener' });
+          socketRef.current.send('mute-updated', { targetUserId, isMuted: true });
         }
       } catch (err: any) {
         console.error('Failed to demote user:', err);
@@ -972,12 +852,8 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
 
   // Host moderation: Mute all speakers
   const muteAll = useCallback(async () => {
-    if (realtimeChannelRef.current) {
-      realtimeChannelRef.current.send({
-        type: 'broadcast',
-        event: 'mute-all',
-        payload: {},
-      });
+    if (socketRef.current) {
+      socketRef.current.send('mute-all', {});
     }
   }, []);
 

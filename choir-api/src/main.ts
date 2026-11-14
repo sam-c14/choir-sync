@@ -14,6 +14,7 @@ import searchRoutes from './modules/search/search.routes';
 import { prisma } from "./lib/prisma";
 import playlistsRoutes from './modules/playlists/playlists.routes';
 import audioRoomsRoutes from './modules/audio-rooms/audio-rooms.routes';
+import { setupAudioRoomsWebSocketServer } from './modules/audio-rooms/audio-rooms.ws';
 import songPartsRoutes from './modules/snippets/song-parts.routes';
 import snippetsRoutes from './modules/snippets/snippets.routes';
 import swaggerUi from 'swagger-ui-express';
@@ -181,4 +182,5 @@ const port = process.env.PORT || 3333;
 const server = app.listen(port, () => {
   logger.info(`Listening at http://localhost:${port}/api`);
 });
+setupAudioRoomsWebSocketServer(server);
 server.on('error', (err) => logger.error(err));
