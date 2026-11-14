@@ -78,7 +78,7 @@ export function AudioRoomPanel({
     return () => {
       active = false;
     };
-  }, [joinRoom]);
+  }, []);
 
   // Handle local speaking meter
   useEffect(() => {
@@ -534,27 +534,46 @@ function RemoteAudioPlayer({
 
   useEffect(() => {
     const el = audioRef.current;
-    if (el && remote.stream) {
-      el.srcObject = remote.stream;
+    if (!el || !remote.stream) return;
+
+    el.srcObject = remote.stream;
+    el.muted = false;
+    el.volume = 1.0;
+
+    const tryPlay = () => {
       el.play().catch((err) => {
-        console.warn('Autoplay audio stream handled (awaiting user gesture):', err);
-        const unlock = () => {
-          el?.play().catch(() => {});
-          window.removeEventListener('click', unlock);
-          window.removeEventListener('keydown', unlock);
-          window.removeEventListener('touchstart', unlock);
-        };
-        window.addEventListener('click', unlock, { once: true });
-        window.addEventListener('keydown', unlock, { once: true });
-        window.addEventListener('touchstart', unlock, { once: true });
+        console.warn('[Audio] Autoplay pending user interaction:', err);
       });
-    }
+    };
+
+    tryPlay();
+
+    // Listen on audio tracks in case they unmute after SDP negotiation
+    const tracks = remote.stream.getAudioTracks();
+    tracks.forEach((track) => {
+      track.enabled = true;
+      track.addEventListener('unmute', tryPlay);
+    });
+
+    const unlock = () => {
+      el.play().catch(() => {});
+    };
+
+    window.addEventListener('click', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    window.addEventListener('touchstart', unlock, { once: true });
 
     const meter = createAudioMeter(remote.stream, (_vol, isSpeaking) => {
       onSpeakingChange(isSpeaking);
     });
 
     return () => {
+      tracks.forEach((track) => {
+        track.removeEventListener('unmute', tryPlay);
+      });
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
       meter.stop();
     };
   }, [remote.stream, onSpeakingChange]);
@@ -564,13 +583,17 @@ function RemoteAudioPlayer({
       ref={audioRef}
       autoPlay
       playsInline
+      controls={false}
       style={{
-        position: 'fixed',
-        left: '-9999px',
-        top: '-9999px',
+        position: 'absolute',
         width: '1px',
         height: '1px',
-        opacity: 0.001,
+        padding: 0,
+        margin: '-1px',
+        overflow: 'hidden',
+        clip: 'rect(0, 0, 0, 0)',
+        border: 0,
+        opacity: 0,
         pointerEvents: 'none',
       }}
     />

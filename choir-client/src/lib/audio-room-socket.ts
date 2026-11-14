@@ -66,6 +66,10 @@ export class AudioRoomSocket {
       this.ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
+          if (msg.type === 'ping') {
+            this.send('pong', {});
+            return;
+          }
           if (msg.type) {
             this.emit(msg.type, msg.payload);
           }

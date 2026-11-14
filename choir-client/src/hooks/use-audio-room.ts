@@ -46,8 +46,17 @@ interface UseAudioRoomOptions {
 }
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
-  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
   { urls: ['stun:stun.cloudflare.com:3478'] },
+  {
+    urls: [
+      'turn:openrelay.metered.ca:80',
+      'turn:openrelay.metered.ca:443',
+      'turn:openrelay.metered.ca:443?transport=tcp',
+    ],
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
 ];
 
 export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomOptions) {
@@ -191,7 +200,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     if (!queue || queue.length === 0) return;
     for (const cand of queue) {
       try {
-        await pc.addIceCandidate(new RTCIceCandidate(cand));
+        await pc.addIceCandidate(cand);
       } catch (err) {
         console.warn(`Buffered ICE candidate warning for ${peerId}:`, err);
       }
@@ -215,10 +224,18 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         const pc = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS });
         p2pConnectionsRef.current.set(targetUserId, pc);
 
+        pc.oniceconnectionstatechange = () => {
+          console.log(`[WebRTC] ICE connection state with ${targetUserId}: ${pc.iceConnectionState}`);
+        };
+        pc.onconnectionstatechange = () => {
+          console.log(`[WebRTC] Peer connection state with ${targetUserId}: ${pc.connectionState}`);
+        };
+
         // Listen for inbound audio from peer on this connection as well
         pc.ontrack = (event) => {
+          console.log(`[WebRTC] Received remote audio track from ${targetUserId}`);
           const stream = event.streams[0] || new MediaStream([event.track]);
-          const trackId = event.track.id;
+          event.track.enabled = true;
 
           setRemoteStreams((prev) => {
             const next = new Map(prev);
@@ -226,7 +243,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
               stream,
               userId: targetUserId,
               sessionId: '',
-              trackName: trackId,
+              trackName: event.track.id,
             });
             return next;
           });
@@ -248,18 +265,19 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           if (event.candidate) {
             socket.send('webrtc-signal', {
               targetUserId,
-              signal: { type: 'candidate', candidate: event.candidate },
+              signal: { type: 'candidate', candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate },
             });
           }
         };
 
-        const offer = await pc.createOffer();
-        const optimizedOffer = optimizeOpusSdp(offer.sdp || '');
-        await pc.setLocalDescription({ type: 'offer', sdp: optimizedOffer });
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+        });
+        await pc.setLocalDescription(offer);
 
         socket.send('webrtc-signal', {
           targetUserId,
-          signal: { type: 'offer', sdp: optimizedOffer },
+          signal: { type: 'offer', sdp: offer.sdp },
         });
       } catch (err) {
         console.warn(`Failed to send P2P offer to ${targetUserId}:`, err);
@@ -284,6 +302,13 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           const pc = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS });
           p2pConnectionsRef.current.set(fromUserId, pc);
 
+          pc.oniceconnectionstatechange = () => {
+            console.log(`[WebRTC] ICE connection state with ${fromUserId}: ${pc.iceConnectionState}`);
+          };
+          pc.onconnectionstatechange = () => {
+            console.log(`[WebRTC] Peer connection state with ${fromUserId}: ${pc.connectionState}`);
+          };
+
           // Add our local audio track if microphone is currently active
           if (localStreamRef.current) {
             localStreamRef.current.getAudioTracks().forEach((track) => {
@@ -292,8 +317,9 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           }
 
           pc.ontrack = (event) => {
+            console.log(`[WebRTC] Listener received remote audio track from ${fromUserId}`);
             const stream = event.streams[0] || new MediaStream([event.track]);
-            const trackId = event.track.id;
+            event.track.enabled = true;
 
             setRemoteStreams((prev) => {
               const next = new Map(prev);
@@ -301,7 +327,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
                 stream,
                 userId: fromUserId,
                 sessionId: '',
-                trackName: trackId,
+                trackName: event.track.id,
               });
               return next;
             });
@@ -319,7 +345,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
             if (event.candidate) {
               socket.send('webrtc-signal', {
                 targetUserId: fromUserId,
-                signal: { type: 'candidate', candidate: event.candidate },
+                signal: { type: 'candidate', candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate },
               });
             }
           };
@@ -328,12 +354,11 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           await flushPendingIceCandidates(fromUserId, pc);
 
           const answer = await pc.createAnswer();
-          const optimizedAnswer = optimizeOpusSdp(answer.sdp || '');
-          await pc.setLocalDescription({ type: 'answer', sdp: optimizedAnswer });
+          await pc.setLocalDescription(answer);
 
           socket.send('webrtc-signal', {
             targetUserId: fromUserId,
-            signal: { type: 'answer', sdp: optimizedAnswer },
+            signal: { type: 'answer', sdp: answer.sdp },
           });
         } else if (signal.type === 'answer') {
           const pc = p2pConnectionsRef.current.get(fromUserId);
@@ -344,7 +369,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         } else if (signal.type === 'candidate' && signal.candidate) {
           const pc = p2pConnectionsRef.current.get(fromUserId);
           if (pc && pc.remoteDescription) {
-            await pc.addIceCandidate(new RTCIceCandidate(signal.candidate)).catch(() => {});
+            await pc.addIceCandidate(signal.candidate).catch(() => {});
           } else {
             if (!pendingIceCandidatesRef.current.has(fromUserId)) {
               pendingIceCandidatesRef.current.set(fromUserId, []);
@@ -507,7 +532,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       try {
         await cloudflareSfuClient.joinRoom(roomId);
         const roomData = await cloudflareSfuClient.getRoom(roomId);
-        if (roomData?.participants) {
+        if (roomData?.participants && participantsRef.current.length === 0) {
           const initialList: RoomParticipantState[] = roomData.participants.map((p: any) => ({
             userId: p.userId,
             name: p.user?.name || p.user?.email || 'Chorister',
@@ -857,12 +882,15 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     }
   }, []);
 
+  const leaveRoomRef = useRef(leaveRoom);
+  leaveRoomRef.current = leaveRoom;
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      leaveRoom();
+      leaveRoomRef.current();
     };
-  }, [leaveRoom]);
+  }, []);
 
   return {
     connectionStatus,
