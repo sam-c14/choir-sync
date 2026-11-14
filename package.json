@@ -10,7 +10,8 @@
     "lint": "nx run-many -t lint --all",
     "typecheck:api": "tsc -b choir-api/tsconfig.json",
     "typecheck:client": "tsc -b choir-client/tsconfig.json",
-    "typecheck": "npm run typecheck:api && npm run typecheck:client"
+    "typecheck": "npm run typecheck:api && npm run typecheck:client",
+    "prisma:generate": "prisma generate --schema=./choir-api/src/prisma/schema.prisma"
   },
   "private": true,
   "devDependencies": {
