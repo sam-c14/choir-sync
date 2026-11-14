@@ -15,10 +15,11 @@ interface IceServerConfig {
 
 export class AudioRoomsService {
   private getCloudflareConfig() {
-    const appId = process.env.CLOUDFLARE_APP_ID;
-    const appSecret = process.env.CLOUDFLARE_APP_SECRET;
-    const turnKeyId = process.env.CLOUDFLARE_TURN_KEY_ID;
-    const turnApiToken = process.env.CLOUDFLARE_TURN_API_TOKEN;
+    const clean = (val?: string) => (val ? val.trim().replace(/^["']|["']$/g, '') : undefined);
+    const appId = clean(process.env.CLOUDFLARE_APP_ID);
+    const appSecret = clean(process.env.CLOUDFLARE_APP_SECRET);
+    const turnKeyId = clean(process.env.CLOUDFLARE_TURN_KEY_ID);
+    const turnApiToken = clean(process.env.CLOUDFLARE_TURN_API_TOKEN);
 
     return { appId, appSecret, turnKeyId, turnApiToken };
   }
@@ -202,8 +203,8 @@ export class AudioRoomsService {
       }
 
       const data = (await response.json()) as any;
-      if (data?.iceServers?.length) {
-        return data.iceServers;
+      if (data?.iceServers) {
+        return Array.isArray(data.iceServers) ? data.iceServers : [data.iceServers];
       }
       return defaultIceServers;
     } catch (err: any) {

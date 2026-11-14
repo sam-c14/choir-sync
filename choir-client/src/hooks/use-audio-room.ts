@@ -80,6 +80,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const p2pConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const pendingIceCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
+  const iceServersRef = useRef<RTCIceServer[]>(DEFAULT_ICE_SERVERS);
   const socketRef = useRef<AudioRoomSocket | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const localTrackNameRef = useRef<string | null>(null);
@@ -221,7 +222,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           existing.close();
         }
 
-        const pc = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS });
+        const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
         p2pConnectionsRef.current.set(targetUserId, pc);
 
         pc.oniceconnectionstatechange = () => {
@@ -299,7 +300,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
             existing.close();
           }
 
-          const pc = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS });
+          const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
           p2pConnectionsRef.current.set(fromUserId, pc);
 
           pc.oniceconnectionstatechange = () => {
@@ -384,6 +385,36 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     [user?.id, flushPendingIceCandidates]
   );
 
+  // Subscribe to a remote participant's track via Cloudflare Calls SFU
+  const subscribeToRemoteTrack = useCallback(
+    async (remoteSessionId: string, remoteTrackName: string, publisherUserId?: string) => {
+      const pc = pcRef.current;
+      const mySessionId = sessionIdRef.current;
+      if (!pc || !mySessionId || !remoteSessionId || !remoteTrackName) return;
+
+      try {
+        console.log(`[SFU] Subscribing to track ${remoteTrackName} from session ${remoteSessionId}`);
+        const offer = await pc.createOffer({ offerToReceiveAudio: true });
+        await pc.setLocalDescription(offer);
+
+        const res = await cloudflareSfuClient.subscribeRemoteTracks(
+          roomId,
+          mySessionId,
+          offer.sdp!,
+          [{ sessionId: remoteSessionId, trackName: remoteTrackName }]
+        );
+
+        if (res?.sessionDescription) {
+          await pc.setRemoteDescription(res.sessionDescription);
+          console.log(`[SFU] Subscribed to track ${remoteTrackName} successfully!`);
+        }
+      } catch (err) {
+        console.warn(`[SFU] Failed to subscribe to track ${remoteTrackName}:`, err);
+      }
+    },
+    [roomId]
+  );
+
   // Publish local microphone track
   const publishMicrophoneTrack = useCallback(async () => {
     setError(null);
@@ -462,13 +493,12 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         }
 
         const offer = await pc.createOffer();
-        const optimizedOffer = optimizeOpusSdp(offer.sdp || '');
-        await pc.setLocalDescription({ type: 'offer', sdp: optimizedOffer });
+        await pc.setLocalDescription(offer);
 
         const answerRes = await cloudflareSfuClient.publishLocalTrack(
           roomId,
           sessionId,
-          optimizedOffer,
+          offer.sdp!,
           trackName,
           sender.track?.id
         );
@@ -476,6 +506,14 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         if (answerRes?.sessionDescription) {
           try {
             await pc.setRemoteDescription(answerRes.sessionDescription);
+            if (socketRef.current) {
+              socketRef.current.send('track-published', {
+                sessionId,
+                trackName,
+                userId: user?.id,
+              });
+            }
+            console.log(`[SFU] Successfully published track to Cloudflare: ${trackName}`);
           } catch (sdpErr) {
             console.warn('SFU setRemoteDescription warning (non-fatal):', sdpErr);
           }
@@ -559,6 +597,13 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       socket.on('room-roster', (payload: any) => {
         if (Array.isArray(payload?.participants)) {
           setParticipants(payload.participants);
+
+          // If any participant in the roster is an active speaker on Cloudflare SFU, subscribe immediately!
+          payload.participants.forEach((p: any) => {
+            if (p.sessionId && p.trackName && p.sessionId !== sessionIdRef.current && !p.isMuted) {
+              subscribeToRemoteTrack(p.sessionId, p.trackName, p.userId);
+            }
+          });
 
           // If local user has an active microphone, offer audio to remote participants
           if (localStreamRef.current && (roleRef.current === 'host' || roleRef.current === 'speaker')) {
@@ -670,6 +715,9 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       });
 
       socket.on('track-published', (payload: any) => {
+        if (payload?.sessionId && payload?.trackName && payload.sessionId !== sessionIdRef.current) {
+          subscribeToRemoteTrack(payload.sessionId, payload.trackName, payload.userId);
+        }
         if (payload?.userId && payload.userId !== user?.id) {
           if (localStreamRef.current && !p2pConnectionsRef.current.has(payload.userId)) {
             sendP2pOffer(payload.userId);
@@ -685,25 +733,32 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
 
       socket.connect();
 
-      // 3. Initialize Cloudflare Calls SFU session as secondary high-scale router
+      // 3. Initialize Cloudflare Calls SFU session as primary router
       try {
         const sessionData: SfuSessionResponse = await cloudflareSfuClient.createSession(roomId);
         sessionIdRef.current = sessionData.sessionId;
 
+        if (sessionData.iceServers && sessionData.iceServers.length > 0) {
+          iceServersRef.current = sessionData.iceServers;
+          console.log('[WebRTC] Active ICE servers from Cloudflare TURN:', sessionData.iceServers);
+        }
+
         const pc = new RTCPeerConnection({
-          iceServers: sessionData.iceServers?.length ? sessionData.iceServers : DEFAULT_ICE_SERVERS,
+          iceServers: iceServersRef.current,
           bundlePolicy: 'max-bundle',
           rtcpMuxPolicy: 'require',
         });
         pcRef.current = pc;
 
         pc.ontrack = (event) => {
+          console.log('[SFU] Inbound remote track from Cloudflare Calls SFU:', event.track.kind);
           const stream = event.streams[0] || new MediaStream([event.track]);
+          event.track.enabled = true;
           const trackId = event.track.id;
 
           setRemoteStreams((prev) => {
             const next = new Map(prev);
-            next.set(trackId, {
+            next.set(`sfu-${trackId}`, {
               stream,
               userId: 'sfu-speaker',
               sessionId: '',
@@ -711,9 +766,17 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
             });
             return next;
           });
+
+          event.track.onended = () => {
+            setRemoteStreams((prev) => {
+              const next = new Map(prev);
+              next.delete(`sfu-${trackId}`);
+              return next;
+            });
+          };
         };
       } catch (sfuErr) {
-        console.warn('Cloudflare SFU initialization warning (direct WebSockets P2P active):', sfuErr);
+        console.warn('Cloudflare SFU session error (direct WebSockets P2P active):', sfuErr);
       }
 
       startTelemetryMonitoring();
@@ -736,6 +799,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     unpublishMicrophoneTrack,
     sendP2pOffer,
     handleP2pSignal,
+    subscribeToRemoteTrack,
     startTelemetryMonitoring,
   ]);
 
