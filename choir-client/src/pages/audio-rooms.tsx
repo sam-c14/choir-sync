@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Radio, Plus, Users, Loader2, Sparkles, MessageSquare } from 'lucide-react';
@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from '../components/ui/dialog';
 import { cloudflareSfuClient } from '../lib/cloudflare-sfu-client';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../auth/auth-context';
 import { toast } from 'sonner';
 
@@ -31,6 +32,33 @@ export default function AudioRoomsPage() {
     queryFn: () => cloudflareSfuClient.listRooms(),
     refetchInterval: 5000,
   });
+
+  // Real-time synchronization of room creation and participant joins/leaves
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const channel = supabase
+      .channel('audio-rooms-lobby')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'audio_rooms' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['audio-rooms'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'audio_room_participants' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['audio-rooms'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const createRoomMutation = useMutation({
     mutationFn: (data: { title: string; description?: string }) =>

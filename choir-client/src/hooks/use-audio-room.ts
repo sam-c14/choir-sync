@@ -450,7 +450,14 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     setConnectionStatus('connecting');
 
     try {
-      // 1. Seed participants from backend database so initial statuses are present immediately
+      // 1. Register participant in backend database
+      try {
+        await cloudflareSfuClient.joinRoom(roomId);
+      } catch (joinErr) {
+        console.warn('Backend joinRoom registration warning:', joinErr);
+      }
+
+      // 2. Seed participants from backend database so initial statuses are present immediately
       try {
         const roomData = await cloudflareSfuClient.getRoom(roomId);
         if (roomData?.participants) {
@@ -468,11 +475,11 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         console.warn('Could not fetch initial room participants:', fetchErr);
       }
 
-      // 2. Initialize SFU session with Cloudflare via backend proxy
+      // 3. Initialize SFU session with Cloudflare via backend proxy
       const sessionData: SfuSessionResponse = await cloudflareSfuClient.createSession(roomId);
       sessionIdRef.current = sessionData.sessionId;
 
-      // 3. Instantiate single RTCPeerConnection with STUN/TURN servers
+      // 4. Instantiate single RTCPeerConnection with STUN/TURN servers
       const pc = new RTCPeerConnection({
         iceServers: sessionData.iceServers,
         bundlePolicy: 'max-bundle',
@@ -552,23 +559,57 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
               });
             });
 
-            // Merge presence into existing participants so database-fetched users remain
-            setParticipants((prev) => {
-              const merged = new Map<string, RoomParticipantState>();
-              prev.forEach((p) => merged.set(p.userId, p));
-              presenceMap.forEach((p, id) => {
-                const prevP = merged.get(id);
-                merged.set(id, {
-                  ...prevP,
-                  ...p,
-                  handRaised: p.handRaised !== undefined ? p.handRaised : (prevP?.handRaised ?? false),
+            // If active presence exists, presence state is the live ground truth
+            if (presenceMap.size > 0) {
+              setParticipants((prev) => {
+                const nextList: RoomParticipantState[] = [];
+                presenceMap.forEach((pres, uId) => {
+                  const existing = prev.find((p) => p.userId === uId);
+                  nextList.push({
+                    ...existing,
+                    ...pres,
+                    handRaised: pres.handRaised !== undefined ? pres.handRaised : (existing?.handRaised ?? false),
+                  });
                 });
+                return nextList;
               });
-              return Array.from(merged.values());
-            });
 
-            // Subscribe to any active speaker tracks not yet subscribed to
-            presenceMap.forEach((p) => {
+              // Subscribe to any active speaker tracks not yet subscribed to
+              presenceMap.forEach((p) => {
+                if (
+                  (p.role === 'host' || p.role === 'speaker') &&
+                  p.sessionId &&
+                  p.trackName &&
+                  p.userId !== user?.id
+                ) {
+                  subscribeToRemoteTrack(p.sessionId, p.trackName, p.userId);
+                }
+              });
+            }
+          })
+          .on('presence', { event: 'join' }, ({ newPresences }) => {
+            if (!newPresences) return;
+            newPresences.forEach((p: any) => {
+              if (!p?.userId) return;
+              const newParticipant: RoomParticipantState = {
+                userId: p.userId,
+                name: p.name || 'Chorister',
+                avatarUrl: p.avatarUrl,
+                role: p.role || 'listener',
+                isMuted: p.isMuted ?? true,
+                handRaised: p.handRaised ?? false,
+                sessionId: p.sessionId,
+                trackName: p.trackName,
+              };
+
+              setParticipants((prev) => {
+                const exists = prev.some((item) => item.userId === p.userId);
+                if (exists) {
+                  return prev.map((item) => (item.userId === p.userId ? { ...item, ...newParticipant } : item));
+                }
+                return [...prev, newParticipant];
+              });
+
               if (
                 (p.role === 'host' || p.role === 'speaker') &&
                 p.sessionId &&
@@ -578,6 +619,42 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
                 subscribeToRemoteTrack(p.sessionId, p.trackName, p.userId);
               }
             });
+          })
+          .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+            if (!leftPresences) return;
+            const leftIds = new Set(leftPresences.map((p: any) => p.userId).filter(Boolean));
+            setParticipants((prev) => prev.filter((p) => !leftIds.has(p.userId)));
+          })
+          .on('broadcast', { event: 'participant-joined' }, ({ payload }) => {
+            if (payload?.participant?.userId) {
+              setParticipants((prev) => {
+                const exists = prev.some((p) => p.userId === payload.participant.userId);
+                if (exists) {
+                  return prev.map((p) =>
+                    p.userId === payload.participant.userId ? { ...p, ...payload.participant } : p
+                  );
+                }
+                return [...prev, payload.participant];
+              });
+
+              if (
+                (payload.participant.role === 'host' || payload.participant.role === 'speaker') &&
+                payload.participant.sessionId &&
+                payload.participant.trackName &&
+                payload.participant.userId !== user?.id
+              ) {
+                subscribeToRemoteTrack(
+                  payload.participant.sessionId,
+                  payload.participant.trackName,
+                  payload.participant.userId
+                );
+              }
+            }
+          })
+          .on('broadcast', { event: 'participant-left' }, ({ payload }) => {
+            if (payload?.userId) {
+              setParticipants((prev) => prev.filter((p) => p.userId !== payload.userId));
+            }
           })
           .on('broadcast', { event: 'hand-raised' }, ({ payload }) => {
             if (payload?.userId) {
@@ -658,8 +735,8 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           })
           .subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
-              await channel.track({
-                userId: user?.id,
+              const participantData: RoomParticipantState = {
+                userId: user?.id || `anon-${Date.now()}`,
                 name: user?.name || user?.email || 'Chorister',
                 avatarUrl: user?.avatarUrl,
                 role: roleRef.current,
@@ -667,6 +744,14 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
                 handRaised: handRaisedRef.current,
                 sessionId: sessionIdRef.current,
                 trackName: localTrackNameRef.current,
+              };
+
+              await channel.track(participantData);
+
+              channel.send({
+                type: 'broadcast',
+                event: 'participant-joined',
+                payload: { participant: participantData },
               });
             }
           });
@@ -700,7 +785,16 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     isJoinedRef.current = false;
 
     if (realtimeChannelRef.current) {
-      await realtimeChannelRef.current.untrack();
+      try {
+        realtimeChannelRef.current.send({
+          type: 'broadcast',
+          event: 'participant-left',
+          payload: { userId: user?.id },
+        });
+        await realtimeChannelRef.current.untrack();
+      } catch (untrackErr) {
+        console.warn('Presence untrack warning:', untrackErr);
+      }
       supabase.removeChannel(realtimeChannelRef.current);
       realtimeChannelRef.current = null;
     }
@@ -712,7 +806,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     } catch {
       // Ignore exit failure
     }
-  }, [roomId, cleanupPeerConnection]);
+  }, [roomId, user?.id, cleanupPeerConnection]);
 
   // Toggle microphone mute/unmute
   const toggleMute = useCallback(() => {

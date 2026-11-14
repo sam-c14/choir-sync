@@ -46,6 +46,11 @@ export const cloudflareSfuClient = {
     return res.data;
   },
 
+  async joinRoom(roomId: string) {
+    const res = await apiClient.post(`/audio-rooms/${roomId}/join`);
+    return res.data;
+  },
+
   async createSession(roomId: string): Promise<SfuSessionResponse> {
     const res = await apiClient.post(`/audio-rooms/${roomId}/session`);
     return res.data;
