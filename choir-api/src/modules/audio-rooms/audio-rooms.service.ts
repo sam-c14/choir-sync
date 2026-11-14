@@ -16,10 +16,29 @@ interface IceServerConfig {
 export class AudioRoomsService {
   private getCloudflareConfig() {
     const clean = (val?: string) => (val ? val.trim().replace(/^["']|["']$/g, '') : undefined);
-    const appId = clean(process.env.CLOUDFLARE_APP_ID);
-    const appSecret = clean(process.env.CLOUDFLARE_APP_SECRET);
-    const turnKeyId = clean(process.env.CLOUDFLARE_TURN_KEY_ID);
-    const turnApiToken = clean(process.env.CLOUDFLARE_TURN_API_TOKEN);
+    const appId = clean(
+      process.env.CLOUDFLARE_APP_ID ||
+      process.env.CLOUDFARE_APP_ID ||
+      process.env.CLOUDFLARE_CALLS_APP_ID ||
+      process.env.CLOUDFLARE_SFU_APP_ID
+    );
+    const appSecret = clean(
+      process.env.CLOUDFLARE_APP_SECRET ||
+      process.env.CLOUDFARE_APP_SECRET ||
+      process.env.CLOUDFLARE_CALLS_APP_SECRET ||
+      process.env.CLOUDFLARE_SFU_APP_SECRET ||
+      process.env.CLOUDFLARE_CALLS_APP_TOKEN
+    );
+    const turnKeyId = clean(
+      process.env.CLOUDFLARE_TURN_KEY_ID ||
+      process.env.CLOUDFARE_TURN_KEY_ID ||
+      process.env.CLOUDFLARE_TURN_ID
+    );
+    const turnApiToken = clean(
+      process.env.CLOUDFLARE_TURN_API_TOKEN ||
+      process.env.CLOUDFARE_TURN_API_TOKEN ||
+      process.env.CLOUDFLARE_TURN_TOKEN
+    );
 
     return { appId, appSecret, turnKeyId, turnApiToken };
   }
@@ -221,7 +240,7 @@ export class AudioRoomsService {
 
     if (!appId || !appSecret) {
       logger.warn(
-        'CLOUDFLARE_APP_ID or CLOUDFLARE_APP_SECRET is not set. Generating mock SFU session ID for local testing.'
+        '[SFU] CLOUDFLARE_APP_ID or CLOUDFLARE_APP_SECRET is not set (checked CLOUDFLARE_ and CLOUDFARE_ prefixes). Generating mock SFU session ID for local testing.'
       );
       const mockSessionId = `mock-sfu-session-${roomId.slice(0, 8)}-${userId.slice(0, 8)}`;
       return { sessionId: mockSessionId, iceServers };
@@ -245,6 +264,7 @@ export class AudioRoomsService {
     }
 
     const data = (await response.json()) as { sessionId: string };
+    logger.info(`[SFU] Cloudflare session created successfully: ${data.sessionId} (App ID: ${appId.slice(0, 8)}...)`);
     return {
       sessionId: data.sessionId,
       iceServers,
@@ -336,7 +356,12 @@ export class AudioRoomsService {
       throw new Error(`Cloudflare renegotiation failed: ${errorText}`);
     }
 
-    return response.json();
+    const text = await response.text();
+    try {
+      return text ? JSON.parse(text) : { success: true };
+    } catch {
+      return { success: true };
+    }
   }
 
   async proxyCloseTracks(sessionId: string, trackNames: string[]) {
