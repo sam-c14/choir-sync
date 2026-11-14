@@ -88,14 +88,9 @@ export const cloudflareSfuClient = {
   async subscribeRemoteTracks(
     roomId: string,
     sessionId: string,
-    offerSdp: string,
     remoteTracks: Array<{ sessionId: string; trackName: string }>
   ): Promise<TrackNegotiationResponse> {
     const payload: AudioRoomTrackRequestDto = {
-      sessionDescription: {
-        type: 'offer',
-        sdp: offerSdp,
-      },
       tracks: remoteTracks.map((t) => ({
         location: 'remote',
         sessionId: t.sessionId,
@@ -103,7 +98,7 @@ export const cloudflareSfuClient = {
       })),
     };
 
-    const res = await apiClient.put(`/audio-rooms/${roomId}/tracks`, payload, {
+    const res = await apiClient.post(`/audio-rooms/${roomId}/tracks`, payload, {
       headers: {
         'x-sfu-session-id': sessionId,
       },
@@ -114,14 +109,14 @@ export const cloudflareSfuClient = {
   async renegotiate(
     roomId: string,
     sessionId: string,
-    offerSdp: string
+    answerSdp: string
   ): Promise<{ sessionDescription: { type: 'answer'; sdp: string } }> {
     const res = await apiClient.put(
       `/audio-rooms/${roomId}/renegotiate`,
       {
         sessionDescription: {
-          type: 'offer',
-          sdp: offerSdp,
+          type: 'answer',
+          sdp: answerSdp,
         },
       },
       {

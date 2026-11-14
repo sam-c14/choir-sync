@@ -259,10 +259,12 @@ export class AudioRoomsService {
 
     if (!appId || !appSecret) {
       logger.warn('Mocking Cloudflare track negotiation response.');
-      const offerSdp = body.sessionDescription.sdp;
+      const offerSdp = body.sessionDescription?.sdp || '';
       const answerSdp = offerSdp
-        .replace(/a=setup:actpass/g, 'a=setup:active')
-        .replace(/a=sendrecv/g, 'a=recvonly');
+        ? offerSdp
+            .replace(/a=setup:actpass/g, 'a=setup:active')
+            .replace(/a=sendrecv/g, 'a=recvonly')
+        : '';
 
       return {
         sessionDescription: {

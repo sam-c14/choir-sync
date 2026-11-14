@@ -84,6 +84,8 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
   const socketRef = useRef<AudioRoomSocket | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const localTrackNameRef = useRef<string | null>(null);
+  const subscribedTracksRef = useRef<Set<string>>(new Set());
+  const trackMidToUserMapRef = useRef<Map<string, string>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -136,6 +138,8 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
 
     sessionIdRef.current = null;
     localTrackNameRef.current = null;
+    subscribedTracksRef.current.clear();
+    trackMidToUserMapRef.current.clear();
     setRemoteStreams(new Map());
     setConnectionStatus('disconnected');
   }, []);
@@ -392,23 +396,66 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       const mySessionId = sessionIdRef.current;
       if (!pc || !mySessionId || !remoteSessionId || !remoteTrackName) return;
 
+      if (subscribedTracksRef.current.has(remoteTrackName)) {
+        console.log(`[SFU] Already subscribed to track ${remoteTrackName}, skipping.`);
+        return;
+      }
+      subscribedTracksRef.current.add(remoteTrackName);
+
       try {
         console.log(`[SFU] Subscribing to track ${remoteTrackName} from session ${remoteSessionId}`);
-        const offer = await pc.createOffer({ offerToReceiveAudio: true });
-        await pc.setLocalDescription(offer);
-
         const res = await cloudflareSfuClient.subscribeRemoteTracks(
           roomId,
           mySessionId,
-          offer.sdp!,
           [{ sessionId: remoteSessionId, trackName: remoteTrackName }]
         );
 
+        if (res?.tracks && Array.isArray(res.tracks)) {
+          res.tracks.forEach((t: any) => {
+            if (t.mid && publisherUserId) {
+              trackMidToUserMapRef.current.set(t.mid, publisherUserId);
+            }
+          });
+        }
+
         if (res?.sessionDescription) {
-          await pc.setRemoteDescription(res.sessionDescription);
+          // 1. Cloudflare sends an offer to the subscriber
+          await pc.setRemoteDescription(new RTCSessionDescription(res.sessionDescription));
+
+          // 2. Generate local answer
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+
+          // 3. Wait for ICE gathering on answer
+          await new Promise<void>((resolve) => {
+            if (pc.iceGatheringState === 'complete') {
+              resolve();
+            } else {
+              const handler = () => {
+                if (pc.iceGatheringState === 'complete') {
+                  pc.removeEventListener('icegatheringstatechange', handler);
+                  resolve();
+                }
+              };
+              pc.addEventListener('icegatheringstatechange', handler);
+              setTimeout(() => {
+                pc.removeEventListener('icegatheringstatechange', handler);
+                resolve();
+              }, 1500);
+            }
+          });
+
+          // 4. Submit answer to /renegotiate
+          await cloudflareSfuClient.renegotiate(
+            roomId,
+            mySessionId,
+            pc.localDescription?.sdp || answer.sdp || ''
+          );
+
           console.log(`[SFU] Subscribed to track ${remoteTrackName} successfully!`);
         }
       } catch (err) {
+        subscribedTracksRef.current.delete(remoteTrackName);
         console.warn(`[SFU] Failed to subscribe to track ${remoteTrackName}:`, err);
       }
     },
@@ -461,10 +508,9 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       );
     }
 
-    // 2. Broadcast unmuted state & track announcement through native WebSocket
+    // 2. Broadcast unmuted state through native WebSocket
     if (socketRef.current) {
       socketRef.current.send('mute-updated', { isMuted: false });
-      socketRef.current.send('track-published', { trackName: `mic-${user?.id}` });
     }
 
     // 3. Send direct WebRTC P2P audio offer to all other participants in the room
@@ -482,25 +528,44 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         const trackName = `mic-${user?.id || 'unknown'}-${Date.now()}`;
         localTrackNameRef.current = trackName;
 
-        const senders = pc.getSenders();
-        const existingSender = senders.find((s) => s.track?.kind === 'audio');
-        let sender: RTCRtpSender;
-        if (existingSender) {
-          await existingSender.replaceTrack(audioTrack);
-          sender = existingSender;
+        let transceiver = pc.getTransceivers().find((t) => t.sender.track === audioTrack);
+        if (!transceiver) {
+          transceiver = pc.addTransceiver(audioTrack, { direction: 'sendonly' });
         } else {
-          sender = pc.addTrack(audioTrack, stream);
+          transceiver.direction = 'sendonly';
+          await transceiver.sender.replaceTrack(audioTrack);
         }
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
+        // Wait for ICE gathering to complete so all candidates are in offer.sdp
+        await new Promise<void>((resolve) => {
+          if (pc.iceGatheringState === 'complete') {
+            resolve();
+          } else {
+            const handler = () => {
+              if (pc.iceGatheringState === 'complete') {
+                pc.removeEventListener('icegatheringstatechange', handler);
+                resolve();
+              }
+            };
+            pc.addEventListener('icegatheringstatechange', handler);
+            setTimeout(() => {
+              pc.removeEventListener('icegatheringstatechange', handler);
+              resolve();
+            }, 1500);
+          }
+        });
+
+        const mid = transceiver.mid;
+
         const answerRes = await cloudflareSfuClient.publishLocalTrack(
           roomId,
           sessionId,
-          offer.sdp!,
+          pc.localDescription?.sdp || offer.sdp!,
           trackName,
-          sender.track?.id
+          mid || undefined
         );
 
         if (answerRes?.sessionDescription) {
@@ -585,7 +650,55 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         console.warn('Database room join warning:', dbErr);
       }
 
-      // 2. Connect to Native WebSocket Signaling Server on choir-api
+      // 2. Initialize Cloudflare Calls SFU session as primary router
+      try {
+        const sessionData: SfuSessionResponse = await cloudflareSfuClient.createSession(roomId);
+        sessionIdRef.current = sessionData.sessionId;
+
+        if (sessionData.iceServers && sessionData.iceServers.length > 0) {
+          iceServersRef.current = sessionData.iceServers;
+          console.log('[WebRTC] Active ICE servers from Cloudflare TURN:', sessionData.iceServers);
+        }
+
+        const pc = new RTCPeerConnection({
+          iceServers: iceServersRef.current,
+          bundlePolicy: 'max-bundle',
+          rtcpMuxPolicy: 'require',
+        });
+        pcRef.current = pc;
+
+        pc.ontrack = (event) => {
+          console.log('[SFU] Inbound remote track from Cloudflare Calls SFU:', event.track.kind);
+          const stream = event.streams[0] || new MediaStream([event.track]);
+          event.track.enabled = true;
+          const trackId = event.track.id;
+          const mid = event.transceiver?.mid;
+          const associatedUserId = (mid ? trackMidToUserMapRef.current.get(mid) : undefined) || 'sfu-speaker';
+
+          setRemoteStreams((prev) => {
+            const next = new Map(prev);
+            next.set(`sfu-${trackId}`, {
+              stream,
+              userId: associatedUserId,
+              sessionId: '',
+              trackName: trackId,
+            });
+            return next;
+          });
+
+          event.track.onended = () => {
+            setRemoteStreams((prev) => {
+              const next = new Map(prev);
+              next.delete(`sfu-${trackId}`);
+              return next;
+            });
+          };
+        };
+      } catch (sfuErr) {
+        console.warn('Cloudflare SFU session error (direct WebSockets P2P active):', sfuErr);
+      }
+
+      // 3. Connect to Native WebSocket Signaling Server on choir-api
       const token = localStorage.getItem('token') || '';
       const socket = new AudioRoomSocket(roomId, token);
       socketRef.current = socket;
@@ -646,6 +759,11 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
           setRemoteStreams((prev) => {
             const next = new Map(prev);
             next.delete(payload.userId);
+            for (const [key, val] of next.entries()) {
+              if (val.userId === payload.userId) {
+                next.delete(key);
+              }
+            }
             return next;
           });
         }
@@ -725,6 +843,12 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         }
       });
 
+      socket.on('track-unpublished', (payload: any) => {
+        if (payload?.trackName) {
+          subscribedTracksRef.current.delete(payload.trackName);
+        }
+      });
+
       socket.on('webrtc-signal', (payload: any) => {
         if (payload?.fromUserId && payload.signal) {
           handleP2pSignal(payload.fromUserId, payload.signal);
@@ -732,52 +856,6 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       });
 
       socket.connect();
-
-      // 3. Initialize Cloudflare Calls SFU session as primary router
-      try {
-        const sessionData: SfuSessionResponse = await cloudflareSfuClient.createSession(roomId);
-        sessionIdRef.current = sessionData.sessionId;
-
-        if (sessionData.iceServers && sessionData.iceServers.length > 0) {
-          iceServersRef.current = sessionData.iceServers;
-          console.log('[WebRTC] Active ICE servers from Cloudflare TURN:', sessionData.iceServers);
-        }
-
-        const pc = new RTCPeerConnection({
-          iceServers: iceServersRef.current,
-          bundlePolicy: 'max-bundle',
-          rtcpMuxPolicy: 'require',
-        });
-        pcRef.current = pc;
-
-        pc.ontrack = (event) => {
-          console.log('[SFU] Inbound remote track from Cloudflare Calls SFU:', event.track.kind);
-          const stream = event.streams[0] || new MediaStream([event.track]);
-          event.track.enabled = true;
-          const trackId = event.track.id;
-
-          setRemoteStreams((prev) => {
-            const next = new Map(prev);
-            next.set(`sfu-${trackId}`, {
-              stream,
-              userId: 'sfu-speaker',
-              sessionId: '',
-              trackName: trackId,
-            });
-            return next;
-          });
-
-          event.track.onended = () => {
-            setRemoteStreams((prev) => {
-              const next = new Map(prev);
-              next.delete(`sfu-${trackId}`);
-              return next;
-            });
-          };
-        };
-      } catch (sfuErr) {
-        console.warn('Cloudflare SFU session error (direct WebSockets P2P active):', sfuErr);
-      }
 
       startTelemetryMonitoring();
 

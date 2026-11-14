@@ -188,10 +188,12 @@ export const UpdateParticipantRoleSchema = z.object({
 export type UpdateParticipantRoleDto = z.infer<typeof UpdateParticipantRoleSchema>;
 
 export const AudioRoomTrackRequestSchema = z.object({
-  sessionDescription: z.object({
-    type: z.enum(["offer", "answer"]),
-    sdp: z.string().min(1),
-  }),
+  sessionDescription: z
+    .object({
+      type: z.enum(['offer', 'answer']),
+      sdp: z.string().min(1),
+    })
+    .optional(),
   tracks: z.array(
     z.object({
       location: z.enum(["local", "remote"]),
