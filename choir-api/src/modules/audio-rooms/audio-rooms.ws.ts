@@ -76,6 +76,28 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
   wss.on('connection', async (ws: WebSocket, _request: any, info: { userId: string; roomId: string }) => {
     const { userId, roomId } = info;
     const connectionId = crypto.randomUUID();
+    // Buffer frames arriving while async DB initialization runs so early messages aren't dropped
+    const earlyMessageQueue: Array<Buffer | string> = [];
+    let isInitialized = false;
+    let isClosed = false;
+    let handleIncomingMessage: ((data: Buffer | string) => Promise<void>) | null = null;
+
+    ws.on('message', (data: Buffer | string) => {
+      if (!isInitialized || !handleIncomingMessage) {
+        earlyMessageQueue.push(data);
+        return;
+      }
+      handleIncomingMessage(data);
+    });
+
+    ws.on('error', (err) => {
+      logger.warn(`WebSocket error for user ${userId} (${connectionId.slice(0, 8)}):`, err);
+    });
+
+    const earlyCloseHandler = () => {
+      isClosed = true;
+    };
+    ws.once('close', earlyCloseHandler);
 
     try {
       const user = await prisma.user.findUnique({
@@ -93,6 +115,13 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
         return;
       }
 
+      const isSocketClosingOrClosed = () =>
+        isClosed || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING;
+
+      if (isSocketClosingOrClosed()) {
+        return;
+      }
+
       const isHost = room.hostId === userId;
       const initialRole: AudioRoomRole = isHost ? 'host' : 'listener';
 
@@ -107,6 +136,10 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
           handRaised: false,
         },
       });
+
+      if (isSocketClosingOrClosed()) {
+        return;
+      }
 
       const clientRole = (participant.role as AudioRoomRole) || initialRole;
 
@@ -133,10 +166,11 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
         `WebSocket: User ${userId} (${client.name}, conn=${connectionId.slice(0, 8)}) connected to room ${roomId}. Total sockets: ${roomClients.size}`
       );
 
-      // Build unique participant roster across all connections in the room
+      // Build unique participant roster across all connections in the room (prefer active SFU track metadata)
       const uniqueParticipantsMap = new Map<string, any>();
       roomClients.forEach((c) => {
-        if (!uniqueParticipantsMap.has(c.userId)) {
+        const existing = uniqueParticipantsMap.get(c.userId);
+        if (!existing || (!existing.trackName && c.trackName)) {
           uniqueParticipantsMap.set(c.userId, {
             userId: c.userId,
             name: c.name,
@@ -144,8 +178,8 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
             role: c.role,
             isMuted: c.isMuted,
             handRaised: c.handRaised,
-            sessionId: c.sessionId,
-            trackName: c.trackName,
+            sessionId: c.sessionId || existing?.sessionId,
+            trackName: c.trackName || existing?.trackName,
           });
         }
       });
@@ -169,11 +203,13 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
             role: client.role,
             isMuted: client.isMuted,
             handRaised: client.handRaised,
+            sessionId: client.sessionId,
+            trackName: client.trackName,
           },
         },
       });
 
-      ws.on('message', async (data: Buffer | string) => {
+      handleIncomingMessage = async (data: Buffer | string) => {
         client.lastSeen = Date.now();
         try {
           const msg = JSON.parse(data.toString());
@@ -182,7 +218,9 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
 
           switch (type) {
             case 'ping': {
-              ws.send(JSON.stringify({ type: 'pong' }));
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'pong' }));
+              }
               break;
             }
 
@@ -193,19 +231,20 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
 
             case 'hand-raised': {
               const nextRaised = Boolean(payload.handRaised);
+              const targetUserId = (client.role === 'host' && payload.userId) ? payload.userId : userId;
               // Update state for all connections of this user
               roomClients.forEach((c) => {
-                if (c.userId === userId) c.handRaised = nextRaised;
+                if (c.userId === targetUserId) c.handRaised = nextRaised;
               });
 
               broadcastToRoom(roomId, null, {
                 type: 'hand-raised',
-                payload: { userId, handRaised: nextRaised },
+                payload: { userId: targetUserId, handRaised: nextRaised },
               });
 
               await prisma.audioRoomParticipant
                 .update({
-                  where: { roomId_userId: { roomId, userId } },
+                  where: { roomId_userId: { roomId, userId: targetUserId } },
                   data: { handRaised: nextRaised },
                 })
                 .catch(() => {});
@@ -214,18 +253,19 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
 
             case 'mute-updated': {
               const nextMuted = Boolean(payload.isMuted);
+              const targetUserId = (client.role === 'host' && payload.targetUserId) ? payload.targetUserId : userId;
               roomClients.forEach((c) => {
-                if (c.userId === userId) c.isMuted = nextMuted;
+                if (c.userId === targetUserId) c.isMuted = nextMuted;
               });
 
               broadcastToRoom(roomId, null, {
                 type: 'mute-updated',
-                payload: { targetUserId: userId, isMuted: nextMuted },
+                payload: { targetUserId, isMuted: nextMuted },
               });
 
               await prisma.audioRoomParticipant
                 .update({
-                  where: { roomId_userId: { roomId, userId } },
+                  where: { roomId_userId: { roomId, userId: targetUserId } },
                   data: { isMuted: nextMuted },
                 })
                 .catch(() => {});
@@ -266,8 +306,13 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
             }
 
             case 'track-published': {
-              client.trackName = payload.trackName;
-              client.sessionId = payload.sessionId;
+              roomClients.forEach((c) => {
+                if (c.userId === userId) {
+                  c.trackName = payload.trackName;
+                  c.sessionId = payload.sessionId;
+                  c.isMuted = false;
+                }
+              });
               broadcastToRoom(roomId, connectionId, {
                 type: 'track-published',
                 payload: {
@@ -280,7 +325,11 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
             }
 
             case 'track-unpublished': {
-              client.trackName = null;
+              roomClients.forEach((c) => {
+                if (c.userId === userId) {
+                  c.trackName = null;
+                }
+              });
               broadcastToRoom(roomId, connectionId, {
                 type: 'track-unpublished',
                 payload: { userId, trackName: payload.trackName },
@@ -314,8 +363,9 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
         } catch (err) {
           logger.error('Error processing WebSocket message:', err);
         }
-      });
+      };
 
+      ws.removeListener('close', earlyCloseHandler);
       ws.on('close', async () => {
         roomClients.delete(connectionId);
         logger.info(
@@ -343,9 +393,11 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
         }
       });
 
-      ws.on('error', (err) => {
-        logger.warn(`WebSocket error for user ${userId} (${connectionId.slice(0, 8)}):`, err);
-      });
+      isInitialized = true;
+      for (const queued of earlyMessageQueue) {
+        await handleIncomingMessage(queued);
+      }
+      earlyMessageQueue.length = 0;
     } catch (connErr) {
       logger.error('WebSocket connection setup error:', connErr);
       ws.close();

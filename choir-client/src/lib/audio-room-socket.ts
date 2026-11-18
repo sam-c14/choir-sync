@@ -39,6 +39,7 @@ export class AudioRoomSocket {
   private reconnectTimeout: any = null;
   private pingInterval: any = null;
   private isIntentionallyClosed = false;
+  private pendingMessages: string[] = [];
   private roomId: string;
   private token: string;
 
@@ -55,6 +56,12 @@ export class AudioRoomSocket {
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {
+        // Flush any signaling messages queued during handshake
+        while (this.pendingMessages.length > 0 && this.ws?.readyState === WebSocket.OPEN) {
+          const msg = this.pendingMessages.shift();
+          if (msg) this.ws.send(msg);
+        }
+
         this.emit('connected', {});
 
         if (this.pingInterval) clearInterval(this.pingInterval);
@@ -100,8 +107,11 @@ export class AudioRoomSocket {
   }
 
   send(type: string, payload: any = {}) {
+    const serialized = JSON.stringify({ type, payload });
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type, payload }));
+      this.ws.send(serialized);
+    } else if (!this.isIntentionallyClosed && type !== 'ping' && type !== 'pong') {
+      this.pendingMessages.push(serialized);
     }
   }
 
@@ -129,6 +139,7 @@ export class AudioRoomSocket {
 
   disconnect() {
     this.isIntentionallyClosed = true;
+    this.pendingMessages.length = 0;
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
       this.pingInterval = null;

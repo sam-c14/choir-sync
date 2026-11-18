@@ -12,16 +12,19 @@ export interface SfuSessionResponse {
 }
 
 export interface TrackNegotiationResponse {
-  sessionDescription: {
+  sessionDescription?: {
     type: 'answer' | 'offer';
     sdp: string;
   };
+  requiresImmediateRenegotiation?: boolean;
   tracks?: Array<{
     location: 'local' | 'remote';
     mid?: string;
     trackName?: string;
     sessionId?: string;
     status?: string;
+    errorCode?: string;
+    errorDescription?: string;
   }>;
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Mic,
   MicOff,
@@ -66,6 +66,23 @@ export function AudioRoomPanel({
   } = useAudioRoom({ roomId, initialRole });
 
   const [activeSpeakingUsers, setActiveSpeakingUsers] = useState<Set<string>>(new Set());
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [unlockTick, setUnlockTick] = useState(0);
+
+  const handleRemoteSpeakingChange = useCallback((speakerUserId: string, isSpeaking: boolean) => {
+    if (!speakerUserId) return;
+    setActiveSpeakingUsers((prev) => {
+      if (prev.has(speakerUserId) === isSpeaking) return prev;
+      const next = new Set(prev);
+      if (isSpeaking) next.add(speakerUserId);
+      else next.delete(speakerUserId);
+      return next;
+    });
+  }, []);
+
+  const handleAutoplayBlockedChange = useCallback((blocked: boolean) => {
+    setAutoplayBlocked(blocked);
+  }, []);
 
   // Automatically join conference audio immediately on mount (no intermediate splash page)
   useEffect(() => {
@@ -82,22 +99,25 @@ export function AudioRoomPanel({
 
   // Handle local speaking meter
   useEffect(() => {
-    if (!localStream || isMuted) {
-      setActiveSpeakingUsers((prev) => {
-        const next = new Set(prev);
-        if (user?.id) next.delete(user.id);
-        return next;
-      });
+    const uid = user?.id;
+    if (!localStream || isMuted || !uid) {
+      if (uid) {
+        setActiveSpeakingUsers((prev) => {
+          if (!prev.has(uid)) return prev;
+          const next = new Set(prev);
+          next.delete(uid);
+          return next;
+        });
+      }
       return;
     }
 
     const meter = createAudioMeter(localStream, (_vol, isSpeaking) => {
       setActiveSpeakingUsers((prev) => {
+        if (prev.has(uid) === isSpeaking) return prev;
         const next = new Set(prev);
-        if (user?.id) {
-          if (isSpeaking) next.add(user.id);
-          else next.delete(user.id);
-        }
+        if (isSpeaking) next.add(uid);
+        else next.delete(uid);
         return next;
       });
     });
@@ -105,7 +125,7 @@ export function AudioRoomPanel({
     return () => {
       meter.stop();
     };
-  }, [localStream, isMuted, user]);
+  }, [localStream, isMuted, user?.id]);
 
   const handleLeave = async () => {
     await leaveRoom();
@@ -191,18 +211,30 @@ export function AudioRoomPanel({
         <RemoteAudioPlayer
           key={trackId}
           remote={remote}
-          onSpeakingChange={(isSpeaking) => {
-            setActiveSpeakingUsers((prev) => {
-              const next = new Set(prev);
-              if (remote.userId) {
-                if (isSpeaking) next.add(remote.userId);
-                else next.delete(remote.userId);
-              }
-              return next;
-            });
-          }}
+          unlockTick={unlockTick}
+          onSpeakingChange={handleRemoteSpeakingChange}
+          onAutoplayBlockedChange={handleAutoplayBlockedChange}
         />
       ))}
+
+      {autoplayBlocked && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs sm:text-sm">
+          <div className="flex items-center gap-2">
+            <Volume2 className="w-4 h-4 shrink-0" />
+            <span>Your browser paused incoming audio. Click to hear speakers.</span>
+          </div>
+          <Button
+            size="sm"
+            variant="default"
+            onClick={() => {
+              setUnlockTick((t) => t + 1);
+              setAutoplayBlocked(false);
+            }}
+          >
+            Enable Audio
+          </Button>
+        </div>
+      )}
 
       {/* Conference Room Top Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-card border shadow-sm">
@@ -525,12 +557,22 @@ export function AudioRoomPanel({
 // Sub-component to attach WebRTC MediaStream to invisible HTMLAudioElement with voice meter
 function RemoteAudioPlayer({
   remote,
+  unlockTick,
   onSpeakingChange,
+  onAutoplayBlockedChange,
 }: {
   remote: RemoteAudioStream;
-  onSpeakingChange: (isSpeaking: boolean) => void;
+  unlockTick: number;
+  onSpeakingChange: (userId: string, isSpeaking: boolean) => void;
+  onAutoplayBlockedChange: (blocked: boolean) => void;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const onSpeakingRef = useRef(onSpeakingChange);
+  onSpeakingRef.current = onSpeakingChange;
+  const onBlockedRef = useRef(onAutoplayBlockedChange);
+  onBlockedRef.current = onAutoplayBlockedChange;
+  const userIdRef = useRef(remote.userId);
+  userIdRef.current = remote.userId;
 
   useEffect(() => {
     const el = audioRef.current;
@@ -541,9 +583,16 @@ function RemoteAudioPlayer({
     el.volume = 1.0;
 
     const tryPlay = () => {
-      el.play().catch((err) => {
-        console.warn('[Audio] Autoplay pending user interaction:', err);
-      });
+      el.play()
+        .then(() => {
+          onBlockedRef.current(false);
+        })
+        .catch((err) => {
+          console.warn('[Audio] Autoplay pending user interaction:', err);
+          if (err?.name === 'NotAllowedError') {
+            onBlockedRef.current(true);
+          }
+        });
     };
 
     tryPlay();
@@ -556,15 +605,21 @@ function RemoteAudioPlayer({
     });
 
     const unlock = () => {
-      el.play().catch(() => {});
+      el.play()
+        .then(() => {
+          onBlockedRef.current(false);
+        })
+        .catch(() => {});
     };
 
-    window.addEventListener('click', unlock, { once: true });
-    window.addEventListener('keydown', unlock, { once: true });
-    window.addEventListener('touchstart', unlock, { once: true });
+    window.addEventListener('click', unlock);
+    window.addEventListener('keydown', unlock);
+    window.addEventListener('touchstart', unlock);
 
     const meter = createAudioMeter(remote.stream, (_vol, isSpeaking) => {
-      onSpeakingChange(isSpeaking);
+      if (userIdRef.current) {
+        onSpeakingRef.current(userIdRef.current, isSpeaking);
+      }
     });
 
     return () => {
@@ -575,8 +630,21 @@ function RemoteAudioPlayer({
       window.removeEventListener('keydown', unlock);
       window.removeEventListener('touchstart', unlock);
       meter.stop();
+      if (userIdRef.current) {
+        onSpeakingRef.current(userIdRef.current, false);
+      }
     };
-  }, [remote.stream, onSpeakingChange]);
+  }, [remote.stream]);
+
+  // Retry play when user explicitly clicks the Enable Audio banner
+  useEffect(() => {
+    if (unlockTick === 0) return;
+    const el = audioRef.current;
+    if (!el) return;
+    el.play()
+      .then(() => onBlockedRef.current(false))
+      .catch(() => {});
+  }, [unlockTick]);
 
   return (
     <audio
