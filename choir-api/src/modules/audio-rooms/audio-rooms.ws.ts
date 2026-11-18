@@ -95,6 +95,31 @@ export function notifyRoomParticipantLeft(roomId: string, userId: string) {
   });
 }
 
+export function notifyRoomDeleted(roomId: string) {
+  const roomClients = rooms.get(roomId);
+  if (roomClients) {
+    const payload = JSON.stringify({
+      type: 'room-ended',
+      payload: { roomId },
+    });
+
+    roomClients.forEach((client) => {
+      try {
+        if (client.ws.readyState === WebSocket.OPEN) {
+          client.ws.send(payload);
+        }
+        client.ws.close(1000, 'Room deleted');
+      } catch {
+        // Ignore close errors
+      }
+    });
+  }
+
+  rooms.delete(roomId);
+  activeBibleReferences.delete(roomId);
+  roomChatHistory.delete(roomId);
+}
+
 export function setupAudioRoomsWebSocketServer(server: HttpServer) {
   const wss = new WebSocketServer({ noServer: true });
 

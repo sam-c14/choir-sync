@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/requireAuth';
+import { requireRole } from '../../middleware/requireRole';
 import { audioRoomsController } from './audio-rooms.controller';
 
 const router = Router();
@@ -9,9 +10,10 @@ router.use(requireAuth);
 
 // Room CRUD & membership
 router.get('/', audioRoomsController.listRooms.bind(audioRoomsController));
-router.post('/', audioRoomsController.createRoom.bind(audioRoomsController));
+router.post('/', requireRole(['ADMIN', 'DIRECTOR']), audioRoomsController.createRoom.bind(audioRoomsController));
 router.get('/:id', audioRoomsController.getRoom.bind(audioRoomsController));
 router.patch('/:id', audioRoomsController.updateRoom.bind(audioRoomsController));
+router.delete('/:id', requireRole('ADMIN'), audioRoomsController.deleteRoom.bind(audioRoomsController));
 router.post('/:id/join', audioRoomsController.joinRoom.bind(audioRoomsController));
 router.post('/:id/leave', audioRoomsController.leaveRoom.bind(audioRoomsController));
 router.patch('/:id/participants/:userId', audioRoomsController.updateParticipantRole.bind(audioRoomsController));

@@ -49,6 +49,11 @@ export const cloudflareSfuClient = {
     return res.data;
   },
 
+  async deleteRoom(roomId: string) {
+    const res = await apiClient.delete(`/audio-rooms/${roomId}`);
+    return res.data;
+  },
+
   async joinRoom(roomId: string) {
     const res = await apiClient.post(`/audio-rooms/${roomId}/join`);
     return res.data;

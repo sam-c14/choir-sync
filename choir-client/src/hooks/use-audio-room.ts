@@ -72,6 +72,7 @@ export interface EmojiReactionEvent {
 interface UseAudioRoomOptions {
   roomId: string;
   initialRole?: AudioRoomRole;
+  onRoomEnded?: () => void;
 }
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
@@ -134,8 +135,10 @@ function waitForIceConnected(pc: RTCPeerConnection, timeoutMs = 4000): Promise<v
   });
 }
 
-export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomOptions) {
+export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: UseAudioRoomOptions) {
   const { user } = useAuth();
+  const onRoomEndedRef = useRef(onRoomEnded);
+  onRoomEndedRef.current = onRoomEnded;
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [role, setRole] = useState<AudioRoomRole>(initialRole);
@@ -613,7 +616,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       }
     } catch (micErr: any) {
       console.error('Microphone access denied:', micErr);
-      setError('Could not access microphone. Please check your browser audio permissions.');
+      setError('Please allow microphone access in your browser settings so others can hear you.');
       setIsMuted(true);
       return;
     }
@@ -1066,6 +1069,12 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         }
       });
 
+      socket.on('room-ended', () => {
+        isJoinedRef.current = false;
+        cleanupPeerConnection();
+        onRoomEndedRef.current?.();
+      });
+
       socket.on('webrtc-signal', (payload: any) => {
         if (payload?.fromUserId && payload.signal) {
           handleP2pSignal(payload.fromUserId, payload.signal);
@@ -1082,7 +1091,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       }
     } catch (err: any) {
       console.error('Failed to join audio room:', err);
-      setError(err.message || 'Failed to connect to conference room.');
+      setError("Couldn't enter the room right now. Please check your connection and try again.");
       setConnectionStatus('failed');
       isJoinedRef.current = false;
     }

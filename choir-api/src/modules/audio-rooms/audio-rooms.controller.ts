@@ -6,7 +6,7 @@ import {
   AudioRoomTrackRequestSchema,
 } from '@choir-workspace/shared-validation';
 import { audioRoomsService } from './audio-rooms.service';
-import { notifyRoomParticipantLeft } from './audio-rooms.ws';
+import { notifyRoomParticipantLeft, notifyRoomDeleted } from './audio-rooms.ws';
 import { handleControllerError, sendError } from '../../lib/errors';
 import { z } from 'zod';
 
@@ -46,11 +46,46 @@ export class AudioRoomsController {
         return sendError(res, 401, 'Unauthorized', undefined, 'UNAUTHORIZED');
       }
 
+      if (req.user.role !== 'ADMIN' && req.user.role !== 'DIRECTOR') {
+        return sendError(
+          res,
+          403,
+          'Forbidden: Only administrators and directors can create rooms',
+          undefined,
+          'FORBIDDEN'
+        );
+      }
+
       const validated = CreateAudioRoomSchema.parse(req.body);
       const room = await audioRoomsService.createRoom(req.user.id, validated);
       res.status(201).json(room);
     } catch (error) {
       handleControllerError(res, error, 'Failed to create audio room', req);
+    }
+  }
+
+  async deleteRoom(req: Request, res: Response) {
+    try {
+      if (!req.user?.id) {
+        return sendError(res, 401, 'Unauthorized', undefined, 'UNAUTHORIZED');
+      }
+
+      if (req.user.role !== 'ADMIN') {
+        return sendError(
+          res,
+          403,
+          'Forbidden: Only administrators can delete rooms',
+          undefined,
+          'FORBIDDEN'
+        );
+      }
+
+      const roomId = req.params.id as string;
+      await audioRoomsService.deleteRoom(roomId);
+      notifyRoomDeleted(roomId);
+      res.json({ success: true });
+    } catch (error) {
+      handleControllerError(res, error, 'Failed to delete audio room', req);
     }
   }
 

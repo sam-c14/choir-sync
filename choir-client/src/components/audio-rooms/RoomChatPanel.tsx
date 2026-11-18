@@ -101,7 +101,7 @@ export const RoomChatPanel = React.memo(function RoomChatPanel({
             <MessageSquare className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-bold leading-tight truncate">In-call messages</h3>
+            <h3 className="text-sm font-bold leading-tight truncate">Room Chat</h3>
             <p className="text-[11px] text-muted-foreground truncate">
               {messages.length} {messages.length === 1 ? 'message' : 'messages'}
             </p>
@@ -124,7 +124,7 @@ export const RoomChatPanel = React.memo(function RoomChatPanel({
       <div className="mx-3.5 mt-3 mb-1 px-3 py-2 rounded-xl bg-muted/60 border border-border/60 flex items-start gap-2 text-[11px] text-muted-foreground shrink-0">
         <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-purple-600 dark:text-purple-300" />
         <span>
-          Messages can only be seen by people in the call and are cleared when everyone leaves.
+          Messages can only be seen by people in the room and are cleared when everyone leaves.
         </span>
       </div>
 

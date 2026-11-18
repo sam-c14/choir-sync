@@ -24,7 +24,7 @@ export default function AudioRoomDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Joining conference room...</p>
+        <p className="text-sm text-muted-foreground">Entering room...</p>
       </div>
     );
   }
@@ -36,9 +36,9 @@ export default function AudioRoomDetailPage() {
           <AlertCircle className="w-8 h-8" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-foreground">Room Not Found</h2>
+          <h2 className="text-lg font-bold text-foreground">Room Unavailable</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            This audio room may have ended or the link is invalid.
+            This room may have ended or been removed.
           </p>
         </div>
         <Button variant="outline" onClick={() => navigate('/rooms', { replace: true })} className="gap-2">

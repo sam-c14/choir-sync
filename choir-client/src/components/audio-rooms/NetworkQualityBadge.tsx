@@ -25,12 +25,12 @@ export function NetworkQualityBadge({ telemetry, connectionStatus }: NetworkQual
     return (
       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
         <WifiOff className="w-3.5 h-3.5" />
-        <span>Connection Failed</span>
+        <span>Connection lost</span>
       </div>
     );
   }
 
-  const { rttMs, packetLossPercent, quality } = telemetry;
+  const { quality } = telemetry;
 
   const colorClasses = {
     excellent: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
@@ -38,10 +38,16 @@ export function NetworkQualityBadge({ telemetry, connectionStatus }: NetworkQual
     poor: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
   }[quality];
 
+  const qualityLabel = {
+    excellent: 'Strong signal',
+    good: 'Fair signal',
+    poor: 'Weak signal',
+  }[quality];
+
   return (
     <div
       className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium border ${colorClasses}`}
-      title={`Round Trip: ${rttMs}ms | Packet Loss: ${packetLossPercent}% | Jitter: ${telemetry.jitterMs}ms`}
+      title="Your voice signal quality"
     >
       <span className="relative flex h-2 w-2">
         <span
@@ -63,8 +69,7 @@ export function NetworkQualityBadge({ telemetry, connectionStatus }: NetworkQual
           }`}
         />
       </span>
-      <span>{rttMs > 0 ? `${rttMs}ms` : 'Connected'}</span>
-      {packetLossPercent > 0 && <span className="opacity-75">({packetLossPercent}% loss)</span>}
+      <span>{qualityLabel}</span>
     </div>
   );
 }

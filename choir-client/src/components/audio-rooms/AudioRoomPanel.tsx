@@ -35,6 +35,7 @@ import {
 import { createAudioMeter } from '../../lib/audio-meter';
 import { formatReferenceLabel, BibleVersion } from '../../lib/bible';
 import { useAuth } from '../../auth/auth-context';
+import { toast } from 'sonner';
 
 interface AudioRoomPanelProps {
   roomId: string;
@@ -80,7 +81,14 @@ export function AudioRoomPanel({
     sendChatMessage,
     sendEmojiReaction,
     subscribeToEmojiReactions,
-  } = useAudioRoom({ roomId, initialRole });
+  } = useAudioRoom({
+    roomId,
+    initialRole,
+    onRoomEnded: () => {
+      toast.info('This room has been closed.');
+      onLeave();
+    },
+  });
 
   const [activeSpeakingUsers, setActiveSpeakingUsers] = useState<Set<string>>(new Set());
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
@@ -347,7 +355,7 @@ export function AudioRoomPanel({
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs sm:text-sm">
           <div className="flex items-center gap-2">
             <Volume2 className="w-4 h-4 shrink-0" />
-            <span>Your browser paused incoming audio. Click to hear speakers.</span>
+            <span>Sound was paused by your browser. Tap Enable Sound to listen.</span>
           </div>
           <Button
             size="sm"
@@ -357,7 +365,7 @@ export function AudioRoomPanel({
               setAutoplayBlocked(false);
             }}
           >
-            Enable Audio
+            Enable Sound
           </Button>
         </div>
       )}
@@ -375,7 +383,7 @@ export function AudioRoomPanel({
               </h2>
               <span className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Live Call
+                Live Room
               </span>
               {connectionStatus === 'connecting' && (
                 <span className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
@@ -423,7 +431,7 @@ export function AudioRoomPanel({
               </h4>
             </div>
             <span className="text-[11px] text-muted-foreground hidden sm:inline">
-              {isHost ? 'Promote members to invite them to speak' : 'Participants requesting to speak'}
+              {isHost ? 'Tap Allow to invite someone to speak' : 'Waiting to speak'}
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -454,7 +462,7 @@ export function AudioRoomPanel({
                       onClick={() => promoteToSpeaker(raiser.userId)}
                     >
                       <UserCheck className="w-3 h-3 text-emerald-500" />
-                      Promote
+                      Allow
                     </Button>
                   )}
                 </div>
@@ -552,7 +560,7 @@ export function AudioRoomPanel({
                     {p.role === 'listener' ? (
                       <span
                         className="p-1.5 rounded-full bg-black/60 backdrop-blur-md text-zinc-400 border border-white/10 flex items-center justify-center"
-                        title="Listener (Audio Only)"
+                        title="Listening"
                       >
                         <Headphones className="w-3.5 h-3.5" />
                       </span>
@@ -637,10 +645,10 @@ export function AudioRoomPanel({
                           variant="ghost"
                           className="h-6 px-2 text-[10px] text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
                           onClick={() => demoteToListener(p.userId)}
-                          title="Demote to Listener"
+                          title="Move back to listeners"
                         >
                           <UserX className="w-3 h-3" />
-                          <span className="hidden sm:inline">To Listener</span>
+                          <span className="hidden sm:inline">Listener</span>
                         </Button>
                       )}
                     </div>
@@ -668,7 +676,7 @@ export function AudioRoomPanel({
             <aside
               role="dialog"
               aria-modal="true"
-              aria-label={isBibleOpen ? 'Scripture Reader' : 'In-call Chat'}
+              aria-label={isBibleOpen ? 'Scripture Reader' : 'Room Chat'}
               className="relative z-10 w-full h-[100dvh] sm:w-[440px] md:w-[480px] bg-card sm:border-l border-border shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200"
             >
               {/* Drawer Live Call Strip + Chat/Bible Switcher */}
@@ -678,7 +686,7 @@ export function AudioRoomPanel({
                   <span className="text-xs font-medium truncate">
                     {activeSpeakersList.length > 0
                       ? activeSpeakersList.map((s) => s.name).join(', ')
-                      : `${liveParticipants.length} in call`}
+                      : `${liveParticipants.length} in room`}
                   </span>
                 </div>
 
@@ -904,7 +912,7 @@ export function AudioRoomPanel({
             size="lg"
             className="rounded-full w-11 h-11 sm:w-13 sm:h-13 p-0 shadow-lg bg-red-600 hover:bg-red-700"
             onClick={handleLeave}
-            title="Leave Audio Conference"
+            title="Leave Room"
           >
             <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6" />
           </Button>

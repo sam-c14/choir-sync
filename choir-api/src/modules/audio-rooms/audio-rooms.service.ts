@@ -128,6 +128,16 @@ export class AudioRoomsService {
     });
   }
 
+  async deleteRoom(roomId: string) {
+    const existing = await prisma.audioRoom.findUnique({ where: { id: roomId } });
+    if (!existing) {
+      throw new Error('Audio room not found');
+    }
+    return prisma.audioRoom.delete({
+      where: { id: roomId },
+    });
+  }
+
   async joinRoom(roomId: string, userId: string) {
     const room = await prisma.audioRoom.findUnique({ where: { id: roomId } });
     if (!room) {

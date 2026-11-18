@@ -754,7 +754,7 @@ export function BibleReaderPanel({
                 onClick={handleBroadcastSelection}
               >
                 {justShared ? <Check className="w-3 h-3" /> : <Radio className="w-3 h-3" />}
-                <span>{justShared ? 'Called!' : 'Call to Room'}</span>
+                <span>{justShared ? 'Shared!' : 'Share with Room'}</span>
               </Button>
             )}
             <Button
