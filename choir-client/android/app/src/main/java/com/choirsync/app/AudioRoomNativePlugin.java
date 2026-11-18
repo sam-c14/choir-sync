@@ -64,13 +64,13 @@ public class AudioRoomNativePlugin extends Plugin {
         startOrUpdateForegroundService(currentRoomTitle, currentIsMuted);
 
         List<String> aliasesToRequest = new ArrayList<>();
-        if (includeMic && !hasPermission(Manifest.permission.RECORD_AUDIO)) {
+        if (includeMic && !hasAndroidPermission(Manifest.permission.RECORD_AUDIO)) {
             aliasesToRequest.add("microphone");
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasPermission("android.permission.BLUETOOTH_CONNECT")) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasAndroidPermission("android.permission.BLUETOOTH_CONNECT")) {
             aliasesToRequest.add("bluetooth");
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasPermission("android.permission.POST_NOTIFICATIONS")) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasAndroidPermission("android.permission.POST_NOTIFICATIONS")) {
             aliasesToRequest.add("notifications");
         }
 
@@ -84,7 +84,7 @@ public class AudioRoomNativePlugin extends Plugin {
 
     @PluginMethod
     public void ensureMicrophonePermission(PluginCall call) {
-        if (hasPermission(Manifest.permission.RECORD_AUDIO) || getPermissionState("microphone") == PermissionState.GRANTED) {
+        if (hasAndroidPermission(Manifest.permission.RECORD_AUDIO) || getPermissionState("microphone") == PermissionState.GRANTED) {
             JSObject result = new JSObject();
             result.put("granted", true);
             call.resolve(result);
@@ -137,7 +137,7 @@ public class AudioRoomNativePlugin extends Plugin {
     @PermissionCallback
     private void microphonePermissionCallback(PluginCall call) {
         boolean granted =
-            hasPermission(Manifest.permission.RECORD_AUDIO) || getPermissionState("microphone") == PermissionState.GRANTED;
+            hasAndroidPermission(Manifest.permission.RECORD_AUDIO) || getPermissionState("microphone") == PermissionState.GRANTED;
         if (granted && isSessionActive) {
             updateAudioRouting();
             startOrUpdateForegroundService(currentRoomTitle, currentIsMuted);
@@ -149,19 +149,19 @@ public class AudioRoomNativePlugin extends Plugin {
 
     private JSObject buildPermissionStatusResult() {
         JSObject result = new JSObject();
-        result.put("microphoneGranted", hasPermission(Manifest.permission.RECORD_AUDIO));
+        result.put("microphoneGranted", hasAndroidPermission(Manifest.permission.RECORD_AUDIO));
         result.put(
             "bluetoothGranted",
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.S || hasPermission("android.permission.BLUETOOTH_CONNECT")
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S || hasAndroidPermission("android.permission.BLUETOOTH_CONNECT")
         );
         result.put(
             "notificationsGranted",
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || hasPermission("android.permission.POST_NOTIFICATIONS")
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || hasAndroidPermission("android.permission.POST_NOTIFICATIONS")
         );
         return result;
     }
 
-    private boolean hasPermission(String permission) {
+    private boolean hasAndroidPermission(String permission) {
         return ContextCompat.checkSelfPermission(getContext(), permission) == PackageManager.PERMISSION_GRANTED;
     }
 
@@ -217,7 +217,7 @@ public class AudioRoomNativePlugin extends Plugin {
                     preferred = builtinSpeaker;
                 } else if (wiredHeadset != null) {
                     preferred = wiredHeadset;
-                } else if (bluetoothDevice != null && hasPermission("android.permission.BLUETOOTH_CONNECT")) {
+                } else if (bluetoothDevice != null && hasAndroidPermission("android.permission.BLUETOOTH_CONNECT")) {
                     preferred = bluetoothDevice;
                 } else if (!Boolean.FALSE.equals(speakerphoneOverride) && builtinSpeaker != null) {
                     preferred = builtinSpeaker;
