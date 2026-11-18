@@ -24,6 +24,62 @@ export interface RoomClient {
 
 // Map<roomId, Map<connectionId, RoomClient>>
 const rooms = new Map<string, Map<string, RoomClient>>();
+// Map<roomId, active called scripture reference>
+const activeBibleReferences = new Map<string, any>();
+
+function removeConnectionFromRoom(roomId: string, connectionId: string, userId: string) {
+  const roomClients = rooms.get(roomId);
+  if (!roomClients || !roomClients.has(connectionId)) return;
+
+  roomClients.delete(connectionId);
+  logger.info(
+    `WebSocket: Connection ${connectionId.slice(0, 8)} left room ${roomId} (user=${userId}). Remaining sockets: ${roomClients.size}`
+  );
+
+  // Check if user still has other active sockets (e.g. multiple tabs)
+  const hasOtherSockets = Array.from(roomClients.values()).some((c) => c.userId === userId);
+
+  if (!hasOtherSockets) {
+    broadcastToRoom(roomId, null, {
+      type: 'participant-left',
+      payload: { userId },
+    });
+
+    prisma.audioRoomParticipant
+      .deleteMany({
+        where: { roomId, userId },
+      })
+      .catch(() => {});
+  }
+
+  if (roomClients.size === 0) {
+    rooms.delete(roomId);
+    activeBibleReferences.delete(roomId);
+  }
+}
+
+export function notifyRoomParticipantLeft(roomId: string, userId: string) {
+  const roomClients = rooms.get(roomId);
+  if (!roomClients) return;
+
+  const matchingConnections: Array<{ connectionId: string; ws: WebSocket }> = [];
+  roomClients.forEach((c, connId) => {
+    if (c.userId === userId) {
+      matchingConnections.push({ connectionId: connId, ws: c.ws });
+    }
+  });
+
+  matchingConnections.forEach(({ connectionId, ws }) => {
+    removeConnectionFromRoom(roomId, connectionId, userId);
+    if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+      try {
+        ws.close(1000, 'Participant left room');
+      } catch {
+        // Ignore close errors
+      }
+    }
+  });
+}
 
 export function setupAudioRoomsWebSocketServer(server: HttpServer) {
   const wss = new WebSocketServer({ noServer: true });
@@ -184,11 +240,14 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
         }
       });
 
-      // Send roster to newly joined socket
+      // Send roster + any active called scripture to newly joined socket
       ws.send(
         JSON.stringify({
           type: 'room-roster',
-          payload: { participants: Array.from(uniqueParticipantsMap.values()) },
+          payload: {
+            participants: Array.from(uniqueParticipantsMap.values()),
+            activeBibleReference: activeBibleReferences.get(roomId) || null,
+          },
         })
       );
 
@@ -337,6 +396,36 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
               break;
             }
 
+            case 'bible-reference': {
+              const refPayload = {
+                bookId: payload.bookId,
+                bookName: payload.bookName,
+                chapter: Number(payload.chapter),
+                verseStart: payload.verseStart ? Number(payload.verseStart) : undefined,
+                verseEnd: payload.verseEnd ? Number(payload.verseEnd) : undefined,
+                version: payload.version || 'BSB',
+                sharedByUserId: userId,
+                sharedByName: client.name,
+                calledAt: Date.now(),
+              };
+              if (refPayload.bookId && refPayload.chapter) {
+                activeBibleReferences.set(roomId, refPayload);
+                broadcastToRoom(roomId, null, {
+                  type: 'bible-reference',
+                  payload: refPayload,
+                });
+              }
+              break;
+            }
+
+            case 'leave-room': {
+              removeConnectionFromRoom(roomId, connectionId, userId);
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.close(1000, 'Left room');
+              }
+              break;
+            }
+
             case 'webrtc-signal': {
               const targetUserId = payload.targetUserId;
               if (targetUserId) {
@@ -366,31 +455,8 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
       };
 
       ws.removeListener('close', earlyCloseHandler);
-      ws.on('close', async () => {
-        roomClients.delete(connectionId);
-        logger.info(
-          `WebSocket: Connection ${connectionId.slice(0, 8)} closed for user ${userId} in room ${roomId}. Remaining sockets: ${roomClients.size}`
-        );
-
-        // Check if user still has other active sockets (e.g. multiple tabs)
-        const hasOtherSockets = Array.from(roomClients.values()).some((c) => c.userId === userId);
-
-        if (!hasOtherSockets) {
-          broadcastToRoom(roomId, null, {
-            type: 'participant-left',
-            payload: { userId },
-          });
-
-          await prisma.audioRoomParticipant
-            .deleteMany({
-              where: { roomId, userId },
-            })
-            .catch(() => {});
-        }
-
-        if (roomClients.size === 0) {
-          rooms.delete(roomId);
-        }
+      ws.on('close', () => {
+        removeConnectionFromRoom(roomId, connectionId, userId);
       });
 
       isInitialized = true;

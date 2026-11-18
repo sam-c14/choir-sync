@@ -6,6 +6,7 @@ import {
   AudioRoomTrackRequestSchema,
 } from '@choir-workspace/shared-validation';
 import { audioRoomsService } from './audio-rooms.service';
+import { notifyRoomParticipantLeft } from './audio-rooms.ws';
 import { handleControllerError, sendError } from '../../lib/errors';
 import { z } from 'zod';
 
@@ -92,7 +93,9 @@ export class AudioRoomsController {
         return sendError(res, 401, 'Unauthorized', undefined, 'UNAUTHORIZED');
       }
 
-      await audioRoomsService.leaveRoom(req.params.id as string, req.user.id);
+      const roomId = req.params.id as string;
+      notifyRoomParticipantLeft(roomId, req.user.id);
+      await audioRoomsService.leaveRoom(roomId, req.user.id);
       res.json({ success: true });
     } catch (error) {
       handleControllerError(res, error, 'Failed to leave audio room', req);

@@ -15,16 +15,20 @@ import {
   Headphones,
   PhoneOff,
   Loader2,
+  BookOpen,
+  X,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { UserAvatar } from '../ui/user-avatar';
 import { NetworkQualityBadge } from './NetworkQualityBadge';
+import { BibleReaderPanel } from './BibleReaderPanel';
 import {
   useAudioRoom,
   RoomParticipantState,
   RemoteAudioStream,
 } from '../../hooks/use-audio-room';
 import { createAudioMeter } from '../../lib/audio-meter';
+import { formatReferenceLabel, BibleVersion } from '../../lib/bible';
 import { useAuth } from '../../auth/auth-context';
 
 interface AudioRoomPanelProps {
@@ -55,6 +59,7 @@ export function AudioRoomPanel({
     remoteStreams,
     localStream,
     telemetry,
+    activeBibleReference,
     error,
     joinRoom,
     leaveRoom,
@@ -63,11 +68,34 @@ export function AudioRoomPanel({
     promoteToSpeaker,
     demoteToListener,
     muteAll,
+    shareBibleReference,
   } = useAudioRoom({ roomId, initialRole });
 
   const [activeSpeakingUsers, setActiveSpeakingUsers] = useState<Set<string>>(new Set());
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [unlockTick, setUnlockTick] = useState(0);
+  const [isBibleOpen, setIsBibleOpen] = useState(false);
+  const [hasUnreadBibleCall, setHasUnreadBibleCall] = useState(false);
+  const [dismissedBibleCalledAt, setDismissedBibleCalledAt] = useState<number | null>(null);
+  const [bibleJumpTarget, setBibleJumpTarget] = useState<{
+    bookId: string;
+    chapter: number;
+    verseStart?: number;
+    verseEnd?: number;
+    version?: BibleVersion;
+    nonce: number;
+  } | null>(null);
+  const lastSeenBibleCallRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (activeBibleReference?.calledAt && activeBibleReference.calledAt !== lastSeenBibleCallRef.current) {
+      lastSeenBibleCallRef.current = activeBibleReference.calledAt;
+      setDismissedBibleCalledAt(null);
+      if (!isBibleOpen) {
+        setHasUnreadBibleCall(true);
+      }
+    }
+  }, [activeBibleReference, isBibleOpen]);
 
   const handleRemoteSpeakingChange = useCallback((speakerUserId: string, isSpeaking: boolean) => {
     if (!speakerUserId) return;
@@ -127,9 +155,32 @@ export function AudioRoomPanel({
     };
   }, [localStream, isMuted, user?.id]);
 
-  const handleLeave = async () => {
-    await leaveRoom();
+  const handleLeave = () => {
+    leaveRoom();
     onLeave();
+  };
+
+  const openBibleToCalled = () => {
+    if (activeBibleReference) {
+      setBibleJumpTarget({
+        bookId: activeBibleReference.bookId,
+        chapter: activeBibleReference.chapter,
+        verseStart: activeBibleReference.verseStart,
+        verseEnd: activeBibleReference.verseEnd,
+        version: activeBibleReference.version,
+        nonce: Date.now(),
+      });
+    }
+    setIsBibleOpen(true);
+    setHasUnreadBibleCall(false);
+  };
+
+  const toggleBiblePanel = () => {
+    setIsBibleOpen((prev) => {
+      const next = !prev;
+      if (next) setHasUnreadBibleCall(false);
+      return next;
+    });
   };
 
   // Compute live participant list ensuring current user state is represented even before presence sync
@@ -194,18 +245,26 @@ export function AudioRoomPanel({
 
   const handRaisers = liveParticipants.filter((p) => p.handRaised);
   const speakersCount = liveParticipants.filter((p) => p.role === 'host' || p.role === 'speaker').length;
+  const activeSpeakersList = liveParticipants.filter((p) => activeSpeakingUsers.has(p.userId));
+  const showCalledBibleBanner = Boolean(
+    activeBibleReference && activeBibleReference.calledAt !== dismissedBibleCalledAt
+  );
 
   // Responsive Google Meet / Zoom grid layout class
   const getGridClass = (count: number) => {
     if (count <= 1) return 'grid-cols-1 max-w-2xl mx-auto';
-    if (count === 2) return 'grid-cols-1 sm:grid-cols-2 max-w-4xl mx-auto';
-    if (count <= 4) return 'grid-cols-1 sm:grid-cols-2 max-w-5xl mx-auto';
-    if (count <= 6) return 'grid-cols-2 sm:grid-cols-3';
-    return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4';
+    if (count === 2) return isBibleOpen ? 'grid-cols-1 sm:grid-cols-2 mx-auto' : 'grid-cols-1 sm:grid-cols-2 max-w-4xl mx-auto';
+    if (count <= 4) return isBibleOpen ? 'grid-cols-1 sm:grid-cols-2 mx-auto' : 'grid-cols-1 sm:grid-cols-2 max-w-5xl mx-auto';
+    if (count <= 6) return isBibleOpen ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3';
+    return isBibleOpen ? 'grid-cols-2 xl:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4';
   };
 
   return (
-    <div className="flex flex-col h-full max-w-6xl mx-auto p-3 sm:p-4 space-y-4">
+    <div
+      className={`flex flex-col h-full mx-auto p-3 sm:p-4 space-y-4 transition-all duration-200 ${
+        isBibleOpen ? 'max-w-7xl' : 'max-w-6xl'
+      }`}
+    >
       {/* Hidden audio elements for incoming WebRTC speaker streams */}
       {Array.from(remoteStreams.entries()).map(([trackId, remote]) => (
         <RemoteAudioPlayer
@@ -338,9 +397,55 @@ export function AudioRoomPanel({
         </div>
       )}
 
-      {/* Google Meet / Zoom Conference Video/Audio Grid */}
-      <div className="flex-1 min-h-[420px] flex flex-col justify-center">
-        <div className={`grid gap-3.5 sm:gap-4 w-full ${getGridClass(sortedParticipants.length)}`}>
+      {/* Called Scripture Alert Banner */}
+      {showCalledBibleBanner && activeBibleReference && (
+        <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-primary/10 border border-primary/25 shadow-sm animate-in fade-in duration-200">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-1.5 rounded-lg bg-purple-500/15 text-purple-600 dark:text-purple-300 shrink-0">
+              <BookOpen className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
+                Scripture Called:{' '}
+                <span className="text-purple-700 dark:text-purple-300">
+                  {formatReferenceLabel(
+                    activeBibleReference.bookName,
+                    activeBibleReference.chapter,
+                    activeBibleReference.verseStart,
+                    activeBibleReference.verseEnd,
+                    activeBibleReference.version
+                  )}
+                </span>
+              </p>
+              {activeBibleReference.sharedByName && (
+                <p className="text-[11px] text-muted-foreground truncate">
+                  Shared by {activeBibleReference.sharedByName}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button size="sm" variant="default" className="h-7 px-3 text-xs" onClick={openBibleToCalled}>
+              {isBibleOpen ? 'Jump' : 'Open Bible'}
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground"
+              onClick={() => setDismissedBibleCalledAt(activeBibleReference.calledAt ?? null)}
+              aria-label="Dismiss scripture notice"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Room Stage: Participant Grid + Optional Side-by-Side Bible Reader on Desktop */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 items-stretch min-h-0">
+        {/* Google Meet / Zoom Conference Video/Audio Grid */}
+        <div className="flex-1 min-w-0 min-h-[380px] flex flex-col justify-center">
+          <div className={`grid gap-3.5 sm:gap-4 w-full ${getGridClass(sortedParticipants.length)}`}>
           {sortedParticipants.map((p) => {
             const isSpeaking = activeSpeakingUsers.has(p.userId);
             const isSelf = p.userId === user?.id;
@@ -479,11 +584,74 @@ export function AudioRoomPanel({
               </div>
             );
           })}
+          </div>
         </div>
+
+        {/* Interactive Bible Reader (Side panel on desktop, full-screen drawer on mobile) */}
+        {isBibleOpen && (
+          <aside className="fixed inset-0 z-50 bg-background flex flex-col lg:static lg:z-auto lg:w-[420px] xl:w-[460px] lg:shrink-0 lg:h-[calc(100vh-14rem)] lg:min-h-[500px] lg:rounded-2xl lg:border lg:shadow-lg overflow-hidden">
+            {/* Compact Live Audio Strip visible on mobile while reading Scripture */}
+            <div className="lg:hidden flex items-center justify-between gap-2 px-3 py-2 bg-zinc-950 text-white border-b border-zinc-800 shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="text-xs font-medium truncate">
+                  {activeSpeakersList.length > 0
+                    ? `Speaking: ${activeSpeakersList.map((s) => s.name).join(', ')}`
+                    : `Live Call · ${liveParticipants.length} in room`}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {(role === 'host' || role === 'speaker') && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant={isMuted ? 'destructive' : 'secondary'}
+                    className="h-7 w-7 rounded-full"
+                    onClick={toggleMute}
+                    aria-label={isMuted ? 'Unmute' : 'Mute'}
+                  >
+                    {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  size="icon"
+                  variant={handRaised ? 'default' : 'ghost'}
+                  className={`h-7 w-7 rounded-full ${
+                    handRaised ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'text-zinc-300'
+                  }`}
+                  onClick={toggleHandRaise}
+                  aria-label="Toggle raise hand"
+                >
+                  <Hand className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2.5 text-[11px] border-zinc-700 bg-zinc-900 text-zinc-100"
+                  onClick={() => setIsBibleOpen(false)}
+                >
+                  Back to Call
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0">
+              <BibleReaderPanel
+                onClose={() => setIsBibleOpen(false)}
+                canBroadcast={role === 'host' || role === 'speaker'}
+                calledReference={activeBibleReference}
+                jumpTarget={bibleJumpTarget}
+                onShareReference={shareBibleReference}
+              />
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* Google Meet / Zoom Bottom Call Control Bar */}
-      <div className="sticky bottom-4 left-0 right-0 p-3 rounded-2xl bg-zinc-950/90 backdrop-blur-lg border border-zinc-800 shadow-2xl flex items-center justify-center gap-4 z-20">
+      <div className="sticky bottom-4 left-0 right-0 p-3 rounded-2xl bg-zinc-950/90 backdrop-blur-lg border border-zinc-800 shadow-2xl flex items-center justify-center flex-wrap gap-2.5 sm:gap-4 z-20">
         {/* Mute / Unmute Button */}
         {role === 'host' || role === 'speaker' ? (
           <Button
@@ -512,7 +680,7 @@ export function AudioRoomPanel({
         <Button
           variant={handRaised ? 'default' : 'secondary'}
           size="lg"
-          className={`rounded-full h-11 sm:h-12 px-5 gap-2 shadow-sm ${
+          className={`rounded-full h-11 sm:h-12 px-4 sm:px-5 gap-2 shadow-sm ${
             handRaised
               ? 'bg-amber-500 hover:bg-amber-600 text-white'
               : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700'
@@ -520,9 +688,28 @@ export function AudioRoomPanel({
           onClick={toggleHandRaise}
         >
           <Hand className="w-5 h-5" />
-          <span className="text-xs font-semibold">
+          <span className="text-xs font-semibold hidden xs:inline sm:inline">
             {handRaised ? 'Hand Raised' : 'Raise Hand'}
           </span>
+        </Button>
+
+        {/* Bible Reader Toggle Button */}
+        <Button
+          variant={isBibleOpen ? 'default' : 'secondary'}
+          size="lg"
+          className={`relative rounded-full h-11 sm:h-12 px-4 sm:px-5 gap-2 shadow-sm ${
+            isBibleOpen
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700'
+          }`}
+          onClick={toggleBiblePanel}
+          title="Open KJV / BSB Bible Reader"
+        >
+          <BookOpen className="w-5 h-5" />
+          <span className="text-xs font-semibold">Bible</span>
+          {hasUnreadBibleCall && !isBibleOpen && (
+            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-amber-400 ring-2 ring-zinc-950 animate-pulse" />
+          )}
         </Button>
 
         {/* Host Mute All Action */}

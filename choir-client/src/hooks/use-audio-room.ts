@@ -40,6 +40,18 @@ export interface RoomTelemetry {
   quality: 'excellent' | 'good' | 'poor';
 }
 
+export interface CalledBibleReference {
+  bookId: string;
+  bookName: string;
+  chapter: number;
+  verseStart?: number;
+  verseEnd?: number;
+  version: 'BSB' | 'eng_kjv';
+  sharedByUserId?: string;
+  sharedByName?: string;
+  calledAt?: number;
+}
+
 interface UseAudioRoomOptions {
   roomId: string;
   initialRole?: AudioRoomRole;
@@ -121,6 +133,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     packetLossPercent: 0,
     quality: 'excellent',
   });
+  const [activeBibleReference, setActiveBibleReference] = useState<CalledBibleReference | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -824,6 +837,9 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
       });
 
       socket.on('room-roster', (payload: any) => {
+        if (payload?.activeBibleReference) {
+          setActiveBibleReference(payload.activeBibleReference);
+        }
         if (Array.isArray(payload?.participants)) {
           setParticipants(payload.participants);
 
@@ -1006,6 +1022,12 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         }
       });
 
+      socket.on('bible-reference', (payload: CalledBibleReference) => {
+        if (payload?.bookId && payload?.chapter) {
+          setActiveBibleReference(payload);
+        }
+      });
+
       socket.on('webrtc-signal', (payload: any) => {
         if (payload?.fromUserId && payload.signal) {
           handleP2pSignal(payload.fromUserId, payload.signal);
@@ -1037,21 +1059,20 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     startTelemetryMonitoring,
   ]);
 
-  // Leave room and notify peers
+  // Leave room and notify peers immediately
   const leaveRoom = useCallback(async () => {
+    const wasJoined = isJoinedRef.current;
     isJoinedRef.current = false;
 
     if (socketRef.current) {
-      socketRef.current.disconnect();
+      socketRef.current.disconnect(true);
       socketRef.current = null;
     }
 
     cleanupPeerConnection();
 
-    try {
-      await cloudflareSfuClient.leaveRoom(roomId);
-    } catch {
-      // Ignore exit failure
+    if (wasJoined) {
+      cloudflareSfuClient.leaveRoom(roomId).catch(() => {});
     }
   }, [roomId, cleanupPeerConnection]);
 
@@ -1180,15 +1201,50 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     }
   }, []);
 
+  // Broadcast called scripture reference to everyone in the room
+  const shareBibleReference = useCallback(
+    (ref: Omit<CalledBibleReference, 'sharedByUserId' | 'sharedByName' | 'calledAt'>) => {
+      if (socketRef.current) {
+        socketRef.current.send('bible-reference', ref);
+      }
+    },
+    []
+  );
+
   const leaveRoomRef = useRef(leaveRoom);
   leaveRoomRef.current = leaveRoom;
 
-  // Cleanup on unmount
+  // Instant leave notification when closing tab/app or navigating away
   useEffect(() => {
+    const handlePageExit = () => {
+      if (!isJoinedRef.current) return;
+      isJoinedRef.current = false;
+      if (socketRef.current) {
+        socketRef.current.disconnect(true);
+        socketRef.current = null;
+      }
+      const token = localStorage.getItem('token');
+      const baseUrl = import.meta.env.VITE_API_URL || '/api/v1';
+      if (token) {
+        fetch(`${baseUrl}/audio-rooms/${roomId}/leave`, {
+          method: 'POST',
+          keepalive: true,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }).catch(() => {});
+      }
+    };
+
+    window.addEventListener('pagehide', handlePageExit);
+    window.addEventListener('beforeunload', handlePageExit);
     return () => {
+      window.removeEventListener('pagehide', handlePageExit);
+      window.removeEventListener('beforeunload', handlePageExit);
       leaveRoomRef.current();
     };
-  }, []);
+  }, [roomId]);
 
   return {
     connectionStatus,
@@ -1199,6 +1255,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     remoteStreams,
     localStream,
     telemetry,
+    activeBibleReference,
     error,
     joinRoom,
     leaveRoom,
@@ -1207,5 +1264,6 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     promoteToSpeaker,
     demoteToListener,
     muteAll,
+    shareBibleReference,
   };
 }

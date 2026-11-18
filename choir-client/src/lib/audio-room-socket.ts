@@ -137,7 +137,7 @@ export class AudioRoomSocket {
     });
   }
 
-  disconnect() {
+  disconnect(sendLeave = true) {
     this.isIntentionallyClosed = true;
     this.pendingMessages.length = 0;
     if (this.pingInterval) {
@@ -149,7 +149,14 @@ export class AudioRoomSocket {
       this.reconnectTimeout = null;
     }
     if (this.ws) {
-      this.ws.close();
+      try {
+        if (sendLeave && this.ws.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({ type: 'leave-room', payload: {} }));
+        }
+        this.ws.close(1000, 'Left room');
+      } catch {
+        // Ignore close failure
+      }
       this.ws = null;
     }
     this.listeners.clear();
