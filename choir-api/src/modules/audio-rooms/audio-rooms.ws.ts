@@ -22,10 +22,23 @@ export interface RoomClient {
   lastSeen: number;
 }
 
+export interface RoomChatMessage {
+  id: string;
+  userId: string;
+  senderName: string;
+  senderAvatar?: string | null;
+  text: string;
+  timestamp: number;
+}
+
+const MAX_ROOM_CHAT_HISTORY = 100;
+
 // Map<roomId, Map<connectionId, RoomClient>>
 const rooms = new Map<string, Map<string, RoomClient>>();
 // Map<roomId, active called scripture reference>
 const activeBibleReferences = new Map<string, any>();
+// Map<roomId, recent in-call chat messages>
+const roomChatHistory = new Map<string, RoomChatMessage[]>();
 
 function removeConnectionFromRoom(roomId: string, connectionId: string, userId: string) {
   const roomClients = rooms.get(roomId);
@@ -55,6 +68,7 @@ function removeConnectionFromRoom(roomId: string, connectionId: string, userId: 
   if (roomClients.size === 0) {
     rooms.delete(roomId);
     activeBibleReferences.delete(roomId);
+    roomChatHistory.delete(roomId);
   }
 }
 
@@ -240,13 +254,14 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
         }
       });
 
-      // Send roster + any active called scripture to newly joined socket
+      // Send roster + active called scripture + recent chat history to newly joined socket
       ws.send(
         JSON.stringify({
           type: 'room-roster',
           payload: {
             participants: Array.from(uniqueParticipantsMap.values()),
             activeBibleReference: activeBibleReferences.get(roomId) || null,
+            chatMessages: roomChatHistory.get(roomId) || [],
           },
         })
       );
@@ -415,6 +430,50 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
                   payload: refPayload,
                 });
               }
+              break;
+            }
+
+            case 'chat-message': {
+              const rawText = typeof payload.text === 'string' ? payload.text.trim() : '';
+              if (!rawText) break;
+
+              const chatMsg: RoomChatMessage = {
+                id: typeof payload.id === 'string' && payload.id ? payload.id : crypto.randomUUID(),
+                userId,
+                senderName: client.name,
+                senderAvatar: client.avatarUrl || null,
+                text: rawText.slice(0, 1000),
+                timestamp: Date.now(),
+              };
+
+              const history = roomChatHistory.get(roomId) || [];
+              history.push(chatMsg);
+              if (history.length > MAX_ROOM_CHAT_HISTORY) {
+                history.splice(0, history.length - MAX_ROOM_CHAT_HISTORY);
+              }
+              roomChatHistory.set(roomId, history);
+
+              broadcastToRoom(roomId, connectionId, {
+                type: 'chat-message',
+                payload: chatMsg,
+              });
+              break;
+            }
+
+            case 'emoji-reaction': {
+              const emoji = typeof payload.emoji === 'string' ? payload.emoji.trim().slice(0, 16) : '';
+              if (!emoji) break;
+
+              broadcastToRoom(roomId, connectionId, {
+                type: 'emoji-reaction',
+                payload: {
+                  id: typeof payload.id === 'string' && payload.id ? payload.id : crypto.randomUUID(),
+                  emoji,
+                  userId,
+                  senderName: client.name,
+                  timestamp: Date.now(),
+                },
+              });
               break;
             }
 

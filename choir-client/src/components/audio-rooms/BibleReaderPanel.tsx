@@ -247,7 +247,7 @@ export function BibleReaderPanel({
       : null;
 
   return (
-    <div className="flex flex-col h-full bg-card text-foreground overflow-hidden">
+    <div className="flex flex-col flex-1 h-full min-h-0 bg-card text-foreground overflow-hidden">
       {/* Reader Header: Title, KJV/BSB Switcher, Font Size, Close */}
       <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 border-b bg-muted/30 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
@@ -339,10 +339,10 @@ export function BibleReaderPanel({
                 if (refError) setRefError(null);
               }}
               placeholder='Jump to scripture (e.g. "John 3:16", "Ps 23")'
-              className="h-8 pl-8 pr-2 text-xs rounded-lg"
+              className="h-9 sm:h-8 pl-8 pr-2 text-base sm:text-xs rounded-lg"
             />
           </div>
-          <Button type="submit" size="sm" variant="secondary" className="h-8 px-3 text-xs font-semibold">
+          <Button type="submit" size="sm" variant="secondary" className="h-9 sm:h-8 px-3 text-xs font-semibold">
             Go
           </Button>
         </form>
@@ -481,7 +481,7 @@ export function BibleReaderPanel({
         )}
 
       {/* Main Body: Book Picker, Chapter Grid, or Scripture Text */}
-      <div ref={viewportRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-3.5 relative">
+      <div ref={viewportRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3.5 relative">
         {pickerMode === 'book' ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2 sticky top-0 bg-card pb-2 z-10 border-b">
@@ -727,7 +727,7 @@ export function BibleReaderPanel({
 
       {/* Floating Verse Action Bar when verse(s) selected */}
       {selectionLabel && pickerMode === 'none' && (
-        <div className="px-3.5 py-2 border-t bg-muted/60 backdrop-blur-md flex items-center justify-between gap-2 shrink-0 animate-in fade-in duration-150">
+        <div className="px-3.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t bg-muted/80 backdrop-blur-md flex items-center justify-between gap-2 shrink-0 animate-in fade-in duration-150">
           <div className="min-w-0">
             <span className="text-xs font-semibold truncate block">{selectionLabel}</span>
             <span className="text-[10px] text-muted-foreground">

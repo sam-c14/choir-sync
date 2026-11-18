@@ -127,4 +127,69 @@
   color: var(--primary-foreground) !important;
 }
 
+@keyframes float-emoji-rise {
+  0% {
+    transform: translate3d(0, 10px, 0);
+  }
+  100% {
+    transform: translate3d(0, -76dvh, 0);
+  }
+}
+
+@keyframes float-emoji-opacity {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  76% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes float-emoji-sway {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(var(--drift-x, 18px), 0, 0);
+  }
+  100% {
+    transform: translate3d(calc(var(--drift-x, 18px) * -0.35), 0, 0);
+  }
+}
+
+@keyframes float-emoji-pop {
+  0% {
+    transform: scale(0.45);
+  }
+  65% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-float-emoji {
+  animation:
+    float-emoji-rise 3.1s cubic-bezier(0.22, 0.61, 0.36, 1) forwards,
+    float-emoji-opacity 3.1s linear forwards;
+  will-change: transform, opacity;
+}
+
+.animate-float-emoji-sway {
+  animation: float-emoji-sway 3.1s ease-in-out forwards;
+  will-change: transform;
+}
+
+.animate-float-emoji-pop {
+  animation: float-emoji-pop 0.34s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform;
+}
+
 

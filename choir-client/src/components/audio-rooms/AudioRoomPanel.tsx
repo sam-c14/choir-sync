@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Mic,
   MicOff,
@@ -16,12 +17,16 @@ import {
   PhoneOff,
   Loader2,
   BookOpen,
+  MessageSquare,
+  Smile,
   X,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { UserAvatar } from '../ui/user-avatar';
 import { NetworkQualityBadge } from './NetworkQualityBadge';
 import { BibleReaderPanel } from './BibleReaderPanel';
+import { RoomChatPanel } from './RoomChatPanel';
+import { EmojiReactionsOverlay } from './EmojiReactionsOverlay';
 import {
   useAudioRoom,
   RoomParticipantState,
@@ -38,6 +43,8 @@ interface AudioRoomPanelProps {
   hostId: string;
   onLeave: () => void;
 }
+
+const REACTION_EMOJIS = ['💖', '👍', '🎉', '👏', '😂', '🙏', '🙌', '🔥'] as const;
 
 export function AudioRoomPanel({
   roomId,
@@ -60,6 +67,7 @@ export function AudioRoomPanel({
     localStream,
     telemetry,
     activeBibleReference,
+    chatMessages,
     error,
     joinRoom,
     leaveRoom,
@@ -69,13 +77,18 @@ export function AudioRoomPanel({
     demoteToListener,
     muteAll,
     shareBibleReference,
+    sendChatMessage,
+    sendEmojiReaction,
+    subscribeToEmojiReactions,
   } = useAudioRoom({ roomId, initialRole });
 
   const [activeSpeakingUsers, setActiveSpeakingUsers] = useState<Set<string>>(new Set());
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [unlockTick, setUnlockTick] = useState(0);
-  const [isBibleOpen, setIsBibleOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<'none' | 'bible' | 'chat'>('none');
   const [hasUnreadBibleCall, setHasUnreadBibleCall] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [dismissedBibleCalledAt, setDismissedBibleCalledAt] = useState<number | null>(null);
   const [bibleJumpTarget, setBibleJumpTarget] = useState<{
     bookId: string;
@@ -86,16 +99,63 @@ export function AudioRoomPanel({
     nonce: number;
   } | null>(null);
   const lastSeenBibleCallRef = useRef<number | undefined>(undefined);
+  const prevChatCountRef = useRef<number>(0);
+  const emojiBarRef = useRef<HTMLDivElement | null>(null);
+
+  const isSidePanelOpen = activePanel !== 'none';
+  const isBibleOpen = activePanel === 'bible';
+  const isChatOpen = activePanel === 'chat';
 
   useEffect(() => {
     if (activeBibleReference?.calledAt && activeBibleReference.calledAt !== lastSeenBibleCallRef.current) {
       lastSeenBibleCallRef.current = activeBibleReference.calledAt;
       setDismissedBibleCalledAt(null);
-      if (!isBibleOpen) {
+      if (activePanel !== 'bible') {
         setHasUnreadBibleCall(true);
       }
     }
-  }, [activeBibleReference, isBibleOpen]);
+  }, [activeBibleReference, activePanel]);
+
+  useEffect(() => {
+    if (activePanel === 'chat') {
+      prevChatCountRef.current = chatMessages.length;
+      setUnreadChatCount(0);
+      return;
+    }
+    if (chatMessages.length > prevChatCountRef.current) {
+      const added = chatMessages.length - prevChatCountRef.current;
+      prevChatCountRef.current = chatMessages.length;
+      setUnreadChatCount((c) => c + added);
+    } else {
+      prevChatCountRef.current = chatMessages.length;
+    }
+  }, [chatMessages.length, activePanel]);
+
+  useEffect(() => {
+    if (!isEmojiPickerOpen) return;
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
+      if (emojiBarRef.current && !emojiBarRef.current.contains(e.target as Node)) {
+        setIsEmojiPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+    };
+  }, [isEmojiPickerOpen]);
+
+  useEffect(() => {
+    if (!isSidePanelOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActivePanel('none');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSidePanelOpen]);
 
   const handleRemoteSpeakingChange = useCallback((speakerUserId: string, isSpeaking: boolean) => {
     if (!speakerUserId) return;
@@ -171,14 +231,22 @@ export function AudioRoomPanel({
         nonce: Date.now(),
       });
     }
-    setIsBibleOpen(true);
+    setActivePanel('bible');
     setHasUnreadBibleCall(false);
   };
 
   const toggleBiblePanel = () => {
-    setIsBibleOpen((prev) => {
-      const next = !prev;
-      if (next) setHasUnreadBibleCall(false);
+    setActivePanel((prev) => {
+      const next = prev === 'bible' ? 'none' : 'bible';
+      if (next === 'bible') setHasUnreadBibleCall(false);
+      return next;
+    });
+  };
+
+  const toggleChatPanel = () => {
+    setActivePanel((prev) => {
+      const next = prev === 'chat' ? 'none' : 'chat';
+      if (next === 'chat') setUnreadChatCount(0);
       return next;
     });
   };
@@ -253,18 +321,17 @@ export function AudioRoomPanel({
   // Responsive Google Meet / Zoom grid layout class
   const getGridClass = (count: number) => {
     if (count <= 1) return 'grid-cols-1 max-w-2xl mx-auto';
-    if (count === 2) return isBibleOpen ? 'grid-cols-1 sm:grid-cols-2 mx-auto' : 'grid-cols-1 sm:grid-cols-2 max-w-4xl mx-auto';
-    if (count <= 4) return isBibleOpen ? 'grid-cols-1 sm:grid-cols-2 mx-auto' : 'grid-cols-1 sm:grid-cols-2 max-w-5xl mx-auto';
-    if (count <= 6) return isBibleOpen ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3';
-    return isBibleOpen ? 'grid-cols-2 xl:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4';
+    if (count === 2) return 'grid-cols-1 sm:grid-cols-2 max-w-4xl mx-auto';
+    if (count <= 4) return 'grid-cols-1 sm:grid-cols-2 max-w-5xl mx-auto';
+    if (count <= 6) return 'grid-cols-2 sm:grid-cols-3';
+    return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4';
   };
 
   return (
-    <div
-      className={`flex flex-col h-full mx-auto p-3 sm:p-4 space-y-4 transition-all duration-200 ${
-        isBibleOpen ? 'max-w-7xl' : 'max-w-6xl'
-      }`}
-    >
+    <div className="flex flex-col h-full max-w-6xl mx-auto p-3 sm:p-4 space-y-4">
+      {/* Isolated GPU-composited floating emoji reactions overlay */}
+      <EmojiReactionsOverlay currentUserId={user?.id} subscribe={subscribeToEmojiReactions} />
+
       {/* Hidden audio elements for incoming WebRTC speaker streams */}
       {Array.from(remoteStreams.entries()).map(([trackId, remote]) => (
         <RemoteAudioPlayer
@@ -441,11 +508,9 @@ export function AudioRoomPanel({
         </div>
       )}
 
-      {/* Main Room Stage: Participant Grid + Optional Side-by-Side Bible Reader on Desktop */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-4 items-stretch min-h-0">
-        {/* Google Meet / Zoom Conference Video/Audio Grid */}
-        <div className="flex-1 min-w-0 min-h-[380px] flex flex-col justify-center">
-          <div className={`grid gap-3.5 sm:gap-4 w-full ${getGridClass(sortedParticipants.length)}`}>
+      {/* Google Meet / Zoom Conference Video/Audio Grid */}
+      <div className="flex-1 min-h-[380px] flex flex-col justify-center">
+        <div className={`grid gap-3.5 sm:gap-4 w-full ${getGridClass(sortedParticipants.length)}`}>
           {sortedParticipants.map((p) => {
             const isSpeaking = activeSpeakingUsers.has(p.userId);
             const isSelf = p.userId === user?.id;
@@ -453,7 +518,7 @@ export function AudioRoomPanel({
             return (
               <div
                 key={p.userId}
-                className={`relative flex flex-col justify-between overflow-hidden rounded-2xl bg-zinc-900 border transition-all duration-300 shadow-md aspect-[4/3] sm:aspect-[16/10] p-3 sm:p-4 ${
+                className={`relative isolate z-0 flex flex-col justify-between overflow-hidden rounded-2xl bg-zinc-900 border transition-all duration-300 shadow-md aspect-[4/3] sm:aspect-[16/10] p-3 sm:p-4 ${
                   isSpeaking
                     ? 'border-emerald-500 ring-4 ring-emerald-500/40 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
                     : p.handRaised
@@ -462,7 +527,7 @@ export function AudioRoomPanel({
                 }`}
               >
                 {/* Top Overlay Row inside Participant Tile */}
-                <div className="flex items-center justify-between w-full z-10">
+                <div className="relative z-[1] flex items-center justify-between w-full">
                   {/* Left: Role / Hand Raised Status */}
                   <div className="flex items-center gap-1.5">
                     {p.handRaised ? (
@@ -539,7 +604,7 @@ export function AudioRoomPanel({
                 </div>
 
                 {/* Bottom Overlay Row (Google Meet style name pill + host controls) */}
-                <div className="flex items-center justify-between gap-2 z-10 w-full">
+                <div className="relative z-[1] flex items-center justify-between gap-2 w-full">
                   <div className="bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-xl flex items-center gap-1.5 max-w-[80%] min-w-0">
                     {isSpeaking && (
                       <div className="flex items-end gap-0.5 h-3 shrink-0">
@@ -584,158 +649,266 @@ export function AudioRoomPanel({
               </div>
             );
           })}
-          </div>
         </div>
+      </div>
 
-        {/* Interactive Bible Reader (Side panel on desktop, full-screen drawer on mobile) */}
-        {isBibleOpen && (
-          <aside className="fixed inset-0 z-50 bg-background flex flex-col lg:static lg:z-auto lg:w-[420px] xl:w-[460px] lg:shrink-0 lg:h-[calc(100vh-14rem)] lg:min-h-[500px] lg:rounded-2xl lg:border lg:shadow-lg overflow-hidden">
-            {/* Compact Live Audio Strip visible on mobile while reading Scripture */}
-            <div className="lg:hidden flex items-center justify-between gap-2 px-3 py-2 bg-zinc-950 text-white border-b border-zinc-800 shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="text-xs font-medium truncate">
-                  {activeSpeakersList.length > 0
-                    ? `Speaking: ${activeSpeakersList.map((s) => s.name).join(', ')}`
-                    : `Live Call · ${liveParticipants.length} in room`}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {(role === 'host' || role === 'speaker') && (
+      {/* Responsive Slide-Over Drawer for Chat & Bible (Portaled above Navbar, Call Bar, and Mobile BottomNav) */}
+      {isSidePanelOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[60] flex justify-end">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/45 backdrop-blur-[1px] animate-in fade-in duration-150"
+              onClick={() => setActivePanel('none')}
+              aria-hidden="true"
+            />
+
+            {/* Drawer Surface */}
+            <aside
+              role="dialog"
+              aria-modal="true"
+              aria-label={isBibleOpen ? 'Scripture Reader' : 'In-call Chat'}
+              className="relative z-10 w-full h-[100dvh] sm:w-[440px] md:w-[480px] bg-card sm:border-l border-border shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200"
+            >
+              {/* Drawer Live Call Strip + Chat/Bible Switcher */}
+              <div className="flex items-center justify-between gap-2 px-3 py-2 bg-zinc-950 text-white border-b border-zinc-800 shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="text-xs font-medium truncate">
+                    {activeSpeakersList.length > 0
+                      ? activeSpeakersList.map((s) => s.name).join(', ')
+                      : `${liveParticipants.length} in call`}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="inline-flex rounded-lg bg-zinc-900 p-0.5 border border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => setActivePanel('chat')}
+                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+                        isChatOpen ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      Chat{unreadChatCount > 0 && !isChatOpen ? ` (${unreadChatCount})` : ''}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivePanel('bible')}
+                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+                        isBibleOpen ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      Bible
+                    </button>
+                  </div>
+
+                  {(role === 'host' || role === 'speaker') && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant={isMuted ? 'destructive' : 'secondary'}
+                      className="h-7 w-7 rounded-full sm:hidden"
+                      onClick={toggleMute}
+                      aria-label={isMuted ? 'Unmute' : 'Mute'}
+                    >
+                      {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     size="icon"
-                    variant={isMuted ? 'destructive' : 'secondary'}
-                    className="h-7 w-7 rounded-full"
-                    onClick={toggleMute}
-                    aria-label={isMuted ? 'Unmute' : 'Mute'}
+                    variant={handRaised ? 'default' : 'ghost'}
+                    className={`h-7 w-7 rounded-full sm:hidden ${
+                      handRaised ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'text-zinc-300'
+                    }`}
+                    onClick={toggleHandRaise}
+                    aria-label="Toggle raise hand"
                   >
-                    {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                    <Hand className="w-3.5 h-3.5" />
                   </Button>
-                )}
-                <Button
-                  type="button"
-                  size="icon"
-                  variant={handRaised ? 'default' : 'ghost'}
-                  className={`h-7 w-7 rounded-full ${
-                    handRaised ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'text-zinc-300'
-                  }`}
-                  onClick={toggleHandRaise}
-                  aria-label="Toggle raise hand"
-                >
-                  <Hand className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2.5 text-[11px] border-zinc-700 bg-zinc-900 text-zinc-100"
-                  onClick={() => setIsBibleOpen(false)}
-                >
-                  Back to Call
-                </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2.5 text-[11px] border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+                    onClick={() => setActivePanel('none')}
+                  >
+                    <span className="sm:hidden">Call</span>
+                    <span className="hidden sm:inline">Close</span>
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <div className="flex-1 min-h-0">
-              <BibleReaderPanel
-                onClose={() => setIsBibleOpen(false)}
-                canBroadcast={role === 'host' || role === 'speaker'}
-                calledReference={activeBibleReference}
-                jumpTarget={bibleJumpTarget}
-                onShareReference={shareBibleReference}
-              />
-            </div>
-          </aside>
+              {/* Drawer Body */}
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                {isBibleOpen ? (
+                  <BibleReaderPanel
+                    onClose={() => setActivePanel('none')}
+                    canBroadcast={role === 'host' || role === 'speaker'}
+                    calledReference={activeBibleReference}
+                    jumpTarget={bibleJumpTarget}
+                    onShareReference={shareBibleReference}
+                  />
+                ) : (
+                  <RoomChatPanel
+                    messages={chatMessages}
+                    currentUserId={user?.id}
+                    onSendMessage={sendChatMessage}
+                    onClose={() => setActivePanel('none')}
+                  />
+                )}
+              </div>
+            </aside>
+          </div>,
+          document.body
         )}
-      </div>
 
       {/* Google Meet / Zoom Bottom Call Control Bar */}
-      <div className="sticky bottom-4 left-0 right-0 p-3 rounded-2xl bg-zinc-950/90 backdrop-blur-lg border border-zinc-800 shadow-2xl flex items-center justify-center flex-wrap gap-2.5 sm:gap-4 z-20">
-        {/* Mute / Unmute Button */}
-        {role === 'host' || role === 'speaker' ? (
-          <Button
-            variant={isMuted ? 'destructive' : 'default'}
-            size="lg"
-            className="rounded-full w-12 h-12 sm:w-14 sm:h-14 p-0 shadow-lg"
-            onClick={toggleMute}
-            title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
-          >
-            {isMuted ? <MicOff className="w-5 h-5 sm:w-6 sm:h-6" /> : <Mic className="w-5 h-5 sm:w-6 sm:h-6" />}
-          </Button>
-        ) : (
-          <div className="text-center" title="Listeners cannot speak. Raise hand to request permission.">
-            <Button
-              variant="outline"
-              size="lg"
-              disabled
-              className="rounded-full w-12 h-12 sm:w-14 sm:h-14 p-0 opacity-40 cursor-not-allowed border-zinc-700 bg-zinc-900"
-            >
-              <MicOff className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400" />
-            </Button>
+      <div className="sticky bottom-4 left-0 right-0 flex flex-col items-center z-20" ref={emojiBarRef}>
+        {/* Floating Google Meet Emoji Picker Bar */}
+        {isEmojiPickerOpen && (
+          <div className="mb-2.5 px-2.5 py-1.5 rounded-full bg-zinc-900/95 backdrop-blur-lg border border-zinc-700/80 shadow-2xl flex items-center gap-1 sm:gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150">
+            {REACTION_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => sendEmojiReaction(emoji)}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xl sm:text-2xl hover:bg-zinc-800 active:scale-125 transition-transform select-none"
+                title={`React with ${emoji}`}
+                aria-label={`Send ${emoji} reaction`}
+              >
+                {emoji}
+              </button>
+            ))}
           </div>
         )}
 
-        {/* Raise Hand Button */}
-        <Button
-          variant={handRaised ? 'default' : 'secondary'}
-          size="lg"
-          className={`rounded-full h-11 sm:h-12 px-4 sm:px-5 gap-2 shadow-sm ${
-            handRaised
-              ? 'bg-amber-500 hover:bg-amber-600 text-white'
-              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700'
-          }`}
-          onClick={toggleHandRaise}
-        >
-          <Hand className="w-5 h-5" />
-          <span className="text-xs font-semibold hidden xs:inline sm:inline">
-            {handRaised ? 'Hand Raised' : 'Raise Hand'}
-          </span>
-        </Button>
-
-        {/* Bible Reader Toggle Button */}
-        <Button
-          variant={isBibleOpen ? 'default' : 'secondary'}
-          size="lg"
-          className={`relative rounded-full h-11 sm:h-12 px-4 sm:px-5 gap-2 shadow-sm ${
-            isBibleOpen
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700'
-          }`}
-          onClick={toggleBiblePanel}
-          title="Open KJV / BSB Bible Reader"
-        >
-          <BookOpen className="w-5 h-5" />
-          <span className="text-xs font-semibold">Bible</span>
-          {hasUnreadBibleCall && !isBibleOpen && (
-            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-amber-400 ring-2 ring-zinc-950 animate-pulse" />
+        <div className="w-full p-2.5 sm:p-3 rounded-2xl bg-zinc-950/90 backdrop-blur-lg border border-zinc-800 shadow-2xl flex items-center justify-center flex-wrap gap-2 sm:gap-3.5">
+          {/* Mute / Unmute Button */}
+          {role === 'host' || role === 'speaker' ? (
+            <Button
+              variant={isMuted ? 'destructive' : 'default'}
+              size="lg"
+              className="rounded-full w-11 h-11 sm:w-13 sm:h-13 p-0 shadow-lg"
+              onClick={toggleMute}
+              title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+            >
+              {isMuted ? <MicOff className="w-5 h-5 sm:w-6 sm:h-6" /> : <Mic className="w-5 h-5 sm:w-6 sm:h-6" />}
+            </Button>
+          ) : (
+            <div className="text-center" title="Listeners cannot speak. Raise hand to request permission.">
+              <Button
+                variant="outline"
+                size="lg"
+                disabled
+                className="rounded-full w-11 h-11 sm:w-13 sm:h-13 p-0 opacity-40 cursor-not-allowed border-zinc-700 bg-zinc-900"
+              >
+                <MicOff className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400" />
+              </Button>
+            </div>
           )}
-        </Button>
 
-        {/* Host Mute All Action */}
-        {isHost && speakersCount > 1 && (
+          {/* Emoji Reaction Button (Google Meet style) */}
           <Button
-            variant="outline"
+            variant={isEmojiPickerOpen ? 'default' : 'secondary'}
             size="lg"
-            className="rounded-full h-11 sm:h-12 px-4 gap-1.5 text-xs border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200"
-            onClick={muteAll}
-            title="Mute all other speakers"
+            className={`rounded-full w-11 h-11 sm:w-12 sm:h-12 p-0 shadow-sm ${
+              isEmojiPickerOpen
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700'
+            }`}
+            onClick={() => setIsEmojiPickerOpen((o) => !o)}
+            title="Send a reaction"
+            aria-label="Send a reaction"
           >
-            <VolumeX className="w-4 h-4" />
-            <span className="hidden sm:inline">Mute All</span>
+            <Smile className="w-5 h-5" />
           </Button>
-        )}
 
-        {/* End / Leave Call Button */}
-        <Button
-          variant="destructive"
-          size="lg"
-          className="rounded-full w-12 h-12 sm:w-14 sm:h-14 p-0 shadow-lg bg-red-600 hover:bg-red-700"
-          onClick={handleLeave}
-          title="Leave Audio Conference"
-        >
-          <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6" />
-        </Button>
+          {/* Raise Hand Button */}
+          <Button
+            variant={handRaised ? 'default' : 'secondary'}
+            size="lg"
+            className={`rounded-full h-11 sm:h-12 px-3.5 sm:px-4 gap-2 shadow-sm ${
+              handRaised
+                ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700'
+            }`}
+            onClick={toggleHandRaise}
+            title={handRaised ? 'Lower Hand' : 'Raise Hand'}
+          >
+            <Hand className="w-5 h-5" />
+            <span className="text-xs font-semibold hidden sm:inline">
+              {handRaised ? 'Raised' : 'Raise Hand'}
+            </span>
+          </Button>
+
+          {/* In-Call Chat Toggle Button */}
+          <Button
+            variant={isChatOpen ? 'default' : 'secondary'}
+            size="lg"
+            className={`relative rounded-full h-11 sm:h-12 px-3.5 sm:px-4 gap-2 shadow-sm ${
+              isChatOpen
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700'
+            }`}
+            onClick={toggleChatPanel}
+            title="Chat with everyone"
+          >
+            <MessageSquare className="w-5 h-5" />
+            <span className="text-xs font-semibold hidden sm:inline">Chat</span>
+            {unreadChatCount > 0 && !isChatOpen && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-zinc-950">
+                {unreadChatCount > 99 ? '99+' : unreadChatCount}
+              </span>
+            )}
+          </Button>
+
+          {/* Bible Reader Toggle Button */}
+          <Button
+            variant={isBibleOpen ? 'default' : 'secondary'}
+            size="lg"
+            className={`relative rounded-full h-11 sm:h-12 px-3.5 sm:px-4 gap-2 shadow-sm ${
+              isBibleOpen
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700'
+            }`}
+            onClick={toggleBiblePanel}
+            title="Open KJV / BSB Bible Reader"
+          >
+            <BookOpen className="w-5 h-5" />
+            <span className="text-xs font-semibold hidden sm:inline">Bible</span>
+            {hasUnreadBibleCall && !isBibleOpen && (
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-amber-400 ring-2 ring-zinc-950 animate-pulse" />
+            )}
+          </Button>
+
+          {/* Host Mute All Action */}
+          {isHost && speakersCount > 1 && (
+            <Button
+              variant="outline"
+              size="lg"
+              className="rounded-full h-11 sm:h-12 px-3.5 gap-1.5 text-xs border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200"
+              onClick={muteAll}
+              title="Mute all other speakers"
+            >
+              <VolumeX className="w-4 h-4" />
+              <span className="hidden md:inline">Mute All</span>
+            </Button>
+          )}
+
+          {/* End / Leave Call Button */}
+          <Button
+            variant="destructive"
+            size="lg"
+            className="rounded-full w-11 h-11 sm:w-13 sm:h-13 p-0 shadow-lg bg-red-600 hover:bg-red-700"
+            onClick={handleLeave}
+            title="Leave Audio Conference"
+          >
+            <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6" />
+          </Button>
+        </div>
       </div>
     </div>
   );

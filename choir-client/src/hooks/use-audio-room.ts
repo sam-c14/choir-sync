@@ -52,6 +52,23 @@ export interface CalledBibleReference {
   calledAt?: number;
 }
 
+export interface RoomChatMessage {
+  id: string;
+  userId: string;
+  senderName: string;
+  senderAvatar?: string | null;
+  text: string;
+  timestamp: number;
+}
+
+export interface EmojiReactionEvent {
+  id: string;
+  emoji: string;
+  userId: string;
+  senderName: string;
+  timestamp: number;
+}
+
 interface UseAudioRoomOptions {
   roomId: string;
   initialRole?: AudioRoomRole;
@@ -134,6 +151,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     quality: 'excellent',
   });
   const [activeBibleReference, setActiveBibleReference] = useState<CalledBibleReference | null>(null);
+  const [chatMessages, setChatMessages] = useState<RoomChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -141,6 +159,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
   const pendingIceCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
   const iceServersRef = useRef<RTCIceServer[]>(DEFAULT_ICE_SERVERS);
   const socketRef = useRef<AudioRoomSocket | null>(null);
+  const emojiListenersRef = useRef<Set<(reaction: EmojiReactionEvent) => void>>(new Set());
   const sessionIdRef = useRef<string | null>(null);
   const isSfuActiveRef = useRef<boolean>(false);
   const sfuQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -840,6 +859,9 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         if (payload?.activeBibleReference) {
           setActiveBibleReference(payload.activeBibleReference);
         }
+        if (Array.isArray(payload?.chatMessages)) {
+          setChatMessages(payload.chatMessages);
+        }
         if (Array.isArray(payload?.participants)) {
           setParticipants(payload.participants);
 
@@ -1028,6 +1050,22 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
         }
       });
 
+      socket.on('chat-message', (payload: RoomChatMessage) => {
+        if (payload?.id && payload?.text) {
+          setChatMessages((prev) => {
+            if (prev.some((m) => m.id === payload.id)) return prev;
+            const next = [...prev, payload];
+            return next.length > 150 ? next.slice(next.length - 150) : next;
+          });
+        }
+      });
+
+      socket.on('emoji-reaction', (payload: EmojiReactionEvent) => {
+        if (payload?.emoji) {
+          emojiListenersRef.current.forEach((fn) => fn(payload));
+        }
+      });
+
       socket.on('webrtc-signal', (payload: any) => {
         if (payload?.fromUserId && payload.signal) {
           handleP2pSignal(payload.fromUserId, payload.signal);
@@ -1211,6 +1249,75 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     []
   );
 
+  // Send in-call chat message with 0ms optimistic render
+  const sendChatMessage = useCallback(
+    (rawText: string) => {
+      const text = rawText.trim();
+      if (!text || !user?.id) return;
+
+      const id =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+      const msg: RoomChatMessage = {
+        id,
+        userId: user.id,
+        senderName: user.name || user.email || 'You',
+        senderAvatar: user.avatarUrl || null,
+        text: text.slice(0, 1000),
+        timestamp: Date.now(),
+      };
+
+      setChatMessages((prev) => {
+        const next = [...prev, msg];
+        return next.length > 150 ? next.slice(next.length - 150) : next;
+      });
+
+      if (socketRef.current) {
+        socketRef.current.send('chat-message', { id, text: msg.text });
+      }
+    },
+    [user?.id, user?.name, user?.email, user?.avatarUrl]
+  );
+
+  // Subscribe to floating emoji reactions without re-rendering the room stage
+  const subscribeToEmojiReactions = useCallback(
+    (handler: (reaction: EmojiReactionEvent) => void) => {
+      emojiListenersRef.current.add(handler);
+      return () => {
+        emojiListenersRef.current.delete(handler);
+      };
+    },
+    []
+  );
+
+  // Send floating emoji reaction (0ms local emit + WebSocket broadcast)
+  const sendEmojiReaction = useCallback(
+    (emoji: string) => {
+      if (!emoji || !user?.id) return;
+      const id =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+      const event: EmojiReactionEvent = {
+        id,
+        emoji,
+        userId: user.id,
+        senderName: user.name || user.email || 'You',
+        timestamp: Date.now(),
+      };
+
+      emojiListenersRef.current.forEach((fn) => fn(event));
+
+      if (socketRef.current) {
+        socketRef.current.send('emoji-reaction', { id, emoji });
+      }
+    },
+    [user?.id, user?.name, user?.email]
+  );
+
   const leaveRoomRef = useRef(leaveRoom);
   leaveRoomRef.current = leaveRoom;
 
@@ -1256,6 +1363,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     localStream,
     telemetry,
     activeBibleReference,
+    chatMessages,
     error,
     joinRoom,
     leaveRoom,
@@ -1265,5 +1373,8 @@ export function useAudioRoom({ roomId, initialRole = 'listener' }: UseAudioRoomO
     demoteToListener,
     muteAll,
     shareBibleReference,
+    sendChatMessage,
+    sendEmojiReaction,
+    subscribeToEmojiReactions,
   };
 }

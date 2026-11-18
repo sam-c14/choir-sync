@@ -25,7 +25,7 @@ export function Navbar() {
   };
 
   return (
-    <header className="border-b bg-background shadow-sm sticky top-0 z-10 transition-colors">
+    <header className="border-b bg-background shadow-sm sticky top-0 z-30 transition-colors">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-4 md:gap-6 overflow-x-auto no-scrollbar flex-1 mask-edges py-1">
           <div className="flex items-center gap-2 flex-shrink-0">
