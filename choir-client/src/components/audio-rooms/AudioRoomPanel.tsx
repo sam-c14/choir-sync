@@ -10,10 +10,7 @@ import {
   LogOut,
   Shield,
   VolumeX,
-  UserCheck,
-  UserX,
   AlertCircle,
-  Headphones,
   PhoneOff,
   Loader2,
   BookOpen,
@@ -56,7 +53,7 @@ export function AudioRoomPanel({
 }: AudioRoomPanelProps) {
   const { user } = useAuth();
   const isHost = user?.id === hostId;
-  const initialRole = isHost ? 'host' : 'listener';
+  const initialRole = isHost ? 'host' : 'speaker';
 
   const {
     connectionStatus,
@@ -74,8 +71,7 @@ export function AudioRoomPanel({
     leaveRoom,
     toggleMute,
     toggleHandRaise,
-    promoteToSpeaker,
-    demoteToListener,
+    muteParticipant,
     muteAll,
     shareBibleReference,
     sendChatMessage,
@@ -83,6 +79,7 @@ export function AudioRoomPanel({
     subscribeToEmojiReactions,
   } = useAudioRoom({
     roomId,
+    roomTitle,
     initialRole,
     onRoomEnded: () => {
       toast.info('This room has been closed.');
@@ -320,7 +317,9 @@ export function AudioRoomPanel({
   }, [liveParticipants, activeSpeakingUsers, user?.id]);
 
   const handRaisers = liveParticipants.filter((p) => p.handRaised);
-  const speakersCount = liveParticipants.filter((p) => p.role === 'host' || p.role === 'speaker').length;
+  const unmutedOthersCount = liveParticipants.filter(
+    (p) => p.userId !== user?.id && !p.isMuted
+  ).length;
   const activeSpeakersList = liveParticipants.filter((p) => activeSpeakingUsers.has(p.userId));
   const showCalledBibleBanner = Boolean(
     activeBibleReference && activeBibleReference.calledAt !== dismissedBibleCalledAt
@@ -431,7 +430,7 @@ export function AudioRoomPanel({
               </h4>
             </div>
             <span className="text-[11px] text-muted-foreground hidden sm:inline">
-              {isHost ? 'Tap Allow to invite someone to speak' : 'Waiting to speak'}
+              Raised hands in order
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -454,17 +453,6 @@ export function AudioRoomPanel({
                   <span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded-full font-medium">
                     <Hand className="w-3 h-3 text-amber-500" /> Raised
                   </span>
-                  {isHost && !isSelf && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="h-6 px-2 text-[10px] gap-1 ml-1 hover:bg-emerald-500/10 hover:text-emerald-600"
-                      onClick={() => promoteToSpeaker(raiser.userId)}
-                    >
-                      <UserCheck className="w-3 h-3 text-emerald-500" />
-                      Allow
-                    </Button>
-                  )}
                 </div>
               );
             })}
@@ -548,23 +536,12 @@ export function AudioRoomPanel({
                         <Shield className="w-2.5 h-2.5" />
                         <span>Host</span>
                       </span>
-                    ) : p.role === 'speaker' ? (
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30 text-[10px] font-semibold">
-                        <span>Speaker</span>
-                      </span>
                     ) : null}
                   </div>
 
                   {/* Right: Audio / Mic status badge */}
                   <div>
-                    {p.role === 'listener' ? (
-                      <span
-                        className="p-1.5 rounded-full bg-black/60 backdrop-blur-md text-zinc-400 border border-white/10 flex items-center justify-center"
-                        title="Listening"
-                      >
-                        <Headphones className="w-3.5 h-3.5" />
-                      </span>
-                    ) : p.isMuted ? (
+                    {p.isMuted ? (
                       <span
                         className="p-1.5 rounded-full bg-red-500/90 text-white shadow-sm flex items-center justify-center"
                         title="Muted"
@@ -627,30 +604,18 @@ export function AudioRoomPanel({
                   </div>
 
                   {/* Host Moderation Controls */}
-                  {isHost && !isSelf && (
+                  {isHost && !isSelf && !p.isMuted && (
                     <div className="shrink-0">
-                      {p.role === 'listener' ? (
-                        <Button
-                          size="sm"
-                          className="h-6 px-2 text-[10px] bg-primary/90 hover:bg-primary text-white shadow-sm gap-1"
-                          onClick={() => promoteToSpeaker(p.userId)}
-                          title="Invite to Speak"
-                        >
-                          <UserCheck className="w-3 h-3" />
-                          <span className="hidden sm:inline">Invite</span>
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 px-2 text-[10px] text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
-                          onClick={() => demoteToListener(p.userId)}
-                          title="Move back to listeners"
-                        >
-                          <UserX className="w-3 h-3" />
-                          <span className="hidden sm:inline">Listener</span>
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-[10px] text-zinc-300 hover:text-red-400 hover:bg-red-500/10 gap-1"
+                        onClick={() => muteParticipant(p.userId)}
+                        title="Mute microphone"
+                      >
+                        <MicOff className="w-3 h-3" />
+                        <span className="hidden sm:inline">Mute</span>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -712,18 +677,16 @@ export function AudioRoomPanel({
                     </button>
                   </div>
 
-                  {(role === 'host' || role === 'speaker') && (
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant={isMuted ? 'destructive' : 'secondary'}
-                      className="h-7 w-7 rounded-full sm:hidden"
-                      onClick={toggleMute}
-                      aria-label={isMuted ? 'Unmute' : 'Mute'}
-                    >
-                      {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant={isMuted ? 'destructive' : 'secondary'}
+                    className="h-7 w-7 rounded-full sm:hidden"
+                    onClick={toggleMute}
+                    aria-label={isMuted ? 'Unmute' : 'Mute'}
+                  >
+                    {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                  </Button>
                   <Button
                     type="button"
                     size="icon"
@@ -794,29 +757,17 @@ export function AudioRoomPanel({
         )}
 
         <div className="w-full p-2.5 sm:p-3 rounded-2xl bg-zinc-950/90 backdrop-blur-lg border border-zinc-800 shadow-2xl flex items-center justify-center flex-wrap gap-2 sm:gap-3.5">
-          {/* Mute / Unmute Button */}
-          {role === 'host' || role === 'speaker' ? (
-            <Button
-              variant={isMuted ? 'destructive' : 'default'}
-              size="lg"
-              className="rounded-full w-11 h-11 sm:w-13 sm:h-13 p-0 shadow-lg"
-              onClick={toggleMute}
-              title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
-            >
-              {isMuted ? <MicOff className="w-5 h-5 sm:w-6 sm:h-6" /> : <Mic className="w-5 h-5 sm:w-6 sm:h-6" />}
-            </Button>
-          ) : (
-            <div className="text-center" title="Listeners cannot speak. Raise hand to request permission.">
-              <Button
-                variant="outline"
-                size="lg"
-                disabled
-                className="rounded-full w-11 h-11 sm:w-13 sm:h-13 p-0 opacity-40 cursor-not-allowed border-zinc-700 bg-zinc-900"
-              >
-                <MicOff className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400" />
-              </Button>
-            </div>
-          )}
+          {/* Mute / Unmute Button (available to everyone in the room) */}
+          <Button
+            variant={isMuted ? 'destructive' : 'default'}
+            size="lg"
+            className="rounded-full w-11 h-11 sm:w-13 sm:h-13 p-0 shadow-lg"
+            onClick={toggleMute}
+            title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+            aria-label={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+          >
+            {isMuted ? <MicOff className="w-5 h-5 sm:w-6 sm:h-6" /> : <Mic className="w-5 h-5 sm:w-6 sm:h-6" />}
+          </Button>
 
           {/* Emoji Reaction Button (Google Meet style) */}
           <Button
@@ -893,7 +844,7 @@ export function AudioRoomPanel({
           </Button>
 
           {/* Host Mute All Action */}
-          {isHost && speakersCount > 1 && (
+          {isHost && unmutedOthersCount > 0 && (
             <Button
               variant="outline"
               size="lg"

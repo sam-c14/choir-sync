@@ -218,11 +218,11 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
       }
 
       const isHost = room.hostId === userId;
-      const initialRole: AudioRoomRole = isHost ? 'host' : 'listener';
+      const initialRole: AudioRoomRole = isHost ? 'host' : 'speaker';
 
       const participant = await prisma.audioRoomParticipant.upsert({
         where: { roomId_userId: { roomId, userId } },
-        update: { updatedAt: new Date(), ...(isHost ? { role: 'host' } : {}) },
+        update: { updatedAt: new Date(), role: initialRole },
         create: {
           roomId,
           userId,
@@ -397,10 +397,17 @@ export function setupAudioRoomsWebSocketServer(server: HttpServer) {
             }
 
             case 'mute-all': {
+              if (client.role !== 'host') break;
               roomClients.forEach((c) => {
                 if (c.role !== 'host') c.isMuted = true;
               });
               broadcastToRoom(roomId, null, { type: 'mute-all', payload: {} });
+              await prisma.audioRoomParticipant
+                .updateMany({
+                  where: { roomId, role: { not: 'host' } },
+                  data: { isMuted: true },
+                })
+                .catch(() => {});
               break;
             }
 

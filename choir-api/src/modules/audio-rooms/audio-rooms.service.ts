@@ -148,7 +148,7 @@ export class AudioRoomsService {
     }
 
     const isHost = room.hostId === userId;
-    const defaultRole = isHost ? 'host' : 'listener';
+    const defaultRole = isHost ? 'host' : 'speaker';
 
     return prisma.audioRoomParticipant.upsert({
       where: {
@@ -156,7 +156,8 @@ export class AudioRoomsService {
       },
       update: {
         updatedAt: new Date(),
-        ...(isHost ? { role: 'host' } : {}),
+        role: defaultRole,
+        ...(!isHost && { isMuted: true, handRaised: false }),
       },
       create: {
         roomId,

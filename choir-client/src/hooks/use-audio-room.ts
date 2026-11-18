@@ -2,6 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { cloudflareSfuClient, SfuSessionResponse } from '../lib/cloudflare-sfu-client';
 import { optimizeOpusSdp } from '../lib/sdp-utils';
 import { AudioRoomSocket } from '../lib/audio-room-socket';
+import {
+  startNativeAudioRoomSession,
+  ensureNativeMicrophonePermission,
+  updateNativeAudioRoomSession,
+  stopNativeAudioRoomSession,
+} from '../lib/android-audio-room';
 import { useAuth } from '../auth/auth-context';
 import type { AudioRoomRole } from '@choir-workspace/shared-validation';
 
@@ -71,6 +77,7 @@ export interface EmojiReactionEvent {
 
 interface UseAudioRoomOptions {
   roomId: string;
+  roomTitle?: string;
   initialRole?: AudioRoomRole;
   onRoomEnded?: () => void;
 }
@@ -135,10 +142,12 @@ function waitForIceConnected(pc: RTCPeerConnection, timeoutMs = 4000): Promise<v
   });
 }
 
-export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: UseAudioRoomOptions) {
+export function useAudioRoom({ roomId, roomTitle, initialRole = 'speaker', onRoomEnded }: UseAudioRoomOptions) {
   const { user } = useAuth();
   const onRoomEndedRef = useRef(onRoomEnded);
   onRoomEndedRef.current = onRoomEnded;
+  const roomTitleRef = useRef(roomTitle || 'Live Fellowship Room');
+  roomTitleRef.current = roomTitle || 'Live Fellowship Room';
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [role, setRole] = useState<AudioRoomRole>(initialRole);
@@ -242,6 +251,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
     trackMidToUserMapRef.current.clear();
     setRemoteStreams(new Map());
     setConnectionStatus('disconnected');
+    stopNativeAudioRoomSession();
   }, []);
 
   // Poll RTCPeerConnection statistics for telemetry
@@ -594,6 +604,13 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
   const publishMicrophoneTrack = useCallback(async () => {
     setError(null);
 
+    const hasNativeMicPermission = await ensureNativeMicrophonePermission();
+    if (!hasNativeMicPermission) {
+      setError('Please allow microphone access in your device settings so others can hear you.');
+      setIsMuted(true);
+      return;
+    }
+
     // 1. Acquire microphone audio
     let stream: MediaStream;
     try {
@@ -629,6 +646,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
       audioTrack.enabled = true;
     }
     setIsMuted(false);
+    updateNativeAudioRoomSession(roomTitleRef.current, false);
 
     if (user?.id) {
       setParticipants((prev) =>
@@ -747,6 +765,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
     }
 
     setIsMuted(true);
+    updateNativeAudioRoomSession(roomTitleRef.current, true);
 
     if (user?.id) {
       setParticipants((prev) =>
@@ -768,6 +787,12 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
     setConnectionStatus('connecting');
 
     try {
+      await startNativeAudioRoomSession(
+        roomTitleRef.current,
+        roleRef.current !== 'host',
+        roleRef.current === 'host'
+      );
+
       // 1. Register in backend database and fetch initial metadata
       try {
         await cloudflareSfuClient.joinRoom(roomId);
@@ -777,7 +802,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
             userId: p.userId,
             name: p.user?.name || p.user?.email || 'Chorister',
             avatarUrl: p.user?.avatarUrl,
-            role: p.role || 'listener',
+            role: p.role || 'speaker',
             isMuted: p.isMuted ?? true,
             handRaised: p.handRaised ?? false,
           }));
@@ -868,11 +893,11 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
         if (Array.isArray(payload?.participants)) {
           setParticipants(payload.participants);
 
-          // Sync role if server already has us promoted (e.g., speaker rejoined after refresh)
+          // Sync role with server; only the host auto-activates microphone on entry
           const selfEntry = payload.participants.find((p: any) => p.userId === user?.id);
           if (selfEntry?.role && selfEntry.role !== roleRef.current) {
             setRole(selfEntry.role);
-            if ((selfEntry.role === 'host' || selfEntry.role === 'speaker') && !localStreamRef.current) {
+            if (selfEntry.role === 'host' && !localStreamRef.current) {
               publishMicrophoneTrack();
             }
           }
@@ -888,7 +913,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
           if (
             !isSfuActiveRef.current &&
             localStreamRef.current &&
-            (roleRef.current === 'host' || roleRef.current === 'speaker')
+            !isMutedRef.current
           ) {
             payload.participants.forEach((p: any) => {
               if (p.userId !== user?.id) {
@@ -918,7 +943,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
           if (
             !isSfuActiveRef.current &&
             localStreamRef.current &&
-            (roleRef.current === 'host' || roleRef.current === 'speaker')
+            !isMutedRef.current
           ) {
             sendP2pOffer(newP.userId);
           }
@@ -972,6 +997,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
             });
           }
           setIsMuted(true);
+          updateNativeAudioRoomSession(roomTitleRef.current, true);
         }
       });
 
@@ -991,15 +1017,16 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
         }
         if (payload?.targetUserId === user?.id) {
           setRole(payload.newRole);
-          if (payload.newRole === 'listener') {
-            unpublishMicrophoneTrack();
-          } else if (payload.newRole === 'speaker') {
+          if (payload.newRole === 'host' && !localStreamRef.current) {
             publishMicrophoneTrack();
           }
         }
       });
 
       socket.on('mute-all', () => {
+        setParticipants((prev) =>
+          prev.map((p) => (p.role !== 'host' ? { ...p, isMuted: true } : p))
+        );
         if (roleRef.current !== 'host') {
           if (localStreamRef.current) {
             localStreamRef.current.getAudioTracks().forEach((track) => {
@@ -1007,6 +1034,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
             });
           }
           setIsMuted(true);
+          updateNativeAudioRoomSession(roomTitleRef.current, true);
         }
       });
 
@@ -1085,8 +1113,8 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
 
       startTelemetryMonitoring();
 
-      // If joining directly as host or speaker, activate microphone immediately
-      if (roleRef.current === 'host' || roleRef.current === 'speaker') {
+      // Only the host enters unmuted automatically; all other participants start muted by default
+      if (roleRef.current === 'host') {
         publishMicrophoneTrack();
       }
     } catch (err: any) {
@@ -1123,16 +1151,15 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
     }
   }, [roomId, cleanupPeerConnection]);
 
-  // Toggle microphone mute/unmute
+  // Toggle microphone mute/unmute (available to everyone in the room)
   const toggleMute = useCallback(() => {
-    if (role === 'listener') return;
-
     if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
       const nextMuted = !isMuted;
       localStreamRef.current.getAudioTracks().forEach((track) => {
         track.enabled = !nextMuted;
       });
       setIsMuted(nextMuted);
+      updateNativeAudioRoomSession(roomTitleRef.current, nextMuted);
 
       if (user?.id) {
         setParticipants((prev) =>
@@ -1163,7 +1190,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
     if (isMuted) {
       publishMicrophoneTrack();
     }
-  }, [roomId, role, isMuted, user?.id, publishMicrophoneTrack, sendP2pOffer]);
+  }, [roomId, isMuted, user?.id, publishMicrophoneTrack, sendP2pOffer]);
 
   // Hand raise toggle
   const toggleHandRaise = useCallback(() => {
@@ -1240,6 +1267,16 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
     },
     [roomId]
   );
+
+  // Host moderation: Mute an unmuted participant (they can unmute themselves again later)
+  const muteParticipant = useCallback((targetUserId: string) => {
+    setParticipants((prev) =>
+      prev.map((p) => (p.userId === targetUserId ? { ...p, isMuted: true } : p))
+    );
+    if (socketRef.current) {
+      socketRef.current.send('mute-updated', { targetUserId, isMuted: true });
+    }
+  }, []);
 
   // Host moderation: Mute all speakers
   const muteAll = useCallback(async () => {
@@ -1380,6 +1417,7 @@ export function useAudioRoom({ roomId, initialRole = 'listener', onRoomEnded }: 
     toggleHandRaise,
     promoteToSpeaker,
     demoteToListener,
+    muteParticipant,
     muteAll,
     shareBibleReference,
     sendChatMessage,
