@@ -244,12 +244,12 @@ export class AudioRoomsService {
   }
 
   async createSfuSession(roomId: string, userId: string) {
-    await this.joinRoom(roomId, userId);
-
     const { appId, appSecret } = this.getCloudflareConfig();
-    const iceServers = await this.getTurnCredentials();
+    const joinPromise = this.joinRoom(roomId, userId);
+    const turnPromise = this.getTurnCredentials();
 
     if (!appId || !appSecret) {
+      const [, iceServers] = await Promise.all([joinPromise, turnPromise]);
       logger.warn(
         '[SFU] CLOUDFLARE_APP_ID or CLOUDFLARE_APP_SECRET is not set (checked CLOUDFLARE_ and CLOUDFARE_ prefixes). Generating mock SFU session ID for local testing.'
       );
@@ -257,7 +257,7 @@ export class AudioRoomsService {
       return { sessionId: mockSessionId, iceServers };
     }
 
-    const response = await fetch(
+    const sessionPromise = fetch(
       `https://rtc.live.cloudflare.com/v1/apps/${appId}/sessions/new`,
       {
         method: 'POST',
@@ -267,6 +267,8 @@ export class AudioRoomsService {
         },
       }
     );
+
+    const [, iceServers, response] = await Promise.all([joinPromise, turnPromise, sessionPromise]);
 
     if (!response.ok) {
       const errorText = await response.text();

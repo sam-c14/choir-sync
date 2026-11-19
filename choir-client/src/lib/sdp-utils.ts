@@ -1,11 +1,11 @@
 /**
  * Opus SDP Optimization Utility
  * 
- * Enforces Opus mono voice parameters for high-resilience and low-bandwidth conferencing:
+ * Enforces Opus mono voice parameters for low-latency, clear conferencing:
  * - useinbandfec=1: Enables Forward Error Correction to recover from packet loss
- * - usedtx=1: Enables Discontinuous Transmission (stops transmitting silence)
- * - maxaveragebitrate=32000: Limits audio bandwidth to 32 kbps per stream
- * - stereo=0; sprop-stereo=0: Enforces mono audio transmission
+ * - minptime=10: Encourages low-latency 10ms framing where supported
+ * - maxaveragebitrate=48000: Clear voice bandwidth per stream
+ * - stereo=0; sprop-stereo=0: Enforces mono audio transmission without DTX clipping
  */
 export function optimizeOpusSdp(sdp: string): string {
   if (!sdp) return sdp;
@@ -28,8 +28,8 @@ export function optimizeOpusSdp(sdp: string): string {
 
   const opusParams = [
     'useinbandfec=1',
-    'usedtx=1',
-    'maxaveragebitrate=32000',
+    'minptime=10',
+    'maxaveragebitrate=48000',
     'stereo=0',
     'sprop-stereo=0',
   ];

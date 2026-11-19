@@ -28,8 +28,9 @@ import {
   useAudioRoom,
   RoomParticipantState,
   RemoteAudioStream,
+  RoomChatMessage,
 } from '../../hooks/use-audio-room';
-import { createAudioMeter } from '../../lib/audio-meter';
+import { createAudioMeter, playChatNotificationSound } from '../../lib/audio-meter';
 import { formatReferenceLabel, BibleVersion } from '../../lib/bible';
 import { useAuth } from '../../auth/auth-context';
 import { toast } from 'sonner';
@@ -77,6 +78,7 @@ export function AudioRoomPanel({
     sendChatMessage,
     sendEmojiReaction,
     subscribeToEmojiReactions,
+    subscribeToChatMessages,
   } = useAudioRoom({
     roomId,
     roomTitle,
@@ -93,6 +95,7 @@ export function AudioRoomPanel({
   const [activePanel, setActivePanel] = useState<'none' | 'bible' | 'chat'>('none');
   const [hasUnreadBibleCall, setHasUnreadBibleCall] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [chatPopups, setChatPopups] = useState<RoomChatMessage[]>([]);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [dismissedBibleCalledAt, setDismissedBibleCalledAt] = useState<number | null>(null);
   const [bibleJumpTarget, setBibleJumpTarget] = useState<{
@@ -106,6 +109,9 @@ export function AudioRoomPanel({
   const lastSeenBibleCallRef = useRef<number | undefined>(undefined);
   const prevChatCountRef = useRef<number>(0);
   const emojiBarRef = useRef<HTMLDivElement | null>(null);
+  const activePanelRef = useRef<'none' | 'bible' | 'chat'>(activePanel);
+  activePanelRef.current = activePanel;
+  const popupTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const isSidePanelOpen = activePanel !== 'none';
   const isBibleOpen = activePanel === 'bible';
@@ -125,6 +131,9 @@ export function AudioRoomPanel({
     if (activePanel === 'chat') {
       prevChatCountRef.current = chatMessages.length;
       setUnreadChatCount(0);
+      setChatPopups([]);
+      popupTimersRef.current.forEach((t) => clearTimeout(t));
+      popupTimersRef.current.clear();
       return;
     }
     if (chatMessages.length > prevChatCountRef.current) {
@@ -135,6 +144,42 @@ export function AudioRoomPanel({
       prevChatCountRef.current = chatMessages.length;
     }
   }, [chatMessages.length, activePanel]);
+
+  // Show Google Meet-style floating chat pop-up & play subtle chime when chat drawer is closed
+  useEffect(() => {
+    const dismissPopup = (id: string) => {
+      setChatPopups((prev) => prev.filter((m) => m.id !== id));
+      const t = popupTimersRef.current.get(id);
+      if (t) {
+        clearTimeout(t);
+        popupTimersRef.current.delete(id);
+      }
+    };
+
+    const unsubscribe = subscribeToChatMessages((msg) => {
+      if (msg.userId === user?.id) return;
+      if (activePanelRef.current === 'chat') return;
+
+      playChatNotificationSound();
+
+      setChatPopups((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        const next = [...prev, msg];
+        return next.length > 2 ? next.slice(next.length - 2) : next;
+      });
+
+      const timer = setTimeout(() => {
+        dismissPopup(msg.id);
+      }, 5000);
+      popupTimersRef.current.set(msg.id, timer);
+    });
+
+    return () => {
+      unsubscribe();
+      popupTimersRef.current.forEach((t) => clearTimeout(t));
+      popupTimersRef.current.clear();
+    };
+  }, [subscribeToChatMessages, user?.id]);
 
   useEffect(() => {
     if (!isEmojiPickerOpen) return;
@@ -282,39 +327,26 @@ export function AudioRoomPanel({
     return p;
   });
 
-  // Google Meet / Zoom style ordered grid:
-  // 1. Actively speaking participants
-  // 2. Participants with hand raised
-  // 3. Current User (You)
-  // 4. Role (Host > Speaker > Listener)
-  // 5. Unmuted before Muted
-  // 6. Alphabetical by name
+  // Stable grid ordering so participant tiles never swap positions while speaking or toggling mic:
+  // 1. Host
+  // 2. Current User (You)
+  // 3. Alphabetical by name (with userId tie-breaker)
   const sortedParticipants = useMemo(() => {
     return [...liveParticipants].sort((a, b) => {
-      const aSpeaking = activeSpeakingUsers.has(a.userId) ? 1 : 0;
-      const bSpeaking = activeSpeakingUsers.has(b.userId) ? 1 : 0;
-      if (aSpeaking !== bSpeaking) return bSpeaking - aSpeaking;
-
-      const aHand = a.handRaised ? 1 : 0;
-      const bHand = b.handRaised ? 1 : 0;
-      if (aHand !== bHand) return bHand - aHand;
+      const aHost = a.role === 'host' ? 1 : 0;
+      const bHost = b.role === 'host' ? 1 : 0;
+      if (aHost !== bHost) return bHost - aHost;
 
       const aIsSelf = a.userId === user?.id ? 1 : 0;
       const bIsSelf = b.userId === user?.id ? 1 : 0;
       if (aIsSelf !== bIsSelf) return bIsSelf - aIsSelf;
 
-      const rolePriority: Record<string, number> = { host: 3, speaker: 2, listener: 1 };
-      const aRole = rolePriority[a.role] || 0;
-      const bRole = rolePriority[b.role] || 0;
-      if (aRole !== bRole) return bRole - aRole;
+      const byName = a.name.localeCompare(b.name);
+      if (byName !== 0) return byName;
 
-      const aMuted = a.isMuted ? 0 : 1;
-      const bMuted = b.isMuted ? 0 : 1;
-      if (aMuted !== bMuted) return bMuted - aMuted;
-
-      return a.name.localeCompare(b.name);
+      return a.userId.localeCompare(b.userId);
     });
-  }, [liveParticipants, activeSpeakingUsers, user?.id]);
+  }, [liveParticipants, user?.id]);
 
   const handRaisers = liveParticipants.filter((p) => p.handRaised);
   const unmutedOthersCount = liveParticipants.filter(
@@ -738,6 +770,64 @@ export function AudioRoomPanel({
 
       {/* Google Meet / Zoom Bottom Call Control Bar */}
       <div className="sticky bottom-4 left-0 right-0 flex flex-col items-center z-20" ref={emojiBarRef}>
+        {/* Floating Google Meet-style Chat Pop-ups when drawer is closed */}
+        {chatPopups.length > 0 && !isChatOpen && (
+          <div className="w-full flex flex-col items-end gap-2 mb-2.5 pointer-events-none">
+            {chatPopups.map((popup) => (
+              <div
+                key={popup.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setChatPopups([]);
+                  setActivePanel('chat');
+                  setUnreadChatCount(0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setChatPopups([]);
+                    setActivePanel('chat');
+                    setUnreadChatCount(0);
+                  }
+                }}
+                className="pointer-events-auto max-w-xs sm:max-w-sm w-fit flex items-start gap-2.5 px-3 py-2 rounded-2xl bg-zinc-900/95 hover:bg-zinc-800/95 backdrop-blur-lg border border-zinc-700/80 shadow-2xl text-left cursor-pointer transition-colors animate-in fade-in slide-in-from-bottom-2 duration-200"
+              >
+                <UserAvatar
+                  name={popup.senderName}
+                  email={popup.senderName}
+                  src={popup.senderAvatar || null}
+                  className="w-7 h-7 shrink-0 mt-0.5"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-zinc-100 truncate">
+                      {popup.senderName}
+                    </span>
+                    <span className="text-[10px] text-emerald-400 font-medium shrink-0">
+                      • Chat
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-300 line-clamp-2 break-words mt-0.5">
+                    {popup.text}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Dismiss chat preview"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setChatPopups((prev) => prev.filter((m) => m.id !== popup.id));
+                  }}
+                  className="p-0.5 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/60 shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Floating Google Meet Emoji Picker Bar */}
         {isEmojiPickerOpen && (
           <div className="mb-2.5 px-2.5 py-1.5 rounded-full bg-zinc-900/95 backdrop-blur-lg border border-zinc-700/80 shadow-2xl flex items-center gap-1 sm:gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150">
@@ -899,12 +989,28 @@ function RemoteAudioPlayer({
 
     el.srcObject = remote.stream;
     el.muted = false;
-    el.volume = 1.0;
+    el.volume = 0;
+
+    let rampTimer: ReturnType<typeof setInterval> | null = null;
+    const rampVolumeIn = () => {
+      if (rampTimer) clearInterval(rampTimer);
+      let step = 0;
+      const steps = 4;
+      rampTimer = setInterval(() => {
+        step += 1;
+        el.volume = Math.min(1, step / steps);
+        if (step >= steps && rampTimer) {
+          clearInterval(rampTimer);
+          rampTimer = null;
+        }
+      }, 20);
+    };
 
     const tryPlay = () => {
       el.play()
         .then(() => {
           onBlockedRef.current(false);
+          rampVolumeIn();
         })
         .catch((err) => {
           console.warn('[Audio] Autoplay pending user interaction:', err);
@@ -927,6 +1033,7 @@ function RemoteAudioPlayer({
       el.play()
         .then(() => {
           onBlockedRef.current(false);
+          if (el.volume < 1) rampVolumeIn();
         })
         .catch(() => {});
     };
@@ -942,6 +1049,7 @@ function RemoteAudioPlayer({
     });
 
     return () => {
+      if (rampTimer) clearInterval(rampTimer);
       tracks.forEach((track) => {
         track.removeEventListener('unmute', tryPlay);
       });
@@ -960,6 +1068,7 @@ function RemoteAudioPlayer({
     if (unlockTick === 0) return;
     const el = audioRef.current;
     if (!el) return;
+    el.volume = 1.0;
     el.play()
       .then(() => onBlockedRef.current(false))
       .catch(() => {});
